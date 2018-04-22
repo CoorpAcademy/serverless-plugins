@@ -1,0 +1,17 @@
+{
+  "name": "6poll",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "preinstall": "lerna bootstrap",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "lerna": "^2.10.2",
+    "serverless": "^1.26.1"
+  }
+}
