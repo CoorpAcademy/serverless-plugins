@@ -1,0 +1,17 @@
+version: "3"
+services:
+  kinesis:
+    image: dlsniper/kinesalite:latest
+    ports:
+      - "4567:4567"
+  kinesis-sidekick:
+    image: mesosphere/aws-cli:latest
+    links:
+      - kinesis
+    volumes:
+      - ./scripts:/project/scripts
+    entrypoint: sh ./scripts/create-kinesis.sh
+    environment:
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+      - AWS_DEFAULT_REGION=eu-west-1

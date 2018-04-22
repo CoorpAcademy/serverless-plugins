@@ -5,13 +5,13 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "preinstall": "lerna bootstrap",
+    "postinstall": "lerna bootstrap",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "lerna": "^2.10.2",
+    "lerna": "^3.0.0-beta.17",
     "serverless": "^1.26.1"
   }
 }
