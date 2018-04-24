@@ -6,7 +6,7 @@ module.exports = {
   entry: slsw.lib.entries,
   target: 'node',
   module: {
-    loaders: [{
+    rules: [{
       test: /\.js$/,
       loaders: ['babel-loader'],
       include: __dirname,

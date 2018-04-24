@@ -13,5 +13,6 @@
   "dependencies": {
     "lerna": "^3.0.0-beta.17",
     "serverless": "^1.26.1"
-  }
+  },
+  "devDependencies": {}
 }

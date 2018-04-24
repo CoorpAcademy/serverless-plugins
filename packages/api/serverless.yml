@@ -8,17 +8,48 @@ plugins:
 
 provider:
   name: aws
-  runtime: nodejs6.10
+  runtime: nodejs8.10
 
 functions:
-  first:
-    handler: first.hello
-  second:
-    handler: second.hello
+  listPolls:
+    handler: polls/index.listPolls
     events:
       - http:
           method: get
-          path: second
+          path: polls
+  createPoll:
+    handler: polls/index.createPoll
+    events:
+      - http:
+          method: post
+          path: polls
+  getPoll:
+    handler: polls/index.getPoll
+    events:
+      - http:
+          method: get
+          path: polls/{id}
+  updatePoll:
+    handler: polls/index.updatePoll
+    events:
+      - http:
+          method: put
+          path: polls/{id}
+  removePoll:
+    handler: polls/index.removePoll
+    events:
+      - http:
+          method: delete
+          path: polls/{id}
+  aggregate:
+    namle: "aggregate"
+    handler: polls/index.aggregate
+    events:
+      - stream:
+          type: kinesis
+          arn: arn:aws:kinesis:eu-west-1:XXXXXX:stream/polls
+          batchSize: 10
+          startingPosition: TRIM_HORIZON
 
 custom:
   serverless-offline:
