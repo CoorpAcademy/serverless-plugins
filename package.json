@@ -6,7 +6,9 @@
   "private": true,
   "scripts": {
     "postinstall": "lerna bootstrap",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "eslint": "eslint .",
+    "ava": "ava",
+    "test": "npm run eslint && npm run ava"
   },
   "author": "",
   "license": "ISC",
@@ -14,5 +16,9 @@
     "lerna": "^3.0.0-beta.17",
     "serverless": "^1.26.1"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@coorpacademy/eslint-plugin-coorpacademy": "^8.1.1",
+    "ava": "^0.25.0",
+    "eslint": "^4.19.1"
+  }
 }

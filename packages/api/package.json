@@ -4,7 +4,7 @@
   "private": true,
   "description": "",
   "scripts": {
-    "start": "sls offline",
+    "start": "sls offline start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
@@ -20,6 +20,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "aws-sdk": "^2.232.1",
+    "kinesis-readable": "^1.2.0",
+    "lodash": "^4.17.10",
     "serverless": "^1.26.1"
   }
 }

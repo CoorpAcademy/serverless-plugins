@@ -1,23 +1,19 @@
 import Kinesis from 'aws-sdk/clients/kinesis';
 
-var kinesis = new Kinesis({
+const kinesis = new Kinesis({
   apiVersion: '2013-12-02',
   endpoint: 'http://localhost:4567',
-  region: "eu-west-1",
-  accessKeyId: "foo",
-  secretAccessKey: "foo"
-})
+  region: 'eu-west-1',
+  accessKeyId: 'foo',
+  secretAccessKey: 'foo'
+});
 
-const polls = new Map([
-  ['foo', {name: 'bar'}]
-]);
+const polls = new Map([['foo', {name: 'bar'}]]);
 
 export const listPolls = (event, context, callback) => {
   callback(null, {
     statusCode: 200,
-    body: JSON.stringify(
-      Array.from(polls.values())
-    )
+    body: JSON.stringify([...polls.values()])
   });
 };
 
@@ -34,24 +30,28 @@ export const createPoll = (event, context, callback) => {
 
   polls.set(id, poll);
 
-  kinesis.putRecord({
-    Data: JSON.stringify({
-      type: 'create',
-      payload: poll
-    }),
-    PartitionKey: id,
-    StreamName: 'polls'
-  }, (err, data) => {
-    console.log('create', {
-      err, data
-    });
-    if (err) return callback(err);
+  kinesis.putRecord(
+    {
+      Data: JSON.stringify({
+        type: 'create',
+        payload: poll
+      }),
+      PartitionKey: id,
+      StreamName: 'polls'
+    },
+    (err, data) => {
+      console.log('create', {
+        err,
+        data
+      });
+      if (err) return callback(err);
 
-    callback(null, {
-      statusCode: 201,
-      body: JSON.stringify(poll)
-    });
-  });
+      callback(null, {
+        statusCode: 201,
+        body: JSON.stringify(poll)
+      });
+    }
+  );
 };
 
 export const getPoll = (event, context, callback) => {
@@ -62,12 +62,10 @@ export const getPoll = (event, context, callback) => {
       statusCode: 404
     });
 
-    return callback(null, {
-      statusCode: 200,
-      body: JSON.stringify(
-        polls.get(id)
-      )
-    });
+  return callback(null, {
+    statusCode: 200,
+    body: JSON.stringify(polls.get(id))
+  });
 };
 
 export const updatePoll = (event, context, callback) => {
@@ -82,21 +80,24 @@ export const updatePoll = (event, context, callback) => {
   const poll = Object.assign({}, polls.get(id), body);
   polls.set(id, poll);
 
-  kinesis.putRecord({
-    Data: JSON.stringify({
-      type: 'update',
-      payload: poll
-    }),
-    PartitionKey: id,
-    StreamName: 'polls'
-  }, (err) => {
-    if (err) return callback(err);
+  kinesis.putRecord(
+    {
+      Data: JSON.stringify({
+        type: 'update',
+        payload: poll
+      }),
+      PartitionKey: id,
+      StreamName: 'polls'
+    },
+    err => {
+      if (err) return callback(err);
 
-    callback(null, {
-      statusCode: 201,
-      body: JSON.stringify(poll)
-    });
-  });
+      callback(null, {
+        statusCode: 201,
+        body: JSON.stringify(poll)
+      });
+    }
+  );
 };
 
 export const removePoll = (event, context, callback) => {
@@ -109,28 +110,31 @@ export const removePoll = (event, context, callback) => {
 
   polls.delete(id);
 
-  kinesis.putRecord({
-    Data: JSON.stringify({
-      type: 'delete',
-      payload: {
-        id
-      }
-    }),
-    PartitionKey: id,
-    StreamName: 'polls'
-  }, (err) => {
-    if (err) return callback(err);
+  kinesis.putRecord(
+    {
+      Data: JSON.stringify({
+        type: 'delete',
+        payload: {
+          id
+        }
+      }),
+      PartitionKey: id,
+      StreamName: 'polls'
+    },
+    err => {
+      if (err) return callback(err);
 
-    callback(null, {
-      statusCode: 201
-    });
-  });
+      callback(null, {
+        statusCode: 201
+      });
+    }
+  );
 };
 
 export const aggregate = (event, context, callback) => {
   console.log('aggregate', {
-    event, context
-  })
+    event,
+    context
+  });
   callback(null);
 };
-
