@@ -1,8 +1,9 @@
 const {join} = require('path');
 const {Writable} = require('stream');
+const figures = require('figures');
 const Kinesis = require('aws-sdk/clients/kinesis');
 const KinesisReadable = require('kinesis-readable');
-const {mapValues, forEach, map, matchesProperty, filter, get, pipe} = require('lodash/fp');
+const {mapValues, isEmpty, forEach, map, matchesProperty, filter, get, pipe} = require('lodash/fp');
 const {createHandler, getFunctionOptions} = require('serverless-offline/src/functionHelper');
 const createLambdaContext = require('serverless-offline/src/createLambdaContext');
 
@@ -13,6 +14,8 @@ const fromCallback = fun =>
       resolve(data);
     });
   });
+
+const printBlankLine = () => console.log();
 
 class ServerlessOfflineKinesis {
   constructor(serverless, options) {
@@ -33,8 +36,9 @@ class ServerlessOfflineKinesis {
     this.streams = [];
   }
 
-  eventHandler(functionName, chunk, cb) {
-    this.serverless.cli.log(`Kinesis ${JSON.stringify(chunk, null, 4)}`);
+  eventHandler(streamEvent, functionName, shardId, chunk, cb) {
+    const streamName = streamEvent.arn.split('/')[1];
+    this.serverless.cli.log(`${streamName} (λ: ${functionName})`);
 
     const {location = '.'} = this.service.custom['serverless-offline'];
 
@@ -43,15 +47,38 @@ class ServerlessOfflineKinesis {
     const funOptions = getFunctionOptions(__function, functionName, servicePath);
     const handler = createHandler(funOptions, {});
 
-    const lambdaContext = createLambdaContext(__function, cb);
+    const lambdaContext = createLambdaContext(__function, (err, data) => {
+      this.serverless.cli.log(
+        `[${err ? figures.cross : figures.tick}] ${JSON.stringify(data) || ''}`
+      );
+      cb(err, data);
+    });
 
-    const event = chunk;
+    const event = {
+      Records: chunk.map(({SequenceNumber, ApproximateArrivalTimestamp, Data, PartitionKey}) => ({
+        kinesis: {
+          partitionKey: PartitionKey,
+          kinesisSchemaVersion: '1.0',
+          data: Data.toString('base64'),
+          sequenceNumber: SequenceNumber
+        },
+        eventSource: 'aws:kinesis',
+        eventID: `${shardId}:${SequenceNumber}`,
+        invokeIdentityArn: 'arn:aws:iam::serverless:role/offline',
+        eventVersion: '1.0',
+        eventName: 'aws:kinesis:record',
+        eventSourceARN: streamEvent.arn,
+        awsRegion: 'us-west-2'
+      }))
+    };
 
     handler(event, lambdaContext, lambdaContext.done);
   }
 
   async createKinesisReadable(functionName, streamEvent) {
     const streamName = streamEvent.arn.split('/')[1];
+
+    this.serverless.cli.log(`${streamName}`);
 
     const {StreamDescription: {Shards: shards}} = await fromCallback(cb =>
       this.client.describeStream(
@@ -73,7 +100,7 @@ class ServerlessOfflineKinesis {
         new Writable({
           objectMode: true,
           write: (chunk, encoding, cb) => {
-            this.eventHandler(functionName, chunk, cb);
+            this.eventHandler(streamEvent, functionName, shardId, chunk, cb);
           }
         })
       );
@@ -81,19 +108,27 @@ class ServerlessOfflineKinesis {
   }
 
   offlineStartInit() {
-    this.serverless.cli.log('offline-start-init');
+    this.serverless.cli.log(`Starting Offline Kinesis.`);
 
     mapValues.convert({cap: false})((_function, functionName) => {
-      return pipe(
+      const streams = pipe(
         get('events'),
         filter(matchesProperty('stream.type', 'kinesis')),
-        map(
-          pipe(get('stream'), streamEvent => {
-            this.serverless.cli.log(`Kinesis ${functionName} ${JSON.stringify(streamEvent)}`);
-            this.createKinesisReadable(functionName, streamEvent);
-          })
-        )
+        map(get('stream'))
       )(_function);
+
+      if (!isEmpty(streams)) {
+        printBlankLine();
+        this.serverless.cli.log(`Kinesis for ${functionName}:`);
+      }
+
+      forEach(streamEvent => {
+        this.createKinesisReadable(functionName, streamEvent);
+      }, streams);
+
+      if (!isEmpty(streams)) {
+        printBlankLine();
+      }
     }, this.service.functions);
   }
 

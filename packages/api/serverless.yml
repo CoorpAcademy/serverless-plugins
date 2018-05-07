@@ -49,7 +49,8 @@ functions:
           type: kinesis
           arn: arn:aws:kinesis:eu-west-1:XXXXXX:stream/polls
           batchSize: 10
-          startingPosition: TRIM_HORIZON
+          # startingPosition: TRIM_HORIZON
+          startingPosition: LATEST
 
 custom:
   serverless-offline:

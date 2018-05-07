@@ -11,10 +11,24 @@ const kinesis = new Kinesis({
 const polls = new Map([['foo', {name: 'bar'}]]);
 
 export const listPolls = (event, context, callback) => {
-  callback(null, {
-    statusCode: 200,
-    body: JSON.stringify([...polls.values()])
-  });
+  kinesis.putRecord(
+    {
+      Data: JSON.stringify({
+        type: 'list',
+        payload: [...polls.values()]
+      }),
+      PartitionKey: '0', //Date.now().toString(),
+      StreamName: 'polls'
+    },
+    (err, data) => {
+      if (err) return callback(err);
+
+      callback(null, {
+        statusCode: 200,
+        body: JSON.stringify([...polls.values()])
+      });
+    }
+  );
 };
 
 export const createPoll = (event, context, callback) => {
@@ -132,9 +146,5 @@ export const removePoll = (event, context, callback) => {
 };
 
 export const aggregate = (event, context, callback) => {
-  console.log('aggregate', {
-    event,
-    context
-  });
   callback(null);
 };

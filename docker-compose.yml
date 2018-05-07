@@ -10,7 +10,6 @@ services:
       - kinesis
     volumes:
       - ./scripts:/project
-    entrypoint: ls -al
     privileged: true
     entrypoint: sh ./create-kinesis.sh
     environment:
@@ -18,7 +17,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=local
       - AWS_DEFAULT_REGION=eu-west-1
       - AWS_ENDPOINT_URL=http://kinesis:4567
-  
+
   dynamodb:
     image: cnadiminti/dynamodb-local
     ports:
@@ -29,7 +28,6 @@ services:
       - dynamodb
     volumes:
       - ./scripts:/project
-    entrypoint: ls -al
     privileged: true
     entrypoint: sh ./create-dynamodb.sh
     environment:
