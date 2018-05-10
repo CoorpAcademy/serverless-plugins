@@ -6,3 +6,7 @@
 
 # Webpack directories
 .webpack
+
+# NYC
+.nyc_output
+coverage

@@ -16,31 +16,31 @@ functions:
     events:
       - http:
           method: get
-          path: polls
+          path: api/v1/polls
   createPoll:
     handler: polls/index.createPoll
     events:
       - http:
           method: post
-          path: polls
+          path: api/v1/polls
   getPoll:
     handler: polls/index.getPoll
     events:
       - http:
           method: get
-          path: polls/{id}
+          path: api/v1/polls/{id}
   updatePoll:
     handler: polls/index.updatePoll
     events:
       - http:
           method: put
-          path: polls/{id}
+          path: api/v1/polls/{id}
   removePoll:
     handler: polls/index.removePoll
     events:
       - http:
           method: delete
-          path: polls/{id}
+          path: api/v1/polls/{id}
   aggregate:
     namle: "aggregate"
     handler: polls/index.aggregate

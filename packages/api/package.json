@@ -5,7 +5,9 @@
   "description": "",
   "scripts": {
     "start": "sls offline start",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "nyc npm run dredd",
+    "dredd": "npm start -- --exec 'dredd'",
+    "dredd:watch": "npm-watch dredd"
   },
   "devDependencies": {
     "babel-core": "^6.26.0",
@@ -13,10 +15,14 @@
     "babel-plugin-transform-runtime": "^6.23.0",
     "babel-polyfill": "^6.26.0",
     "babel-preset-env": "^1.6.1",
+    "dredd": "^5.1.7",
+    "istanbul-instrumenter-loader": "^3.0.1",
+    "npm-watch": "^0.3.0",
+    "nyc": "^11.7.3",
     "serverless-offline": "^3.20.3",
-    "serverless-webpack": "^5.1.1",
-    "serverless-offline-kinesis": "^1.0.0",
     "serverless-offline-dynamodb-streams": "^1.0.0",
+    "serverless-offline-kinesis": "^1.0.0",
+    "serverless-webpack": "^5.1.1",
     "webpack": "^4.6.0"
   },
   "author": "",
@@ -24,5 +30,30 @@
   "dependencies": {
     "aws-sdk": "^2.232.1",
     "serverless": "^1.26.1"
+  },
+  "watch": {
+    "dredd": {
+      "patterns": [
+        "polls",
+        "swagger.yml",
+        "serverless.yml",
+        "test/dredd"
+      ],
+      "extensions": "js,yml"
+    }
+  },
+  "nyc": {
+    "reporter": [
+      "html",
+      "lcov",
+      "text",
+      "text-summary"
+    ],
+    "include": [
+      "polls/**/*.js"
+    ],
+    "all": true,
+    "instrument": false,
+    "sourceMap": false
   }
 }
