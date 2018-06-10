@@ -19,6 +19,7 @@
   "devDependencies": {
     "@coorpacademy/eslint-plugin-coorpacademy": "^8.1.1",
     "ava": "^0.25.0",
-    "eslint": "^4.19.1"
+    "eslint": "^4.19.1",
+    "source-map-support": "^0.5.6"
   }
 }

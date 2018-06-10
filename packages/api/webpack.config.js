@@ -12,9 +12,10 @@ module.exports = {
 
     libraryTarget: 'commonjs',
     path: path.join(__dirname, '.webpack'),
-    filename: '[name].js'
+    filename: '[name].js',
+    devtoolModuleFilenameTemplate: '[absolute-resource-path]'
   },
-  devtool: ' cheap-source-map ',
+  devtool: 'source-map',
   module: {
     rules: [
       {

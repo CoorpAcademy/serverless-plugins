@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Serverless Offline Start",
+      "cwd": "${workspaceFolder}/packages/api",
+      "args": [
+        "-r",
+        "source-map-support/register",
+        "${workspaceFolder}/node_modules/serverless/bin/serverless",
+        "offline",
+        "start"
+      ]
+    }
+  ]
+}
