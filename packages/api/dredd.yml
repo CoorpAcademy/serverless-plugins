@@ -13,7 +13,7 @@ output: []
 header: []
 sorted: false
 user: null
-inline-errors: false
+inline-errors: true
 details: false
 method: []
 color: true

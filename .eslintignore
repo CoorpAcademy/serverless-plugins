@@ -1,2 +1,3 @@
 !**/.serverless_plugins
 !.eslintrc.js
+**/node_modules

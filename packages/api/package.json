@@ -6,7 +6,7 @@
   "scripts": {
     "start": "sls offline start",
     "test": "nyc npm run dredd",
-    "dredd": "npm start -- --exec 'dredd'",
+    "dredd": "npm start -- --exec dredd",
     "dredd:watch": "npm-watch dredd"
   },
   "devDependencies": {
@@ -28,6 +28,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "ava": "^0.25.0",
     "aws-sdk": "^2.232.1",
     "serverless": "^1.26.1"
   },

@@ -9,6 +9,10 @@ tags:
   description: "Everything about your Polls"
 schemes:
 - "http"
+consumes:
+- "application/json; charset=utf-8"
+produces:
+- "application/json; charset=utf-8"
 paths:
   /v1/polls:
     post:
@@ -17,10 +21,6 @@ paths:
       summary: "Add a new poll"
       description: ""
       operationId: "addPoll"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/xml"
       parameters:
       - in: "body"
         name: "body"
@@ -41,10 +41,6 @@ paths:
       summary: "List polls"
       description: ""
       operationId: "listPolls"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/json"
       responses:
         200:
           description: "OK"
@@ -57,10 +53,6 @@ paths:
       summary: "Get poll"
       description: ""
       operationId: "getPoll"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/xml"
       parameters:
       - name: "pollId"
         in: "path"
@@ -82,10 +74,6 @@ paths:
       summary: "List polls"
       description: ""
       operationId: "editPoll"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/json"
       parameters:
       - name: "pollId"
         in: "path"
@@ -113,10 +101,6 @@ paths:
       summary: "Remove polls"
       description: ""
       operationId: "removePoll"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/json"
       parameters:
       - name: "pollId"
         in: "path"
