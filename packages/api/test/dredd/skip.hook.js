@@ -1,6 +1,7 @@
 const {beforeEach} = require('hooks');
 
 beforeEach(function(transaction) {
+  const {method} = transaction.request;
   const {statusCode} = transaction.expected;
-  transaction.skip = !statusCode.toString().startsWith('2');
+  transaction.skip = !['POST'].includes(method);
 });

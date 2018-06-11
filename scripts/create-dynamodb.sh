@@ -9,8 +9,8 @@ else
   echo "Creating stream"
   aws dynamodb create-table \
     --table-name polls \
-    --attribute-definitions AttributeName=id,AttributeType=S \
-    --key-schema AttributeName=id,KeyType=HASH \
+    --attribute-definitions AttributeName=Id,AttributeType=S \
+    --key-schema AttributeName=Id,KeyType=HASH \
     --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
     --endpoint-url ${AWS_ENDPOINT_URL}
 fi
