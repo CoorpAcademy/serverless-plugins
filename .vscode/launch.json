@@ -4,6 +4,18 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Run AVA test",
+      "program": "${workspaceRoot}/node_modules/ava/profile.js",
+      "args": [
+        "${file}"
+      ],
+      "skipFiles": [
+        "<node_internals>/**/*.js"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Serverless Offline Start",
       "cwd": "${workspaceFolder}/packages/api",
       "args": [

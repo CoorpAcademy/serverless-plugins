@@ -10,11 +10,11 @@
     "dredd:watch": "npm-watch dredd"
   },
   "dependencies": {
-    "ava": "^0.25.0",
     "aws-sdk": "^2.232.1",
     "serverless": "^1.26.1"
   },
   "devDependencies": {
+    "ava": "^0.25.0",
     "babel-core": "^6.26.0",
     "babel-loader": "^7.1.4",
     "babel-plugin-transform-runtime": "^6.23.0",
@@ -27,7 +27,7 @@
     "nyc": "^11.7.3",
     "serverless-offline": "^3.20.3",
     "serverless-offline-dynamodb-streams": "^1.0.0",
-    "serverless-offline-kinesis": "^1.0.0",
+    "serverless-offline-kinesis": "1.0.0",
     "serverless-webpack": "^5.1.1",
     "webpack": "^4.6.0"
   },

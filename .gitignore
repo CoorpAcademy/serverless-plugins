@@ -2,6 +2,7 @@
 
 # Serverless directories
 .serverless
+*.log
 
 # Webpack directories
 .webpack
