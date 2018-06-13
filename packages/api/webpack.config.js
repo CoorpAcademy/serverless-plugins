@@ -20,15 +20,6 @@ module.exports = {
     rules: [
       {
         test: /\.js$/,
-        include: __dirname,
-        loader: 'istanbul-instrumenter-loader',
-        query: {
-          esModules: true
-        },
-        exclude: /node_modules/
-      },
-      {
-        test: /\.js$/,
         loaders: ['babel-loader'],
         include: __dirname,
         exclude: /node_modules/

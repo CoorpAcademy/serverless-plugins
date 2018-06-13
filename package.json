@@ -35,6 +35,8 @@
     ]
   },
   "babel": {
-    "presets": ["@ava/stage-4"]
+    "presets": [
+      "@ava/stage-4"
+    ]
   }
 }

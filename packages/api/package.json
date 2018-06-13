@@ -5,7 +5,9 @@
   "description": "",
   "scripts": {
     "start": "sls offline start",
-    "test": "nyc npm run dredd",
+    "test": "nyc npm run _test",
+    "_test": "npm run ava && npm run dredd",
+    "ava": "ava",
     "dredd": "cross-env-shell NODE_OPTIONS=\"$NODE_OPTIONS -r source-map-support/register\" npm start -- --exec dredd",
     "dredd:watch": "npm-watch dredd"
   },
@@ -14,15 +16,17 @@
     "serverless": "^1.26.1"
   },
   "devDependencies": {
+    "@ava/babel-preset-stage-4": "^1.1.0",
     "ava": "^0.25.0",
     "babel-core": "^6.26.0",
     "babel-loader": "^7.1.4",
+    "babel-plugin-istanbul": "^4.1.6",
     "babel-plugin-transform-runtime": "^6.23.0",
     "babel-polyfill": "^6.26.0",
     "babel-preset-env": "^1.6.1",
+    "babel-register": "^6.26.0",
     "cross-env": "^5.1.6",
     "dredd": "^5.1.7",
-    "istanbul-instrumenter-loader": "^3.0.1",
     "npm-watch": "^0.3.0",
     "nyc": "^11.7.3",
     "serverless-offline": "^3.20.3",
@@ -36,13 +40,31 @@
   "watch": {
     "dredd": {
       "patterns": [
-        "polls",
+        "src",
         "swagger.yml",
         "serverless.yml",
         "test/dredd"
       ],
       "extensions": "js,yml"
     }
+  },
+  "ava": {
+    "files": [
+      "**/test/*.js"
+    ],
+    "cache": true,
+    "failFast": true,
+    "require": [
+      "babel-register"
+    ]
+  },
+  "babel": {
+    "plugins": [
+      "istanbul"
+    ],
+    "presets": [
+      "@ava/stage-4"
+    ]
   },
   "nyc": {
     "reporter": [
@@ -52,7 +74,7 @@
       "text-summary"
     ],
     "include": [
-      "polls/**/*.js"
+      "src/**/*.js"
     ],
     "all": true,
     "instrument": false,

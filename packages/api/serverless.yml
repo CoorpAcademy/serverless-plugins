@@ -12,38 +12,38 @@ provider:
 
 functions:
   listPolls:
-    handler: polls/index.listPolls
+    handler: src/index.listPolls
     events:
       - http:
           method: get
           path: api/v1/polls
   createPoll:
-    handler: polls/index.createPoll
+    handler: src/index.createPoll
     events:
       - http:
           method: post
           path: api/v1/polls
   getPoll:
-    handler: polls/index.getPoll
+    handler: src/index.getPoll
     events:
       - http:
           method: get
           path: api/v1/polls/{id}
   updatePoll:
-    handler: polls/index.updatePoll
+    handler: src/index.updatePoll
     events:
       - http:
           method: put
           path: api/v1/polls/{id}
   removePoll:
-    handler: polls/index.removePoll
+    handler: src/index.removePoll
     events:
       - http:
           method: delete
           path: api/v1/polls/{id}
   aggregate:
     namle: "aggregate"
-    handler: polls/index.aggregate
+    handler: src/index.aggregate
     events:
       - stream:
           type: kinesis
