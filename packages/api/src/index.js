@@ -1,6 +1,6 @@
-import DynamoDB from 'aws-sdk/clients/dynamodb';
+import {DocumentClient} from 'aws-sdk/clients/dynamodb';
 
-const dynamodb = new DynamoDB({
+const documentClient = new DocumentClient({
   apiVersion: '2013-12-02',
   endpoint: 'http://0.0.0.0:8000',
   region: 'eu-west-1',
@@ -13,10 +13,17 @@ const POLL = {
 };
 
 export const listPolls = (event, context, callback) => {
-  callback(null, {
-    statusCode: 200,
-    body: JSON.stringify([POLL, POLL])
-  });
+  documentClient.scan(
+    {
+      TableName: 'polls'
+    },
+    (err, data) => {
+      callback(null, {
+        statusCode: 200,
+        body: JSON.stringify(data)
+      });
+    }
+  );
 };
 
 export const createPoll = (event, context, callback) => {
@@ -36,7 +43,7 @@ export const createPoll = (event, context, callback) => {
     TableName: 'polls',
     ReturnConsumedCapacity: 'TOTAL'
   };
-  dynamodb.putItem(params, function(err, data) {
+  documentClient.putItem(params, function(err, data) {
     if (err) {
       console.log(err, err.stack); // an error occurred
       return callback(err);
@@ -51,12 +58,26 @@ export const createPoll = (event, context, callback) => {
 };
 
 export const getPoll = (event, context, callback) => {
-  return callback(null, {
-    statusCode: 200,
-    body: JSON.stringify(POLL)
-  });
+  const item = {
+    Id: `${Date.now()}`,
+    Message: 'Done'
+  };
+  documentClient.put(
+    {
+      TableName: 'polls',
+      Item: item
+    },
+    (err, data) => {
+      callback(err, {
+        statusCode: 200,
+        body: JSON.stringify({
+          data,
+          item
+        })
+      });
+    }
+  );
 };
-
 export const updatePoll = (event, context, callback) => {
   const body = JSON.parse(event.body);
 
@@ -75,5 +96,10 @@ export const removePoll = (event, context, callback) => {
 };
 
 export const aggregate = (event, context, callback) => {
+  callback(null);
+};
+
+export const notify = (event, context, callback) => {
+  console.log('notify', JSON.stringify(event, null, 4));
   callback(null);
 };

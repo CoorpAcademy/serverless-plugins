@@ -5,7 +5,7 @@ services:
     ports:
       - "4567:4567"
   kinesis-create:
-    image: mesosphere/aws-cli:latest
+    image: infrastructureascode/aws-cli:latest
     links:
       - kinesis
     volumes:
@@ -19,11 +19,11 @@ services:
       - AWS_ENDPOINT_URL=http://kinesis:4567
 
   dynamodb:
-    image: cnadiminti/dynamodb-local
+    image: cnadiminti/dynamodb-local:latest
     ports:
       - "8000:8000"
   dynamodb-create:
-    image: mesosphere/aws-cli:latest
+    image: infrastructureascode/aws-cli:latest
     links:
       - dynamodb
     volumes:
