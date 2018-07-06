@@ -1,0 +1,19 @@
+{
+  "name": "dynamodb-streams-readable",
+  "version": "0.0.0",
+  "description": "Simple readable stream client for AWS DynamoDB Streams",
+  "main": "src",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:godu/serverless.git"
+  },
+  "bugs": {
+    "url": "https://github.com/godu/serverless/issues"
+  },
+  "homepage": "https://github.com/godu/serverless/tree/master/packages/dynamodb-streams-readable#readme",
+  "author": "godu",
+  "license": "MIT",
+  "devDependencies": {
+    "uuid": "^3.3.2"
+  }
+}

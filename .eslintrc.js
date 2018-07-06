@@ -13,7 +13,9 @@ module.exports = {
   rules: {
     'fp/no-class': 'off',
     'no-console': 'off',
-    'promise/no-native': 'off'
+    'promise/no-native': 'off',
+    'no-param-reassign': 'off',
+    'import/no-extraneous-dependencies': 'off'
   },
   overrides: [
     {

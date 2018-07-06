@@ -4,8 +4,3 @@ services:
     image: dlsniper/kinesalite:latest
     ports:
       - "4567:4567"
-
-  dynamodb:
-    image: cnadiminti/dynamodb-local:latest
-    ports:
-      - "8000:8000"

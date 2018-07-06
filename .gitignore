@@ -10,3 +10,6 @@
 # NYC
 .nyc_output
 coverage
+
+# OSX
+.DS_Store

@@ -1,7 +1,5 @@
 const stream = require('stream');
 
-module.exports = DynamoDBStreamReadable;
-
 /**
  * A factory to generate a {@link KinesisClient} that pulls records from a DynamoDB stream
  *
@@ -48,6 +46,36 @@ function DynamoDBStreamReadable(client, arn, options) {
     ended,
     pending = 0;
 
+  function getShardIterator(shardId, callback) {
+    const params = {
+      ShardId: shardId,
+      StreamArn: arn
+    };
+
+    if (options.iterator) {
+      params.ShardIteratorType = options.iterator;
+    } else if (options.startAt) {
+      params.ShardIteratorType = 'AT_SEQUENCE_NUMBER';
+      params.SequenceNumber = options.startAt;
+    } else if (options.startAfter) {
+      params.ShardIteratorType = 'AFTER_SEQUENCE_NUMBER';
+      params.SequenceNumber = options.startAfter;
+    } else if (options.timestamp) {
+      params.ShardIteratorType = 'AT_TIMESTAMP';
+      params.Timestamp = options.timestamp;
+    } else {
+      params.ShardIteratorType = 'TRIM_HORIZON';
+    }
+
+    pending++;
+    client.getShardIterator(params, function(err, data) {
+      pending--;
+      if (err) return callback(err);
+      iterator = data.ShardIterator;
+      callback();
+    });
+  }
+
   function describeStream(callback) {
     pending++;
     client.describeStream({StreamArn: arn}, function(err, data) {
@@ -67,36 +95,6 @@ function DynamoDBStreamReadable(client, arn, options) {
     });
   }
 
-  function getShardIterator(shardId, callback) {
-    const params = {
-      ShardId: shardId,
-      StreamArn: arn
-    };
-
-    if (options.iterator) {
-      params.ShardIteratorType = options.iterator;
-    } else if (options.startAt) {
-      params.ShardIteratorType = 'AT_SEQUENCE_NUMBER';
-      params.StartingSequenceNumber = options.startAt;
-    } else if (options.startAfter) {
-      params.ShardIteratorType = 'AFTER_SEQUENCE_NUMBER';
-      params.StartingSequenceNumber = options.startAfter;
-    } else if (options.timestamp) {
-      params.ShardIteratorType = 'AT_TIMESTAMP';
-      params.Timestamp = options.timestamp;
-    } else {
-      params.ShardIteratorType = 'TRIM_HORIZON';
-    }
-
-    pending++;
-    client.getShardIterator(params, function(err, data) {
-      pending--;
-      if (err) return callback(err);
-      iterator = data.ShardIterator;
-      callback();
-    });
-  }
-
   function read(callback) {
     if (drain && !pending) return callback(null, {Records: null});
     if (drain && pending) return setImmediate(read, callback);
@@ -113,7 +111,7 @@ function DynamoDBStreamReadable(client, arn, options) {
 
         iterator = data.NextShardIterator;
 
-        if (!data.Records.length) {
+        if (data.Records.length === 0) {
           if (!drain) return setTimeout(read, options.readInterval || 500, callback);
           data.Records = null;
         }
@@ -124,21 +122,21 @@ function DynamoDBStreamReadable(client, arn, options) {
   }
 
   readable._read = function() {
+    function gotRecords(err, data) {
+      if (err) return checkpoint.emit('error', err);
+      setTimeout(readable.push.bind(readable), options.readInterval || 500, data.Records);
+    }
+
     if (iterator) return read(gotRecords);
 
     describeStream(function(err) {
       if (err) return checkpoint.emit('error', err);
       read(gotRecords);
     });
-
-    function gotRecords(err, data) {
-      if (err) return checkpoint.emit('error', err);
-      setTimeout(readable.push.bind(readable), options.readInterval || 500, data.Records);
-    }
   };
 
   checkpoint._transform = function(data, enc, callback) {
-    checkpoint.emit('checkpoint', data.slice(-1)[0].SequenceNumber);
+    checkpoint.emit('checkpoint', data.slice(-1)[0].dynamodb.SequenceNumber);
     callback(null, data);
   };
 
@@ -175,3 +173,5 @@ function DynamoDBStreamReadable(client, arn, options) {
    */
   return readable.pipe(checkpoint);
 }
+
+module.exports = DynamoDBStreamReadable;
