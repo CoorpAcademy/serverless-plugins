@@ -48,7 +48,6 @@ var options = {
   iterator: 'LATEST', // default to TRIM_HORIZON
   startAfter: '12345678901234567890', // start reading after this sequence number
   startAt: '12345678901234567890', // start reading from this sequence number
-  timestamp: '2016-04-04T19:58:46.480-00:00', // start reading from this timestamp
   limit: 100 // number of records per `data` event
 };
 ```

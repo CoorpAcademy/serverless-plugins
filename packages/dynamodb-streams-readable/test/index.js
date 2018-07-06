@@ -81,7 +81,7 @@ test.serial('reads records that already exist', async t => {
     dynamodbstreams
   } = t.context;
 
-  const documents = [...new Array(20)].map(() => ({
+  const documents = [...new Array(10)].map(() => ({
     Item: {
       Id: {
         S: uuid()
@@ -101,10 +101,10 @@ test.serial('reads records that already exist', async t => {
         cb
       )
     ),
-    {Count: 20, ScannedCount: 20}
+    {Count: documents.length, ScannedCount: documents.length}
   );
 
-  const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn);
+  const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {readInterval: 1});
 
   return new Promise((resolve, reject) => {
     let count = 0;
@@ -118,7 +118,7 @@ test.serial('reads records that already exist', async t => {
         if (count === documents.length) readable.close();
       })
       .on('end', () => {
-        t.deepEqual(count, documents.length, 'read 20 records');
+        t.deepEqual(count, documents.length, `read ${documents.length} records`);
         resolve();
       })
       .on('error', err => {
@@ -136,7 +136,7 @@ test.serial('reads ongoing records', t => {
     dynamodbstreams
   } = t.context;
 
-  const documents = [...new Array(20)].map(() => ({
+  const documents = [...new Array(10)].map(() => ({
     Item: {
       Id: {
         S: uuid()
@@ -144,7 +144,7 @@ test.serial('reads ongoing records', t => {
     }
   }));
 
-  const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn);
+  const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {readInterval: 1});
 
   let count = 0;
   return Promise.all([
@@ -159,7 +159,7 @@ test.serial('reads ongoing records', t => {
           if (count === documents.length) readable.close();
         })
         .on('end', function() {
-          t.deepEqual(count, documents.length, 'read 20 records');
+          t.deepEqual(count, documents.length, `read ${documents.length} records`);
           resolve();
         })
         .on('error', function(err) {
@@ -179,14 +179,14 @@ test.serial('reads latest records', async t => {
     dynamodbstreams
   } = t.context;
 
-  const initialDocuments = [...new Array(20)].map(() => ({
+  const initialDocuments = [...new Array(10)].map(() => ({
     Item: {
       Id: {
         S: uuid()
       }
     }
   }));
-  const subsequentDocuments = [...new Array(20)].map(() => ({
+  const subsequentDocuments = [...new Array(10)].map(() => ({
     Item: {
       Id: {
         S: uuid()
@@ -196,7 +196,10 @@ test.serial('reads latest records', async t => {
 
   await batchWriteItem(dynamodb, tableName, initialDocuments);
 
-  const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {iterator: 'LATEST'});
+  const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {
+    iterator: 'LATEST',
+    readInterval: 1
+  });
 
   let count = 0;
   return Promise.all([
@@ -211,7 +214,11 @@ test.serial('reads latest records', async t => {
           if (count === subsequentDocuments.length) readable.close();
         })
         .on('end', function() {
-          t.deepEqual(count, subsequentDocuments.length, 'read 20 records');
+          t.deepEqual(
+            count,
+            subsequentDocuments.length,
+            `read ${subsequentDocuments.length} records`
+          );
           resolve();
         })
         .on('error', function(err) {
@@ -231,7 +238,7 @@ test.serial('emits checkpoints, obeys limits', t => {
     dynamodbstreams
   } = t.context;
 
-  const documents = [...new Array(20)].map(() => ({
+  const documents = [...new Array(10)].map(() => ({
     Item: {
       Id: {
         S: uuid()
@@ -239,7 +246,10 @@ test.serial('emits checkpoints, obeys limits', t => {
     }
   }));
 
-  const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {limit: 1});
+  const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {
+    limit: 1,
+    readInterval: 1
+  });
   let count = 0;
   let checkpoints = 0;
   return Promise.all([
@@ -259,7 +269,7 @@ test.serial('emits checkpoints, obeys limits', t => {
           checkpoints = checkpoints + 1;
         })
         .on('end', function() {
-          t.deepEqual(count, documents.length, 'read 20 records');
+          t.deepEqual(count, documents.length, `read ${documents.length} records`);
           resolve();
         })
         .on('error', function(err) {
@@ -279,7 +289,7 @@ test.serial('reads after checkpoint', async t => {
     dynamodbstreams
   } = t.context;
 
-  const documents = [...new Array(20)].map(() => ({
+  const documents = [...new Array(10)].map(() => ({
     Item: {
       Id: {
         S: uuid()
@@ -291,7 +301,10 @@ test.serial('reads after checkpoint', async t => {
 
   let count = 0;
   const sequenceNum = await new Promise((resolve, reject) => {
-    const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {limit: 1});
+    const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {
+      limit: 1,
+      readInterval: 1
+    });
 
     let lastSequenceNum;
     readable
@@ -323,7 +336,8 @@ test.serial('reads after checkpoint', async t => {
   await new Promise((resolve, reject) => {
     const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {
       limit: 1,
-      startAfter: sequenceNum
+      startAfter: sequenceNum,
+      readInterval: 1
     });
 
     readable
@@ -354,7 +368,7 @@ test.serial('reads from checkpoint', async t => {
     dynamodbstreams
   } = t.context;
 
-  const documents = [...new Array(5)].map(() => ({
+  const documents = [...new Array(10)].map(() => ({
     Item: {
       Id: {
         S: uuid()
@@ -366,7 +380,10 @@ test.serial('reads from checkpoint', async t => {
 
   let count = 0;
   const sequenceNum = await new Promise((resolve, reject) => {
-    const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {limit: 1});
+    const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {
+      limit: 1,
+      readInterval: 1
+    });
 
     let lastSequenceNum;
     readable
@@ -399,7 +416,8 @@ test.serial('reads from checkpoint', async t => {
   await new Promise((resolve, reject) => {
     const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {
       limit: 1,
-      startAt: sequenceNum
+      startAt: sequenceNum,
+      readInterval: 1
     });
 
     readable

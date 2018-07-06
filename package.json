@@ -7,7 +7,8 @@
     "nyc": "nyc ava",
     "ava:profile": "node node_modules/ava/profile.js",
     "pretest": "npm run eslint",
-    "test": "npm run eslint && npm run nyc"
+    "test": "npm run eslint && npm run nyc",
+    "publish": "lerna publish"
   },
   "dependencies": {
     "lerna": "^3.0.0-beta.17",

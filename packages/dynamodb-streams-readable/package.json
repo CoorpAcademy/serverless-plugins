@@ -11,6 +11,9 @@
     "url": "https://github.com/godu/serverless/issues"
   },
   "homepage": "https://github.com/godu/serverless/tree/master/packages/dynamodb-streams-readable#readme",
+  "files": [
+    "src/index.js"
+  ],
   "author": "godu",
   "license": "MIT",
   "devDependencies": {

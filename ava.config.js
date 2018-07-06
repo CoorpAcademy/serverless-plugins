@@ -1,5 +1,6 @@
 module.exports.default = {
   files: ['packages/**/test/*.js'],
   cache: true,
-  failFast: true
+  failFast: true,
+  timeout: '30s'
 };

@@ -14,7 +14,6 @@ const stream = require('stream');
  * If unspecified, defaults to `TRIM_HORIZON`
  * @param {string} [options.startAt] - a sequence number to start reading from.
  * @param {string} [options.startAfter] - a sequence number to start reading after.
- * @param {number} [options.timestamp] - a timestamp to start reading after.
  * @param {number} [options.limit] - the maximum number of records that will
  * be passed to any single `data` event.
  * @param {number} [options.readInterval] - time in ms to wait between getRecords API calls
@@ -107,7 +106,10 @@ function DynamoDBStreamReadable(client, arn, options) {
       },
       function(err, data) {
         pending--;
-        if (err) return callback(err);
+
+        if (err) {
+          return callback(err);
+        }
 
         iterator = data.NextShardIterator;
 
