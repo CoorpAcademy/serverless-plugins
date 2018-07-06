@@ -18,5 +18,10 @@
   "license": "MIT",
   "devDependencies": {
     "uuid": "^3.3.2"
-  }
+  },
+  "keywords": [
+    "dynamodb",
+    "aws",
+    "stream"
+  ]
 }
