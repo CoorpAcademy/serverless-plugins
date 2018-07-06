@@ -1,4 +1,5 @@
 **/node_modules
+packges/**/packages-lock.json
 
 # Serverless directories
 .serverless
