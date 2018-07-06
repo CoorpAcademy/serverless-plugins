@@ -1,0 +1,15 @@
+language: node_js
+node_js:
+  - "stable"
+
+sudo: required
+
+env:
+  - CXX=g++-4.8
+addons:
+  chrome: stable
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-4.8
