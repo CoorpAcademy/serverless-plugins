@@ -59,9 +59,6 @@ function DynamoDBStreamReadable(client, arn, options) {
     } else if (options.startAfter) {
       params.ShardIteratorType = 'AFTER_SEQUENCE_NUMBER';
       params.SequenceNumber = options.startAfter;
-    } else if (options.timestamp) {
-      params.ShardIteratorType = 'AT_TIMESTAMP';
-      params.Timestamp = options.timestamp;
     } else {
       params.ShardIteratorType = 'TRIM_HORIZON';
     }
