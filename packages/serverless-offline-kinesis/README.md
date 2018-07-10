@@ -30,7 +30,7 @@ plugins:
 Ths configuration of function of the plugin follows the [serverless documentation](https://serverless.com/framework/docs/providers/aws/events/streams/).
 
 ```yml
-funcnios:
+functions:
   myKinesisHandler:
     handler: handler.compute
     events:
