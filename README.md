@@ -2,3 +2,4 @@
 
 
 - [`dynamodb-streams-readable`](/packages/dynamodb-streams-readable)
+- [`serverless-offline-kinesis`](/packages/serverless-offline-kinesis)
