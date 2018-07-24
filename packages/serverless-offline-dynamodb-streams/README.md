@@ -1,6 +1,6 @@
-# serverless-offline
+# serverless-offline-dynamodb-streams
 
-This Serverless-offline plugin emulates AWS λ and DynamoDBStreams on your local machine. To do so, it listens DynamoDBStreams stream and invokes your handlers.
+This Serverless-offline-dynamodb-streams plugin emulates AWS λ and DynamoDBStreams on your local machine. To do so, it listens DynamoDBStreams stream and invokes your handlers.
 
 *Features*:
 - [Serverless Webpack](https://github.com/serverless-heaven/serverless-webpack/) support.
@@ -8,10 +8,10 @@ This Serverless-offline plugin emulates AWS λ and DynamoDBStreams on your local
 
 ## Installation
 
-First, add `serverless-plugin-offline-dynamodb-streams` to your project:
+First, add `serverless-offline-dynamodb-streams` to your project:
 
 ```sh
-npm install serverless-plugin-offline-dynamodb-streams
+npm install serverless-offline-dynamodb-streams
 ```
 
 Then inside your project's `serverless.yml` file, add following entry to the plugins section before `serverless-offline` (and after `serverless-webpack` if presents): `serverless-offline-dynamodb-streams`.

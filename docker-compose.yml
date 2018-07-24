@@ -9,3 +9,8 @@ services:
     image: cnadiminti/dynamodb-local:latest
     ports:
       - "8000:8000"
+
+  sqs:
+    image: s12v/elasticmq:latest
+    ports:
+      - "9324:9324"

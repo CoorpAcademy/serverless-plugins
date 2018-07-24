@@ -1,0 +1,27 @@
+{
+  "name": "serverless-offline-ssm-provider",
+  "version": "0.0.0",
+  "description": "Emulate AWS λ and SSM locally when developing your Serverless project",
+  "main": "src",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:godu/serverless.git"
+  },
+  "bugs": {
+    "url": "https://github.com/godu/serverless/issues"
+  },
+  "homepage": "https://github.com/godu/serverless/tree/master/packages/serverless-offline-ssm-provider#readme",
+  "files": [
+    "src/index.js"
+  ],
+  "author": "godu",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "^4.17.10"
+  },
+  "keywords": [
+    "ssm",
+    "serverless",
+    "lambda"
+  ]
+}

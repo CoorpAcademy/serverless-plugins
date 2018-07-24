@@ -1,6 +1,6 @@
-# serverless-offline
+# serverless-offline-kinesis
 
-This Serverless-offline plugin emulates AWS λ and Kinesis streams on your local machine. To do so, it listens Kinesis stream and invokes your handlers.
+This Serverless-offline-kinesis plugin emulates AWS λ and Kinesis streams on your local machine. To do so, it listens Kinesis stream and invokes your handlers.
 
 *Features*:
 - [Serverless Webpack](https://github.com/serverless-heaven/serverless-webpack/) support.
@@ -8,10 +8,10 @@ This Serverless-offline plugin emulates AWS λ and Kinesis streams on your local
 
 ## Installation
 
-First, add `serverless-plugin-offline-kinesis` to your project:
+First, add `serverless-offline-kinesis` to your project:
 
 ```sh
-npm install serverless-plugin-offline-kinesis
+npm install serverless-offline-kinesis
 ```
 
 Then inside your project's `serverless.yml` file, add following entry to the plugins section before `serverless-offline` (and after `serverless-webpack` if presents): `serverless-offline-kinesis`.
