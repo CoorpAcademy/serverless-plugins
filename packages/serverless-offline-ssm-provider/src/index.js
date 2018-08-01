@@ -14,7 +14,7 @@ const getValues = (path = '.env') =>
 class ServerlessOfflineSSMProvider {
   constructor(serverless) {
     this.serverless = serverless;
-    this.config = this.service.custom['serverless-offline-ssm-provider'];
+    this.config = this.serverless.service.custom['serverless-offline-ssm-provider'];
 
     const aws = this.serverless.getProvider('aws');
     const request = aws.request.bind(aws);
