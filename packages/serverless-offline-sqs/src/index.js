@@ -123,7 +123,7 @@ class ServerlessOfflineSQS {
           return fromCallback(cb =>
             this.client.deleteMessageBatch(
               {
-                Entries: Messages.Records.map(({Id, ReceiptHandle}) => ({Id, ReceiptHandle})),
+                Entries: (Messages || []).map(({Id, ReceiptHandle}) => ({Id, ReceiptHandle})),
                 QueueUrl
               },
               () => cb()
