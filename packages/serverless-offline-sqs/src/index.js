@@ -1,8 +1,8 @@
-const {join} = require('path');
+const { join } = require('path');
 const figures = require('figures');
 const SQS = require('aws-sdk/clients/sqs');
-const {mapValues, isEmpty, forEach, map, has, filter, get, pipe} = require('lodash/fp');
-const {createHandler, getFunctionOptions} = require('serverless-offline/src/functionHelper');
+const { mapValues, isEmpty, forEach, map, has, filter, get, pipe } = require('lodash/fp');
+const { createHandler, getFunctionOptions } = require('serverless-offline/src/functionHelper');
 const createLambdaContext = require('serverless-offline/src/createLambdaContext');
 
 const fromCallback = fun =>
@@ -52,7 +52,7 @@ class ServerlessOfflineSQS {
     const streamName = this.getQueueName(queueEvent);
     this.serverless.cli.log(`${streamName} (λ: ${functionName})`);
 
-    const {location = '.'} = this.service.custom['serverless-offline'];
+    const { location = '.' } = this.service.custom['serverless-offline'];
 
     const __function = this.service.getFunction(functionName);
     const servicePath = join(this.serverless.config.servicePath, location);
@@ -97,7 +97,7 @@ class ServerlessOfflineSQS {
 
     this.serverless.cli.log(`${queueName}`);
 
-    const {QueueUrl} = await fromCallback(cb =>
+    const { QueueUrl } = await fromCallback(cb =>
       this.client.getQueueUrl(
         {
           QueueName: queueName
@@ -107,7 +107,7 @@ class ServerlessOfflineSQS {
     );
 
     const next = async () => {
-      const {Messages} = await fromCallback(cb =>
+      const { Messages } = await fromCallback(cb =>
         this.client.receiveMessage(
           {
             QueueUrl,
@@ -117,20 +117,21 @@ class ServerlessOfflineSQS {
           cb
         )
       );
-
-      await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb)).then(
-        () => {
-          return fromCallback(cb =>
-            this.client.deleteMessageBatch(
-              {
-                Entries: (Messages || []).map(({Id, ReceiptHandle}) => ({Id, ReceiptHandle})),
-                QueueUrl
-              },
-              () => cb()
-            )
-          );
-        }
-      );
+      if (Messages) {
+        await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb)).then(
+          () => {
+            return fromCallback(cb =>
+              this.client.deleteMessageBatch(
+                {
+                  Entries: (Messages || []).map(({ Id, ReceiptHandle }) => ({ Id, ReceiptHandle })),
+                  QueueUrl
+                },
+                () => cb()
+              )
+            );
+          }
+        );
+      }
 
       next();
     };
@@ -141,7 +142,7 @@ class ServerlessOfflineSQS {
   offlineStartInit() {
     this.serverless.cli.log(`Starting Offline Kinesis.`);
 
-    mapValues.convert({cap: false})((_function, functionName) => {
+    mapValues.convert({ cap: false })((_function, functionName) => {
       const queues = pipe(get('events'), filter(has('sqs')), map(get('sqs')))(_function);
 
       if (!isEmpty(queues)) {
