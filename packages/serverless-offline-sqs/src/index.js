@@ -118,7 +118,8 @@ class ServerlessOfflineSQS {
         )
       );
 
-      await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb));
+      if (Messages)
+        await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb));
 
       next();
     };
