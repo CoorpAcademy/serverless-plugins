@@ -118,19 +118,7 @@ class ServerlessOfflineSQS {
         )
       );
 
-      await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb)).then(
-        () => {
-          return fromCallback(cb =>
-            this.client.deleteMessageBatch(
-              {
-                Entries: (Messages || []).map(({Id, ReceiptHandle}) => ({Id, ReceiptHandle})),
-                QueueUrl
-              },
-              () => cb()
-            )
-          );
-        }
-      );
+      await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb));
 
       next();
     };
