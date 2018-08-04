@@ -57,7 +57,11 @@ class ServerlessOfflineDynamoDBStreams {
       Records
     };
 
-    handler(event, lambdaContext, lambdaContext.done);
+    if (handler.length < 3)
+      handler(event, lambdaContext)
+        .then(res => lambdaContext.done(null, res))
+        .catch(lambdaContext.done);
+    else handler(event, lambdaContext, lambdaContext.done);
   }
 
   async createDynamoDBStreamReadable(functionName, streamEvent) {

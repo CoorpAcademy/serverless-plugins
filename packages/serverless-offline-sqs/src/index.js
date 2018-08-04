@@ -89,7 +89,11 @@ class ServerlessOfflineSQS {
       )
     };
 
-    handler(event, lambdaContext, lambdaContext.done);
+    if (handler.length < 3)
+      handler(event, lambdaContext)
+        .then(res => lambdaContext.done(null, res))
+        .catch(lambdaContext.done);
+    else handler(event, lambdaContext, lambdaContext.done);
   }
 
   async createQueueReadable(functionName, queueEvent) {
@@ -118,8 +122,26 @@ class ServerlessOfflineSQS {
         )
       );
 
-      if (Messages)
+      if (Messages) {
         await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb));
+
+        await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb)).then(
+          () => {
+            return fromCallback(cb =>
+              this.client.deleteMessageBatch(
+                {
+                  Entries: (Messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
+                    Id,
+                    ReceiptHandle
+                  })),
+                  QueueUrl
+                },
+                () => cb()
+              )
+            );
+          }
+        );
+      }
 
       next();
     };
