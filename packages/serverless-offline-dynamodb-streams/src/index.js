@@ -77,6 +77,7 @@ class ServerlessOfflineDynamoDBStreams {
       : streamEvent.arn;
 
     this.serverless.cli.log(`${arn}`);
+    streamEvent.arn = streamEvent.arn || arn;
 
     const {StreamDescription: {Shards: shards}} = await fromCallback(cb =>
       this.client.describeStream(
