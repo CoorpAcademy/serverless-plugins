@@ -26,8 +26,6 @@ class ServerlessOfflineKinesis {
 
     this.commands = {};
 
-    this.client = new Kinesis(this.config);
-
     this.hooks = {
       'before:offline:start:init': this.offlineStartInit.bind(this),
       'before:offline:start:end': this.offlineStartEnd.bind(this)
@@ -83,6 +81,10 @@ class ServerlessOfflineKinesis {
     const streamName = streamEvent.arn.split('/')[1];
 
     this.serverless.cli.log(`${streamName}`);
+
+    if(!this.client) { 
+      this.client = new Kinesis(this.config); 
+    }
 
     const {StreamDescription: {Shards: shards}} = await fromCallback(cb =>
       this.client.describeStream(
