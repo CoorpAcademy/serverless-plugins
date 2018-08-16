@@ -82,7 +82,7 @@ class ServerlessOfflineKinesis {
 
     this.serverless.cli.log(`${streamName}`);
 
-    if(!this.client) { 
+    if (!this.client) { 
       this.client = new Kinesis(this.config); 
     }
 
