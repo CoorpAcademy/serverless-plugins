@@ -1,0 +1,59 @@
+service: serverless-offline-dynamodb-streams
+
+provider:
+  name: aws
+  region: us-west-2
+  runtime: nodejs8.10
+
+plugins:
+  localPath: '../..'
+  modules:
+    - serverless-offline-dynamodb-streams
+    - serverless-offline
+
+functions:
+  myHandler:
+    handler: handler.handler
+    events:
+      - stream: arn:aws:dynamodb:region:XXXXXX:table/MyFirstTable
+      - stream:
+          type: dynamodb
+          arn: arn:aws:dynamodb:region:XXXXXX:table/MySecondTable
+      - stream:
+          type: dynamodb
+          streamName: MyThirdTable
+          arn:
+            Fn::GetAtt:
+              - MyThirdTable
+              - Arn
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt:
+              - MyFourthTable
+              - Arn
+
+resources:
+  Resources:
+    MyFourthTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: MyFourthTable
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+
+custom:
+  serverless-offline-dynamodb-streams:
+    endpoint: http://0.0.0.0:8000
+    region: ${self:provider.region}
+    accessKeyId: root
+    secretAccessKey: root

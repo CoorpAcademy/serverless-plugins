@@ -65,7 +65,7 @@ class ServerlessOfflineSQS {
         this.service.resources.Resources &&
         this.service.resources.Resources[ResourceName] &&
         this.service.resources.Resources[ResourceName].Properties &&
-        this.service.resources.Resources[ResourceName].Properties.QueueName
+        typeof this.service.resources.Resources[ResourceName].Properties.QueueName === 'string'
       )
         return this.service.resources.Resources[ResourceName].Properties.QueueName;
     }
@@ -81,7 +81,7 @@ class ServerlessOfflineSQS {
     const streamName = this.getQueueName(queueEvent);
     this.serverless.cli.log(`${streamName} (λ: ${functionName})`);
 
-    const {location = '.'} = getConfig('serverless-offline');
+    const {location = '.'} = getConfig(this.service, 'serverless-offline');
 
     const __function = this.service.getFunction(functionName);
     const servicePath = join(this.serverless.config.servicePath, location);

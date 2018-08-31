@@ -1,0 +1,49 @@
+service: serverless-offline-kinesis
+
+provider:
+  name: aws
+  region: us-west-2
+  runtime: nodejs8.10
+
+plugins:
+  localPath: '../..'
+  modules:
+    - serverless-offline-kinesis
+    - serverless-offline
+
+functions:
+  myHandler:
+    handler: handler.handler
+    events:
+      - stream: arn:aws:kinesis:region:XXXXXX:stream/MyFirstStream 
+      - stream:
+          type: kinesis
+          arn: arn:aws:kinesis:region:XXXXXX:stream/MySecondStream
+      - stream:
+          type: kinesis
+          streamName: MyThirdStream
+          arn:
+            Fn::GetAtt:
+              - MyThirdStream
+              - Arn
+      - stream:
+          type: kinesis
+          arn:
+            Fn::GetAtt:
+              - MyFourthStream
+              - Arn
+
+resources:
+  Resources:
+    MyFourthStream:
+      Type: AWS::Kinesis::Stream
+      Properties:
+        Name: MyFourthStream
+        ShardCount: 1
+
+custom:
+  serverless-offline-kinesis:
+    endpoint: http://0.0.0.0:4567
+    region: ${self:provider.region}
+    accessKeyId: root
+    secretAccessKey: root
