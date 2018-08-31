@@ -1,4 +1,4 @@
-module.exports.default = {
+export default {
   files: ['packages/**/test/*.js'],
   cache: true,
   failFast: true,
