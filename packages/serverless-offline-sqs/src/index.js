@@ -15,16 +15,23 @@ const fromCallback = fun =>
 
 const printBlankLine = () => console.log();
 
+const getConfig = (service, pluginName) => {
+  return (service && service.custom && service.custom[pluginName]) || {};
+};
+
+const extractQueueNameFromARN = arn => {
+  const [, , , , , QueueName] = arn.split(':');
+  return QueueName;
+};
+
 class ServerlessOfflineSQS {
   constructor(serverless, options) {
     this.serverless = serverless;
     this.service = serverless.service;
     this.options = options;
-    this.config = this.service.custom['serverless-offline-sqs'];
+    this.config = getConfig(this.service, 'serverless-offline-sqs');
 
     this.commands = {};
-
-    this.client = new SQS(this.config);
 
     this.hooks = {
       'before:offline:start:init': this.offlineStartInit.bind(this),
@@ -34,16 +41,38 @@ class ServerlessOfflineSQS {
     this.streams = [];
   }
 
+  getClient() {
+    const awsConfig = Object.assign(
+      {
+        region: this.options.region || this.service.provider.region || 'us-west-2'
+      },
+      this.config
+    );
+    return new SQS(awsConfig);
+  }
+
   getQueueName(queueEvent) {
-    if (typeof queueEvent.arn === 'string') return queueEvent.arn.split('/')[1];
+    if (typeof queueEvent === 'string') return extractQueueNameFromARN(queueEvent);
+    if (typeof queueEvent.arn === 'string') return extractQueueNameFromARN(queueEvent.arn);
+    if (typeof queueEvent.queueName === 'string') return queueEvent.queueName;
 
     if (queueEvent.arn['Fn::GetAtt']) {
       const [ResourceName] = queueEvent.arn['Fn::GetAtt'];
 
-      return this.service.resources.Resources[ResourceName].Properties.QueueName;
+      if (
+        this.service &&
+        this.service.resources &&
+        this.service.resources.Resources &&
+        this.service.resources.Resources[ResourceName] &&
+        this.service.resources.Resources[ResourceName].Properties &&
+        this.service.resources.Resources[ResourceName].Properties.QueueName
+      )
+        return this.service.resources.Resources[ResourceName].Properties.QueueName;
     }
 
-    throw new Error(`QueueName not found`);
+    throw new Error(
+      `QueueName not found. See https://github.com/godu/serverless/tree/master/packages/serverless-offline-sqs#functions`
+    );
   }
 
   eventHandler(queueEvent, functionName, messages, cb) {
@@ -52,7 +81,7 @@ class ServerlessOfflineSQS {
     const streamName = this.getQueueName(queueEvent);
     this.serverless.cli.log(`${streamName} (λ: ${functionName})`);
 
-    const {location = '.'} = this.service.custom['serverless-offline'];
+    const {location = '.'} = getConfig('serverless-offline');
 
     const __function = this.service.getFunction(functionName);
     const servicePath = join(this.serverless.config.servicePath, location);
@@ -97,12 +126,13 @@ class ServerlessOfflineSQS {
   }
 
   async createQueueReadable(functionName, queueEvent) {
+    const client = this.getClient();
     const queueName = this.getQueueName(queueEvent);
 
     this.serverless.cli.log(`${queueName}`);
 
     const {QueueUrl} = await fromCallback(cb =>
-      this.client.getQueueUrl(
+      client.getQueueUrl(
         {
           QueueName: queueName
         },
@@ -112,7 +142,7 @@ class ServerlessOfflineSQS {
 
     const next = async () => {
       const {Messages} = await fromCallback(cb =>
-        this.client.receiveMessage(
+        client.receiveMessage(
           {
             QueueUrl,
             MaxNumberOfMessages: queueEvent.batchSize,
@@ -126,7 +156,7 @@ class ServerlessOfflineSQS {
         await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb));
 
         await fromCallback(cb =>
-          this.client.deleteMessageBatch(
+          client.deleteMessageBatch(
             {
               Entries: (Messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
                 Id,

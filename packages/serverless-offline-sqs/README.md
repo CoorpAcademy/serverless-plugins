@@ -23,6 +23,8 @@ plugins:
   - serverless-offline
 ```
 
+[See example](./example/README.md)
+
 ## Configure
 
 ### Functions
@@ -36,13 +38,24 @@ functions:
     events:
       - sqs: arn:aws:sqs:region:XXXXXX:MyFirstQueue
       - sqs:
+          arn: arn:aws:sqs:region:XXXXXX:MySecondQueue
+      - sqs:
+          queueName: MyThirdQueue
           arn:
             Fn::GetAtt:
-              - MySecondQueue
+              - MyThirdQueue
               - Arn
       - sqs:
           arn:
-            Fn::ImportValue: MyExportedQueueArnId
+            Fn::GetAtt:
+              - MyFourthQueue
+              - Arn
+resources:
+  Resources:
+    MyFirstQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: MyFourthQueue
 ```
 
 ### SQS

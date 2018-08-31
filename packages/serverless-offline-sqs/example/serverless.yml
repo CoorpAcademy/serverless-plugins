@@ -1,0 +1,45 @@
+service: serverless-offline-sqs
+
+provider:
+  name: aws
+  region: us-west-2
+  runtime: nodejs8.10
+
+plugins:
+  localPath: '../..'
+  modules:
+    - serverless-offline-sqs
+    - serverless-offline
+
+functions:
+  myHandler:
+    handler: handler.handler
+    events:
+      - sqs: arn:aws:sqs:region:XXXXXX:MyFirstQueue
+      - sqs:
+          arn: arn:aws:sqs:region:XXXXXX:MySecondQueue
+      - sqs:
+          queueName: MyThirdQueue
+          arn:
+            Fn::GetAtt:
+              - MyThirdQueue
+              - Arn
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - MyFourthQueue
+              - Arn
+
+resources:
+  Resources:
+    MyFourthQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: MyFourthQueue
+
+custom:
+  serverless-offline-sqs:
+    endpoint: http://0.0.0.0:9324
+    region: ${self:provider.region}
+    accessKeyId: root
+    secretAccessKey: root

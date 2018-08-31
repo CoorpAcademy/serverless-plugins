@@ -1,0 +1,20 @@
+version: "3"
+services:
+  sqs:
+    image: s12v/elasticmq:latest
+    ports:
+      - "9324:9324"
+  sqs-create:
+    image: infrastructureascode/aws-cli:latest
+    links:
+      - sqs
+    entrypoint: sh
+    volumes:
+      - ./:/project
+      - ./create-queues.sh:/project/create-queues.sh:ro
+    environment:
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+      - AWS_DEFAULT_REGION=eu-west-1
+      - AWS_ENDPOINT_URL=http://sqs:9324
+    command: " ./create-queues.sh"
