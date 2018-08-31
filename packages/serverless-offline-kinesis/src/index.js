@@ -138,6 +138,10 @@ class ServerlessOfflineKinesis {
 
     this.serverless.cli.log(`${streamName}`);
 
+    if (!this.client) { 
+      this.client = new Kinesis(this.config); 
+    }
+
     const {StreamDescription: {Shards: shards}} = await fromCallback(cb =>
       client.describeStream(
         {
