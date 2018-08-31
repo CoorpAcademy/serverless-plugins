@@ -23,6 +23,8 @@ plugins:
   - serverless-offline
 ```
 
+[See example](./example/README.md)
+
 ## Configure
 
 ### Functions

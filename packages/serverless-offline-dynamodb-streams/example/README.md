@@ -2,7 +2,7 @@
 
 ```shell
 # Start containers
-dc up -d
+docker-compose up -d
 
 # Start serverless-offline
 npm start
