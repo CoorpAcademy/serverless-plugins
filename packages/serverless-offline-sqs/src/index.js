@@ -21,6 +21,8 @@ class ServerlessOfflineSQS {
     this.service = serverless.service;
     this.options = options;
     this.config = this.service.custom['serverless-offline-sqs'];
+    this.queueName = this.config.QueueName;
+    delete this.config.QueueName;
 
     this.commands = {};
 
@@ -35,6 +37,8 @@ class ServerlessOfflineSQS {
   }
 
   getQueueName(queueEvent) {
+    if (this.queueName) return this.queueName;
+
     if (typeof queueEvent.arn === 'string') return queueEvent.arn.split('/')[1];
 
     if (queueEvent.arn['Fn::GetAtt']) {
