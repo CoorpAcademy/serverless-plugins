@@ -176,6 +176,10 @@ class ServerlessOfflineSQS {
   }
 
   offlineStartInit() {
+    //make sure to set env variables from provider.envirornment in serverless.yml
+    //TODO ~ probably should add function specific env variables too
+    
+    Object.assign(process.env, this.service.provider.environment);
     this.serverless.cli.log(`Starting Offline Kinesis.`);
 
     mapValues.convert({cap: false})((_function, functionName) => {
