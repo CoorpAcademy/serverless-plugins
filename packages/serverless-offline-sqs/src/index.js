@@ -146,6 +146,7 @@ class ServerlessOfflineSQS {
           {
             QueueUrl,
             MaxNumberOfMessages: queueEvent.batchSize,
+            MessageAttributeNames: ['All'],
             WaitTimeSeconds: 1
           },
           cb
