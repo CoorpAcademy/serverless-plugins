@@ -176,7 +176,7 @@ class ServerlessOfflineSQS {
   }
 
   offlineStartInit() {
-    this.serverless.cli.log(`Starting Offline Kinesis.`);
+    this.serverless.cli.log(`Starting Offline SQS.`);
 
     mapValues.convert({cap: false})((_function, functionName) => {
       const queues = pipe(get('events'), filter(has('sqs')), map(get('sqs')))(_function);
