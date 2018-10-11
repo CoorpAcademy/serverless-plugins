@@ -38,3 +38,6 @@ before_script:
 script:
   - npm run lint
   - npm run test -- packages/$PLUGIN/test
+
+after_success:
+  - npm run cover
