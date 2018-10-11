@@ -6,17 +6,8 @@ sudo: required
 services:
   - docker
 
-addons:
-  chrome: stable
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - g++-4.8
-
 env:
   global:
-    - CXX=g++-4.8
     - DOCKER_COMPOSE_VERSION=1.21.1
   matrix:
     - PLUGIN=dynamodb-streams-readable
