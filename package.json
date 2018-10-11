@@ -2,11 +2,11 @@
   "private": true,
   "scripts": {
     "postinstall": "lerna bootstrap",
-    "eslint": "eslint .",
+    "lint": "eslint .",
     "ava": "ava",
     "nyc": "nyc ava",
     "ava:profile": "node node_modules/ava/profile.js",
-    "pretest": "npm run eslint",
+    "pretest": "npm run lint",
     "test": "npm run nyc",
     "publish": "lerna publish"
   },

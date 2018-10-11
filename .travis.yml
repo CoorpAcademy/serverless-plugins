@@ -18,6 +18,13 @@ env:
   global:
     - CXX=g++-4.8
     - DOCKER_COMPOSE_VERSION=1.21.1
+  matrix:
+    - PLUGIN=dynamodb-streams-readable
+    - PLUGIN=serverless-offline-kinesis
+    - PLUGIN=serverless-offline-dynamodb-streams
+    - PLUGIN=serverless-offline-sqs
+    - PLUGIN=serverless-offline-ssm-provider
+
 
 before_install:
   - sudo rm /usr/local/bin/docker-compose
@@ -27,3 +34,7 @@ before_install:
 
 before_script:
   - docker-compose up -d
+
+script:
+  - npm run lint
+  - npm run test -- packages/$PLUGIN/test
