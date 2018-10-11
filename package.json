@@ -2,7 +2,7 @@
   "name": "serverless",
   "private": true,
   "scripts": {
-    "postinstall": "lerna bootstrap",
+    "postinstall": "lerna bootstrap --no-ci",
     "lint": "eslint .",
     "ava": "ava",
     "nyc": "nyc ava",
