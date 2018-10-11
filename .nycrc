@@ -1,5 +1,9 @@
 {
   "exclude": [
     "**/test/**/*"
-  ]
+  ],
+  "include": [
+    "packages/*/src/**/*"
+  ],
+  "all": true
 }
