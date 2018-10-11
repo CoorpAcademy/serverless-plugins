@@ -32,6 +32,8 @@ before_install:
   - chmod +x docker-compose
   - sudo mv docker-compose /usr/local/bin
 
+install: npm install
+
 before_script:
   - docker-compose up -d
 
