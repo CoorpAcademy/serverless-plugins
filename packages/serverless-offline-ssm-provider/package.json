@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-ssm-provider",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Emulate AWS λ and SSM locally when developing your Serverless project",
   "main": "src",
   "repository": {
