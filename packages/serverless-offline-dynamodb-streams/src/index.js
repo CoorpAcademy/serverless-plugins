@@ -75,8 +75,8 @@ class ServerlessOfflineDynamoDBStreams {
     return new DynamoDBStreams(awsConfig);
   }
 
-  eventHandler(streamEvent, functionName, shardId, Records, cb) {
-    this.serverless.cli.log(`${streamEvent.arn} (λ: ${functionName})`);
+  eventHandler(streamARN, functionName, shardId, Records, cb) {
+    this.serverless.cli.log(`${extractTableNameFromARN(streamARN)} (λ: ${functionName})`);
 
     const {location = '.'} = getConfig(this.service, 'serverless-offline');
 
@@ -138,7 +138,7 @@ class ServerlessOfflineDynamoDBStreams {
         new Writable({
           objectMode: true,
           write: (chunk, encoding, cb) => {
-            this.eventHandler(tableEvent, functionName, shardId, chunk, cb);
+            this.eventHandler(streamARN, functionName, shardId, chunk, cb);
           }
         })
       );
