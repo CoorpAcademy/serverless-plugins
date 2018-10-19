@@ -8,10 +8,10 @@ for QUEUE_NAME in $QUEUES
 do 
     until aws sqs --endpoint-url ${AWS_ENDPOINT_URL} get-queue-url --queue-name ${QUEUE_NAME}  > /dev/null 2> /dev/null
     do
-    echo "Creating queue $QUEUE_NAME"
-    aws sqs --endpoint-url ${AWS_ENDPOINT_URL} create-queue \        
-        --queue-name ${QUEUE_NAME} \
-        > /dev/null 2> /dev/null
+        echo "Creating queue $QUEUE_NAME"
+        aws sqs --endpoint-url ${AWS_ENDPOINT_URL} create-queue \
+            --queue-name ${QUEUE_NAME} \
+            > /dev/null 2> /dev/null
     done
 done
 
