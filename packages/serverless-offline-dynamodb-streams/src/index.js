@@ -81,6 +81,16 @@ class ServerlessOfflineDynamoDBStreams {
     const {location = '.'} = getConfig(this.service, 'serverless-offline');
 
     const __function = this.service.getFunction(functionName);
+
+    const {env} = process;
+    const functionEnv = Object.assign(
+      {},
+      env,
+      get('service.provider.environment', this),
+      get('environment', __function)
+    );
+    process.env = functionEnv;
+
     const servicePath = join(this.serverless.config.servicePath, location);
     const funOptions = getFunctionOptions(__function, functionName, servicePath);
     const handler = createHandler(funOptions, {});
@@ -100,6 +110,8 @@ class ServerlessOfflineDynamoDBStreams {
         .then(res => lambdaContext.done(null, res))
         .catch(lambdaContext.done);
     else handler(event, lambdaContext, lambdaContext.done);
+
+    process.env = env;
   }
 
   async createDynamoDBStreamReadable(functionName, tableEvent) {
