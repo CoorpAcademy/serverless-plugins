@@ -1,0 +1,41 @@
+{
+    // Utilisez IntelliSense pour en savoir plus sur les attributs possibles.
+    // Pointez pour afficher la description des attributs existants.
+    // Pour plus d'informations, visitez : https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "SQS",
+            "program": "${workspaceFolder}/node_modules/.bin/serverless",
+            "cwd": "${workspaceFolder}/packages/serverless-offline-sqs/example",
+            "args": [
+                "offline",
+                "start"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "DynamoDB Streams",
+            "program": "${workspaceFolder}/node_modules/.bin/serverless",
+            "cwd": "${workspaceFolder}/packages/serverless-offline-dynamodb-streams/example",
+            "args": [
+                "offline",
+                "start"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Kinesis",
+            "program": "${workspaceFolder}/node_modules/.bin/serverless",
+            "cwd": "${workspaceFolder}/packages/serverless-offline-kinesis/example",
+            "args": [
+                "offline",
+                "start"
+            ]
+        }
+    ]
+}
