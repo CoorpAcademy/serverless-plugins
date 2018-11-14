@@ -1,6 +1,6 @@
-# serverless-offline-sms-provider
+# serverless-offline-ssm-provider
 
-This Serverless-offline-sms-provider fallback SSM resolution on your local machine. To do so, read specific file and extract values.
+This Serverless-offline-ssm-provider fallback SSM resolution on your local machine. To do so, read specific file and extract values.
 
 ## Installation
 
