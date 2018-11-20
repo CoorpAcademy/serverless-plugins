@@ -64,7 +64,7 @@ class ServerlessOfflineKinesis {
     return new Kinesis(awsConfig);
   }
 
-  eventHandler(streamEvent, functionName, shardId, chunk, cb) {
+  createEventHandler(streamEvent, functionName) {
     const streamName = this.getStreamName(streamEvent);
     this.serverless.cli.log(`${streamName} (λ: ${functionName})`);
 
@@ -79,44 +79,44 @@ class ServerlessOfflineKinesis {
       get('service.provider.environment', this),
       get('environment', __function)
     );
-    process.env = functionEnv;
 
     const servicePath = join(this.serverless.config.servicePath, location);
     const funOptions = getFunctionOptions(__function, functionName, servicePath);
     const handler = createHandler(funOptions, {});
 
-    const lambdaContext = createLambdaContext(__function, (err, data) => {
-      this.serverless.cli.log(
-        `[${err ? figures.cross : figures.tick}] ${JSON.stringify(data) || ''}`
-      );
-      cb(err, data);
-    });
+    return (shardId, chunk, cb) => {
+      const lambdaContext = createLambdaContext(__function, (err, data) => {
+        this.serverless.cli.log(
+          `[${err ? figures.cross : figures.tick}] ${JSON.stringify(data) || ''}`
+        );
+        cb(err, data);
+      });
 
-    const event = {
-      Records: chunk.map(({SequenceNumber, ApproximateArrivalTimestamp, Data, PartitionKey}) => ({
-        kinesis: {
-          partitionKey: PartitionKey,
-          kinesisSchemaVersion: '1.0',
-          data: Data.toString('base64'),
-          sequenceNumber: SequenceNumber
-        },
-        eventSource: 'aws:kinesis',
-        eventID: `${shardId}:${SequenceNumber}`,
-        invokeIdentityArn: 'arn:aws:iam::serverless:role/offline',
-        eventVersion: '1.0',
-        eventName: 'aws:kinesis:record',
-        eventSourceARN: streamEvent.arn,
-        awsRegion: 'us-west-2'
-      }))
+      const event = {
+        Records: chunk.map(({SequenceNumber, ApproximateArrivalTimestamp, Data, PartitionKey}) => ({
+          kinesis: {
+            partitionKey: PartitionKey,
+            kinesisSchemaVersion: '1.0',
+            data: Data.toString('base64'),
+            sequenceNumber: SequenceNumber
+          },
+          eventSource: 'aws:kinesis',
+          eventID: `${shardId}:${SequenceNumber}`,
+          invokeIdentityArn: 'arn:aws:iam::serverless:role/offline',
+          eventVersion: '1.0',
+          eventName: 'aws:kinesis:record',
+          eventSourceARN: streamEvent.arn,
+          awsRegion: 'us-west-2'
+        }))
+      };
+      process.env = functionEnv;
+      if (handler.length < 3)
+        handler(event, lambdaContext)
+          .then(res => lambdaContext.done(null, res))
+          .catch(lambdaContext.done);
+      else handler(event, lambdaContext, lambdaContext.done);
+      process.env = env;
     };
-
-    if (handler.length < 3)
-      handler(event, lambdaContext)
-        .then(res => lambdaContext.done(null, res))
-        .catch(lambdaContext.done);
-    else handler(event, lambdaContext, lambdaContext.done);
-
-    process.env = env;
   }
 
   getStreamName(streamEvent) {
@@ -159,6 +159,8 @@ class ServerlessOfflineKinesis {
       )
     );
 
+    const preload = process.env.SERVERLESS_OFFLINE_PRELOAD;
+    let eventHandler = preload && this.createEventHandler(streamEvent, functionName) 
     forEach(({ShardId: shardId}) => {
       const readable = KinesisReadable(client, streamName, {
         shardId,
@@ -170,7 +172,7 @@ class ServerlessOfflineKinesis {
         new Writable({
           objectMode: true,
           write: (chunk, encoding, cb) => {
-            this.eventHandler(streamEvent, functionName, shardId, chunk, cb);
+            (eventHandler || this.createEventHandler(streamEvent, functionName))(shardId, chunk, cb);
           }
         })
       );
