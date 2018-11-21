@@ -58,6 +58,7 @@ custom:
     region: eu-west-1
     accessKeyId: root
     secretAccessKey: root
+    skipCacheInvalidation: false
 ```
 
 > `arn` could be deduce from `tableName` if your add the key `tableName` in your function's configuration. Useful if your use dynalite and regularly recreate a new DynamoDBStreams.

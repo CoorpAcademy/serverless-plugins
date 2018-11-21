@@ -43,3 +43,4 @@ custom:
     region: ${self:provider.region}
     accessKeyId: root
     secretAccessKey: root
+    skipCacheInvalidation: false

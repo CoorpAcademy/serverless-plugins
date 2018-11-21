@@ -72,4 +72,5 @@ custom:
     region: eu-west-1
     accessKeyId: root
     secretAccessKey: root
+    skipCacheInvalidation: false
 ```
