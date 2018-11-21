@@ -8,8 +8,9 @@ docker-compose up -d
 npm start
 
 # Trigger events
-aws kinesis --endpoint-url http://localhost:4567 put-record --stream-name MyFirstStream --data "MyFirstMessage" --partition-key "MyFirstMessage"
-aws kinesis --endpoint-url http://localhost:4567 put-record --stream-name MySecondStream --data "MySecondMessage" --partition-key "MySecondMessage"
-aws kinesis --endpoint-url http://localhost:4567 put-record --stream-name MyThirdStream --data "MyThirdMessage" --partition-key "MyThirdMessage"
-aws kinesis --endpoint-url http://localhost:4567 put-record --stream-name MyFourthStream --data "MyFourthMessage" --partition-key "MyFourthMessage"
+aws kinesis --endpoint-url http://localhost:4567 put-record --stream-name MyFirstStream  --partition-key "MyFirstMessage"  --data "MyFirstMessage"  &
+aws kinesis --endpoint-url http://localhost:4567 put-record --stream-name MySecondStream --partition-key "MySecondMessage" --data "MySecondMessage" &
+aws kinesis --endpoint-url http://localhost:4567 put-record --stream-name MyThirdStream  --partition-key "MyThirdMessage"  --data "MyThirdMessage"  &
+aws kinesis --endpoint-url http://localhost:4567 put-record --stream-name MyFourthStream --partition-key "MyFourthMessage" --data "MyFourthMessage" &
+wait
 ```
