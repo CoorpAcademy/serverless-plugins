@@ -83,7 +83,6 @@ class ServerlessOfflineKinesis {
 
     const servicePath = join(this.serverless.config.servicePath, location);
     const funOptions = getFunctionOptions(__function, functionName, servicePath);
-    console.log('handler', Object.assign({}, this.options, this.config));
     const handler = createHandler(funOptions, Object.assign({}, this.options, this.config));
     const lambdaContext = createLambdaContext(__function, (err, data) => {
       this.serverless.cli.log(
