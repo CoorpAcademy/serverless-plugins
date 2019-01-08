@@ -37,6 +37,7 @@ functions:
     handler: handler.compute
     events:
       - stream:
+          enabled: true
           type: kinesis
           arn: arn:aws:kinesis:eu-west-1:XXXXXX:stream/polls
           batchSize: 10

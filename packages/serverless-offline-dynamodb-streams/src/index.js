@@ -190,8 +190,9 @@ class ServerlessOfflineDynamoDBStreams {
         get('events'),
         filter(
           event =>
-            matchesProperty('stream.type', 'dynamodb')(event) ||
-            startsWith('arn:aws:dynamodb', event.stream)
+            !matchesProperty('stream.enabled', false)(event) &&
+            (matchesProperty('stream.type', 'dynamodb')(event) ||
+              startsWith('arn:aws:dynamodb', event.stream))
         ),
         map(get('stream'))
       )(_function);

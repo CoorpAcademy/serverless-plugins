@@ -185,8 +185,9 @@ class ServerlessOfflineKinesis {
         get('events'),
         filter(
           event =>
-            matchesProperty('stream.type', 'kinesis')(event) ||
-            startsWith('arn:aws:kinesis', event.stream)
+            !matchesProperty('stream.enabled', false)(event) &&
+            (matchesProperty('stream.type', 'kinesis')(event) ||
+              startsWith('arn:aws:kinesis', event.stream))
         ),
         map(get('stream'))
       )(_function);

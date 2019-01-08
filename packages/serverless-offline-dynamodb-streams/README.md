@@ -37,6 +37,7 @@ functions:
     handler: handler.compute
     events:
       - stream:
+          enabled: true
           type: dynamodb
           arn: arn:aws:dynamodb:eu-west-1:XXXXXX:table/myStream/stream/2018-07-02T19:48:31.121
           batchSize: 10
@@ -69,6 +70,7 @@ functions:
     handler: handler.compute
     events:
       - stream:
+          enabled: true
           type: dynamodb
           tableName: myTable
 ```
