@@ -59,4 +59,5 @@ custom:
     accessKeyId: root
     secretAccessKey: root
     skipCacheInvalidation: false
+    readInterval: 500
 ```

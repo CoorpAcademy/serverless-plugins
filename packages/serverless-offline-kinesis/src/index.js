@@ -160,11 +160,15 @@ class ServerlessOfflineKinesis {
     );
 
     forEach(({ShardId: shardId}) => {
-      const readable = KinesisReadable(client, streamName, {
-        shardId,
-        limit: streamEvent.batchSize,
-        iterator: streamEvent.startingPosition || 'TRIM_HORIZON'
-      });
+      const readable = KinesisReadable(
+        client,
+        streamName,
+        Object.assign({}, this.config, {
+          shardId,
+          limit: streamEvent.batchSize,
+          iterator: streamEvent.startingPosition || 'TRIM_HORIZON'
+        })
+      );
 
       readable.pipe(
         new Writable({

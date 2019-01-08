@@ -140,11 +140,15 @@ class ServerlessOfflineDynamoDBStreams {
     );
 
     forEach(({ShardId: shardId}) => {
-      const readable = DynamoDBReadable(dynamodbStreamsClient, streamARN, {
-        shardId,
-        limit: tableEvent.batchSize,
-        iterator: tableEvent.startingPosition || 'TRIM_HORIZON'
-      });
+      const readable = DynamoDBReadable(
+        dynamodbStreamsClient,
+        streamARN,
+        Object.assign({}, this.config, {
+          shardId,
+          limit: tableEvent.batchSize,
+          iterator: tableEvent.startingPosition || 'TRIM_HORIZON'
+        })
+      );
 
       readable.pipe(
         new Writable({
