@@ -182,7 +182,7 @@ class ServerlessOfflineDynamoDBStreams {
     }
 
     throw new Error(
-      `TableName not found. See https://github.com/godu/serverless/tree/master/packages/serverless-offline-dynamodb-streams#functions`
+      `TableName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-dynamodb-streams#functions`
     );
   }
 

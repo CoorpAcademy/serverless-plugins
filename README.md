@@ -1,5 +1,5 @@
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
-[![Build Status](https://travis-ci.org/godu/serverless.svg?branch=master)](https://travis-ci.org/godu/serverless)
+[![Build Status](https://travis-ci.org/CoorpAcademy/serverless-plugins.svg?branch=master)](https://travis-ci.org/CoorpAcademy/serverless-plugins)
 [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
 
 

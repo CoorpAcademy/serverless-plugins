@@ -71,7 +71,7 @@ class ServerlessOfflineSQS {
     }
 
     throw new Error(
-      `QueueName not found. See https://github.com/godu/serverless/tree/master/packages/serverless-offline-sqs#functions`
+      `QueueName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-sqs#functions`
     );
   }
 
