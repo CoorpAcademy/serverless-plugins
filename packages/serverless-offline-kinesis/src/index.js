@@ -139,7 +139,7 @@ class ServerlessOfflineKinesis {
     }
 
     throw new Error(
-      `StreamName not found. See https://github.com/godu/serverless/tree/master/packages/serverless-offline-kinesis#functions`
+      `StreamName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-kinesis#functions`
     );
   }
 
