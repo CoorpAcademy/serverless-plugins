@@ -9,14 +9,18 @@ class ExtendDeploymentWithAccessLogs {
   bindDeploymentId() {
     const template = this.serverless.service.provider.compiledCloudFormationTemplate
 
-    // Find the deployment resource
-    let deploymentId
+    // Find the deployment resource and patch it
     for (let key of Object.keys(template.Resources)) {
       const resource = template.Resources[key]
       if (resource.Type === 'AWS::ApiGateway::Deployment') {
-        deploymentId = key
-        console.log('YOLOLOLO')
-        break
+        resource.Properties.StageDescription = {
+          AccessLogSetting: {
+            Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "caller":"$context.identity.caller", "user":"$context.identity.user","requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength" }',
+            DestinationArn: {
+              'Fn::GetAtt': 'CloudWatchLogsGroup.Arn'
+            }
+          }
+        }
       }
     }
   }
