@@ -1,63 +1,33 @@
-# serverless-offline-kinesis
+# serverless-apigateway-access-logs
 
-This Serverless-offline-kinesis plugin emulates AWS λ and Kinesis streams on your local machine. To do so, it listens Kinesis stream and invokes your handlers.
-
-*Features*:
-- [Serverless Webpack](https://github.com/serverless-heaven/serverless-webpack/) support.
-- Kinesis configurations: batchsize and startingPosition.
+This Serverless-apigateway-access-logs plugin enables you oto configure AWS APi gateway access logs
 
 ## Installation
 
-First, add `serverless-offline-kinesis` to your project:
+First, add `serverless-apigateway-access-logs to your project:
 
 ```sh
-npm install serverless-offline-kinesis
+npm install serverless-apigateway-access-logs
 ```
 
-Then inside your project's `serverless.yml` file, add following entry to the plugins section before `serverless-offline` (and after `serverless-webpack` if presents): `serverless-offline-kinesis`.
+Then inside your project's `serverless.yml` file, add following entry to the plugins section
 
 ```yml
 plugins:
-  - serverless-webpack
-  - serverless-offline-kinesis
-  - serverless-offline
+  - serverless-apigateway-access-logs
 ```
 
 [See example](./example/README.md)
 
-## Configure
+## Configuration
+Plugin need to be configured with a log group, and a format.
+Log group just need a name, plugins takes care to ensure CloudWatchLogGroup creation.
 
-### Functions
-
-Ths configuration of function of the plugin follows the [serverless documentation](https://serverless.com/framework/docs/providers/aws/events/streams/).
-
-```yml
-functions:
-  myKinesisHandler:
-    handler: handler.compute
-    events:
-      - stream:
-          enabled: true
-          type: kinesis
-          arn: arn:aws:kinesis:eu-west-1:XXXXXX:stream/polls
-          batchSize: 10
-          startingPosition: TRIM_HORIZON
-```
-
-### Kinesis
-
-The configuration of [`aws.Kinesis`'s client](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Kinesis.html#constructor-property) of the plugin is done by defining a `custom: serverless-offline-kinesis` object in your `serverless.yml` with your specific configuration.
-
-You could use [mhart's Kinesalite](https://github.com/mhart/kinesalite) with the following configuration:
-
+To configure it, add something like the following to your `serverless.yml`.
 ```yml
 custom:
-  serverless-offline-kinesis:
-    apiVersion: '2013-12-02'
-    endpoint: http://0.0.0.0:4567
-    region: eu-west-1
-    accessKeyId: root
-    secretAccessKey: root
-    skipCacheInvalidation: false
-    readInterval: 500
+  serverless-apigateway-access-logs:
+    format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "caller":"$context.identity.caller", "user":"$context.identity.user","requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength" }'
+    log-group: /aws/my-api/${self:provider.stage}/access-logs
+    log-group-retention: 14 # optional, default to 7
 ```
