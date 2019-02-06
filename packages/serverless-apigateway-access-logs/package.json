@@ -14,11 +14,11 @@
   "files": [
     "src/index.js"
   ],
-  "author": "AAdrien Becchis @Coorpacademy (https://github.com/AdrieanKhisbe)",
+  "author": "Adrien Becchis @Coorpacademy (https://github.com/AdrieanKhisbe)",
   "license": "MIT",
   "dependencies": {
     "aws-sdk": "^2.271.1",
-    "lodash": "^4.17.10"
+    "lodash": "^4.17.11"
   },
   "keywords": [
     "kinesis",
