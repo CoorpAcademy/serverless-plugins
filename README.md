@@ -6,6 +6,7 @@
 |  Project      | Version       |
 | ------------- | ------------- |
 | [`dynamodb-streams-readable`](/packages/dynamodb-streams-readable) | [![npm](https://img.shields.io/npm/v/dynamodb-streams-readable.svg)](https://www.npmjs.com/package/dynamodb-streams-readable)|
+| [`serverless-apigateway-access-logs`](/packages/serverless-apigateway-access-logs)| [![npm](https://img.shields.io/npm/v/serverless-apigateway-access-logs.svg)](https://www.npmjs.com/package/serverless-apigateway-access-logs)|
 | [`serverless-offline-kinesis`](/packages/serverless-offline-kinesis)| [![npm](https://img.shields.io/npm/v/serverless-offline-kinesis.svg)](https://www.npmjs.com/package/serverless-offline-kinesis)|
 | [`serverless-offline-dynamodb-streams`](/packages/serverless-offline-dynamodb-streams)| [![npm](https://img.shields.io/npm/v/serverless-offline-dynamodb-streams.svg)](https://www.npmjs.com/package/serverless-offline-dynamodb-streams)|
 | [`serverless-offline-sqs`](/packages/serverless-offline-sqs)| [![npm](https://img.shields.io/npm/v/serverless-offline-sqs.svg)](https://www.npmjs.com/package/serverless-offline-sqs)|
