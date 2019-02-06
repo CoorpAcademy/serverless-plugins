@@ -1,20 +1,23 @@
 {
-	"private": true,
-	"dependencies": {
-		"aws-sdk": "^2.271.1",
-		"figures": "^2.0.0",
-		"kinesis-readable": "^1.2.0",
-		"lerna": "^3.2.1",
-		"lodash": "^4.17.10",
-		"serverless": "^1.30.3",
-		"serverless-offline": "^3.25.6",
-		"uuid": "^3.3.2"
-	},
-	"devDependencies": {
-		"@coorpacademy/eslint-plugin-coorpacademy": "^8.1.1",
-		"ava": "^1.0.0-beta.8",
-		"eslint": "^4.19.1",
-		"nyc": "^12.0.2"
-	},
-	"name": "serverless-plugins"
+  "private": true,
+  "scripts": {
+    "postinstall": "lerna bootstrap",
+    "eslint": "eslint .",
+    "ava": "ava",
+    "nyc": "nyc ava",
+    "ava:profile": "node node_modules/ava/profile.js",
+    "pretest": "npm run eslint",
+    "test": "npm run nyc",
+    "publish": "lerna publish"
+  },
+  "dependencies": {
+    "lerna": "^3.2.1",
+    "serverless": "^1.30.3"
+  },
+  "devDependencies": {
+    "@coorpacademy/eslint-plugin-coorpacademy": "^8.1.1",
+    "ava": "^1.0.0-beta.8",
+    "eslint": "^4.19.1",
+    "nyc": "^12.0.2"
+  }
 }
