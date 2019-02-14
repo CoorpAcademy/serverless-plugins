@@ -82,7 +82,7 @@ class ServerlessOfflineSQS {
     const streamName = this.getQueueName(queueEvent);
     this.serverless.cli.log(`${streamName} (λ: ${functionName})`);
 
-    const {location = '.'} = getConfig(this.service, 'serverless-offline');
+    const {location = this.options.location || '.'} = getConfig(this.service, 'serverless-offline');
 
     const __function = this.service.getFunction(functionName);
 
