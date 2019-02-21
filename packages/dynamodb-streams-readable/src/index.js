@@ -108,7 +108,11 @@ function DynamoDBStreamReadable(client, arn, options) {
           return callback(err);
         }
 
-        iterator = data.NextShardIterator;
+        if (data.NextShardIterator) {
+          iterator = data.NextShardIterator;
+        } else {
+          drain = true;
+        }
 
         if (data.Records.length === 0) {
           if (!drain) return setTimeout(read, options.readInterval || 500, callback);
