@@ -52,7 +52,7 @@ functions:
               - Arn
 resources:
   Resources:
-    MyFirstQueue:
+    MyFourthQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: MyFourthQueue
