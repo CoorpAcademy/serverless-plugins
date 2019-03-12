@@ -95,8 +95,8 @@ class ServerlessOfflineSQS {
     process.env = functionEnv;
 
     const servicePath = join(this.serverless.config.servicePath, location);
-
-    const funOptions = getFunctionOptions(__function, functionName, servicePath);
+    const runtime = this.service.provider.runtime || 'nodejs'
+    const funOptions = getFunctionOptions(__function, functionName, servicePath, runtime);
     const handler = createHandler(funOptions, Object.assign({}, this.options, this.config));
 
     const lambdaContext = createLambdaContext(__function, (err, data) => {
@@ -129,10 +129,7 @@ class ServerlessOfflineSQS {
       )
     };
 
-    if (handler.length < 3)
-      handler(event, lambdaContext)
-        .then(res => lambdaContext.done(null, res))
-        .catch(lambdaContext.done);
+    if (handler.length < 3) handler(event, lambdaContext)
     else handler(event, lambdaContext, lambdaContext.done);
 
     process.env = env;
