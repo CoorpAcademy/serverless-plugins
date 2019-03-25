@@ -15,7 +15,7 @@ class ServerlessOfflineSSMProvider {
   constructor(serverless) {
     this.serverless = serverless;
     this.config = this.serverless.service.custom['serverless-offline-ssm-provider'];
-    this.values = getValues(this.config.file);
+    this.values = this.config ? getValues(this.config.file) : getValues();
 
     const aws = this.serverless.getProvider('aws');
     const request = aws.request.bind(aws);
