@@ -92,7 +92,7 @@ function DynamoDBStreamReadable(client, arn, options) {
   }
 
   function read(callback) {
-    if (drain && !pending || !iterator) return callback(null, {Records: null});
+    if ((drain && !pending) || !iterator) return callback(null, {Records: null});
     if (drain && pending) return setImmediate(read, callback);
 
     pending++;
