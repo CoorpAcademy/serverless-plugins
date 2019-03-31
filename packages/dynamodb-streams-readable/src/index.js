@@ -94,6 +94,7 @@ function DynamoDBStreamReadable(client, arn, options) {
   function read(callback) {
     if (drain && !pending) return callback(null, {Records: null});
     if (drain && pending) return setImmediate(read, callback);
+    if (!iterator) return callback(null);
 
     pending++;
     client.getRecords(
