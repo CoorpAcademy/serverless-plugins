@@ -23,6 +23,10 @@ class ExtendDeploymentWithAccessLogs {
 
   bindDeploymentId() {
     const template = this.serverless.service.provider.compiledCloudFormationTemplate;
+    const Tags = _.toPairs(this.configuration.stageTags || {}).map(([Key, Value]) => ({
+      Key,
+      Value
+    }));
 
     // Find the deployment resource and patch it
     Object.keys(template.Resources).forEach(key => {
@@ -45,6 +49,7 @@ class ExtendDeploymentWithAccessLogs {
             RestApiId: this.provider.getApiGatewayRestApiId(),
             StageName: this.provider.getStage(),
             DeploymentId: {Ref: deploymentId},
+            Tags,
             AccessLogSetting: {
               Format: this.configuration.format,
               DestinationArn: {

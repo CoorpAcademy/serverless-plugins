@@ -21,7 +21,7 @@
     "figures": "^2.0.0",
     "kinesis-readable": "^1.2.0",
     "lodash": "^4.17.10",
-    "serverless-offline": "^3.25.6"
+    "serverless-offline": "^4.9.2"
   },
   "keywords": [
     "kinesis",

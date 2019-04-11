@@ -1,6 +1,6 @@
 # serverless-apigateway-access-logs
 
-This Serverless-apigateway-access-logs plugin enables you to configure AWS APi gateway access logs.
+This Serverless-apigateway-access-logs plugin enables you to configure AWS API gateway access logs.
 
 ## Installation
 
@@ -31,3 +31,5 @@ custom:
     log-group: /aws/my-api/${self:provider.stage}/access-logs
     log-group-retention: 14 # optional, default to 7
 ```
+
+You can also additionnaly add a `stageTags` mapping to have some tags attached to the API gateway stage.
