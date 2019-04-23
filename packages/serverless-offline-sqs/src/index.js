@@ -168,7 +168,9 @@ class ServerlessOfflineSQS {
       );
 
       if (Messages) {
-        await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb));
+        await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb)).catch(
+          () => {}
+        );
 
         await fromCallback(cb =>
           client.deleteMessageBatch(
