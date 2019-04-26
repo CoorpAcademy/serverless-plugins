@@ -52,6 +52,8 @@ resources:
           StreamViewType: NEW_AND_OLD_IMAGES
 
 custom:
+  serverless-offline:
+    port: 3001
   serverless-offline-dynamodb-streams:
     endpoint: http://0.0.0.0:8000
     region: ${self:provider.region}

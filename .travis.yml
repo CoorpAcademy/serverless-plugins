@@ -18,7 +18,7 @@ addons:
 env:
   global:
     - CXX=g++-4.8
-    - DOCKER_COMPOSE_VERSION=1.21.1
+    - DOCKER_COMPOSE_VERSION=1.23.2
 
 before_install:
   - sudo rm /usr/local/bin/docker-compose
@@ -26,5 +26,3 @@ before_install:
   - chmod +x docker-compose
   - sudo mv docker-compose /usr/local/bin
 
-before_script:
-  - docker-compose up -d

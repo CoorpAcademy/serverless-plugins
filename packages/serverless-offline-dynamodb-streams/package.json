@@ -16,6 +16,9 @@
   ],
   "author": "godu",
   "license": "MIT",
+  "scripts": {
+    "test": "cd example && npm test"
+  },
   "dependencies": {
     "aws-sdk": "^2.443.0",
     "dynamodb-streams-readable": "^1.0.3",
