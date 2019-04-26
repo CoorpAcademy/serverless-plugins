@@ -42,6 +42,8 @@ resources:
         ShardCount: 1
 
 custom:
+  serverless-offline:
+    port: 3002
   serverless-offline-kinesis:
     endpoint: http://0.0.0.0:4567
     region: ${self:provider.region}

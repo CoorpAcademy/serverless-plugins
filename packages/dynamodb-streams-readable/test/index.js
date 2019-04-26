@@ -77,7 +77,9 @@ test.serial('reads records that already exist', async t => {
   const {
     dynamodb,
     tableName,
-    table: {TableDescription: {LatestStreamArn}},
+    table: {
+      TableDescription: {LatestStreamArn}
+    },
     dynamodbstreams
   } = t.context;
 
@@ -132,7 +134,9 @@ test.serial('reads ongoing records', t => {
   const {
     dynamodb,
     tableName,
-    table: {TableDescription: {LatestStreamArn}},
+    table: {
+      TableDescription: {LatestStreamArn}
+    },
     dynamodbstreams
   } = t.context;
 
@@ -175,7 +179,9 @@ test.serial('reads latest records', async t => {
   const {
     dynamodb,
     tableName,
-    table: {TableDescription: {LatestStreamArn}},
+    table: {
+      TableDescription: {LatestStreamArn}
+    },
     dynamodbstreams
   } = t.context;
 
@@ -234,7 +240,9 @@ test.serial('emits checkpoints, obeys limits', t => {
   const {
     dynamodb,
     tableName,
-    table: {TableDescription: {LatestStreamArn}},
+    table: {
+      TableDescription: {LatestStreamArn}
+    },
     dynamodbstreams
   } = t.context;
 
@@ -285,7 +293,9 @@ test.serial('reads after checkpoint', async t => {
   const {
     dynamodb,
     tableName,
-    table: {TableDescription: {LatestStreamArn}},
+    table: {
+      TableDescription: {LatestStreamArn}
+    },
     dynamodbstreams
   } = t.context;
 
@@ -364,7 +374,9 @@ test.serial('reads from checkpoint', async t => {
   const {
     dynamodb,
     tableName,
-    table: {TableDescription: {LatestStreamArn}},
+    table: {
+      TableDescription: {LatestStreamArn}
+    },
     dynamodbstreams
   } = t.context;
 

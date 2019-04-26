@@ -1,5 +1,8 @@
 {
     "scripts": {
-        "start": "../../../node_modules/.bin/serverless offline start"
+        "start": "../../../node_modules/.bin/serverless offline start",
+        "pretest": "docker-compose stop sqs && docker-compose rm -f sqs && docker-compose run sqs-create",
+        "test": "if test $(npm run start -- --exec ./test.sh | sed -n '/[✔]/p' | wc -l) != 4 ; then exit 1; fi;",
+        "test": "npm run start -- --exec ./test.sh"
     }
 }

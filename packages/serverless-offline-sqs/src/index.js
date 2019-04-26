@@ -94,9 +94,10 @@ class ServerlessOfflineSQS {
     );
     process.env = functionEnv;
 
+    const serviceRuntime = this.service.provider.runtime;
     const servicePath = join(this.serverless.config.servicePath, location);
 
-    const funOptions = getFunctionOptions(__function, functionName, servicePath);
+    const funOptions = getFunctionOptions(__function, functionName, servicePath, serviceRuntime);
     const handler = createHandler(funOptions, Object.assign({}, this.options, this.config));
 
     const lambdaContext = createLambdaContext(__function, (err, data) => {
@@ -194,7 +195,11 @@ class ServerlessOfflineSQS {
     this.serverless.cli.log(`Starting Offline SQS.`);
 
     mapValues.convert({cap: false})((_function, functionName) => {
-      const queues = pipe(get('events'), filter(has('sqs')), map(get('sqs')))(_function);
+      const queues = pipe(
+        get('events'),
+        filter(has('sqs')),
+        map(get('sqs'))
+      )(_function);
 
       if (!isEmpty(queues)) {
         printBlankLine();

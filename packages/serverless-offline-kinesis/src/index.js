@@ -81,8 +81,9 @@ class ServerlessOfflineKinesis {
     );
     process.env = functionEnv;
 
+    const serviceRuntime = this.service.provider.runtime;
     const servicePath = join(this.serverless.config.servicePath, location);
-    const funOptions = getFunctionOptions(__function, functionName, servicePath);
+    const funOptions = getFunctionOptions(__function, functionName, servicePath, serviceRuntime);
     const handler = createHandler(funOptions, Object.assign({}, this.options, this.config));
     const lambdaContext = createLambdaContext(__function, (err, data) => {
       this.serverless.cli.log(
@@ -149,7 +150,9 @@ class ServerlessOfflineKinesis {
 
     this.serverless.cli.log(`${streamName}`);
 
-    const {StreamDescription: {Shards: shards}} = await fromCallback(cb =>
+    const {
+      StreamDescription: {Shards: shards}
+    } = await fromCallback(cb =>
       client.describeStream(
         {
           StreamName: streamName

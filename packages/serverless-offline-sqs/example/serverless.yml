@@ -38,6 +38,8 @@ resources:
         QueueName: MyFourthQueue
 
 custom:
+  serverless-offline:
+    port: 3003
   serverless-offline-sqs:
     endpoint: http://0.0.0.0:9324
     region: ${self:provider.region}

@@ -10,8 +10,8 @@ services:
       - dynamodb
     entrypoint: sh
     volumes:
-      - ./:/project
-      - ./create-tables.sh:/project/create-tables.sh:ro
+      - ./example/:/project
+      - ./example/create-tables.sh:/project/create-tables.sh:ro
     environment:
       - AWS_ACCESS_KEY_ID=local
       - AWS_SECRET_ACCESS_KEY=local

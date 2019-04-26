@@ -6,8 +6,11 @@
     "ava": "ava",
     "nyc": "nyc ava",
     "ava:profile": "node node_modules/ava/profile.js",
-    "pretest": "npm run eslint",
-    "test": "npm run nyc",
+    "pretest:unit": "docker-compose up -d",
+    "test:unit": "npm run nyc",
+    "posttest:unit": "docker-compose stop",
+    "test:integration": "lerna run test",
+    "test": "npm run eslint && npm run test:unit && npm run test:integration",
     "publish": "lerna publish"
   },
   "dependencies": {
