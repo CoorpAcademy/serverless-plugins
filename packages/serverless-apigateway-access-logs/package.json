@@ -17,8 +17,8 @@
   "author": "Adrien Becchis @Coorpacademy (https://github.com/AdrieanKhisbe)",
   "license": "MIT",
   "dependencies": {
-    "aws-sdk": "^2.271.1",
-    "lodash": "^4.17.10"
+    "aws-sdk": "^2.443.0",
+    "lodash": "^4.17.11"
   },
   "keywords": [
     "kinesis",
