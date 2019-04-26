@@ -17,11 +17,11 @@
   "author": "godu",
   "license": "MIT",
   "dependencies": {
-    "aws-sdk": "^2.271.1",
+    "aws-sdk": "^2.443.0",
     "dynamodb-streams-readable": "^1.0.3",
-    "figures": "^2.0.0",
-    "lodash": "^4.17.10",
-    "serverless-offline": "^4.9.2"
+    "figures": "^3.0.0",
+    "lodash": "^4.17.11",
+    "serverless-offline": "^4.9.4"
   },
   "keywords": [
     "kinesis",

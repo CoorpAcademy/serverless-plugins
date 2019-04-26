@@ -11,13 +11,13 @@
     "publish": "lerna publish"
   },
   "dependencies": {
-    "lerna": "^3.13.1",
-    "serverless": "^1.39.1"
+    "lerna": "^3.13.4",
+    "serverless": "^1.41.1"
   },
   "devDependencies": {
-    "@coorpacademy/eslint-plugin-coorpacademy": "^8.1.1",
-    "ava": "^1.4.0",
-    "eslint": "^5.15.3",
-    "nyc": "^13.3.0"
+    "@coorpacademy/eslint-plugin-coorpacademy": "^8.3.1",
+    "ava": "^1.4.1",
+    "eslint": "^5.16.0",
+    "nyc": "^14.0.0"
   }
 }
