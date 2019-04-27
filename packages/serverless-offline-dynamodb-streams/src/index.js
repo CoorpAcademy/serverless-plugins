@@ -8,9 +8,11 @@ const {
   forEach,
   get,
   isEmpty,
+  isUndefined,
   map,
   mapValues,
   matchesProperty,
+  omitBy,
   pipe,
   startsWith
 } = require('lodash/fp');
@@ -28,8 +30,8 @@ const fromCallback = fun =>
 
 const printBlankLine = () => console.log();
 
-const getConfig = (service, pluginName) => {
-  return (service && service.custom && service.custom[pluginName]) || {};
+const getConfig = (service, options, pluginName) => {
+  return Object.assign(get(['custom', pluginName], service), omitBy(isUndefined, options));
 };
 
 const extractTableNameFromARN = arn => {
@@ -43,7 +45,7 @@ class ServerlessOfflineDynamoDBStreams {
     this.serverless = serverless;
     this.service = serverless.service;
     this.options = options;
-    this.config = getConfig(this.service, 'serverless-offline-dynamodb-streams');
+    this.config = getConfig(this.service, this.options, 'serverless-offline-dynamodb-streams');
 
     this.commands = {};
 
@@ -79,7 +81,7 @@ class ServerlessOfflineDynamoDBStreams {
   eventHandler(streamARN, functionName, shardId, Records, cb) {
     this.serverless.cli.log(`${extractTableNameFromARN(streamARN)} (λ: ${functionName})`);
 
-    const {location = '.'} = getConfig(this.service, 'serverless-offline');
+    const {location = '.'} = getConfig(this.service, this.options, 'serverless-offline');
 
     const __function = this.service.getFunction(functionName);
 
@@ -95,7 +97,7 @@ class ServerlessOfflineDynamoDBStreams {
     const serviceRuntime = this.service.provider.runtime;
     const servicePath = join(this.serverless.config.servicePath, location);
     const funOptions = getFunctionOptions(__function, functionName, servicePath, serviceRuntime);
-    const handler = createHandler(funOptions, Object.assign({}, this.options, this.config));
+    const handler = createHandler(funOptions, this.config);
 
     const lambdaContext = createLambdaContext(__function, (err, data) => {
       this.serverless.cli.log(
