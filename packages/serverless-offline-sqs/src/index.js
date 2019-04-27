@@ -1,7 +1,18 @@
 const {join} = require('path');
 const figures = require('figures');
 const SQS = require('aws-sdk/clients/sqs');
-const {mapValues, isEmpty, forEach, map, has, filter, get, pipe} = require('lodash/fp');
+const {
+  filter,
+  forEach,
+  get,
+  has,
+  isEmpty,
+  isUndefined,
+  map,
+  mapValues,
+  omitBy,
+  pipe
+} = require('lodash/fp');
 const {createHandler, getFunctionOptions} = require('serverless-offline/src/functionHelper');
 const createLambdaContext = require('serverless-offline/src/createLambdaContext');
 
@@ -15,8 +26,8 @@ const fromCallback = fun =>
 
 const printBlankLine = () => console.log();
 
-const getConfig = (service, pluginName) => {
-  return (service && service.custom && service.custom[pluginName]) || {};
+const getConfig = (service, options, pluginName) => {
+  return Object.assign(get(['custom', pluginName], service), omitBy(isUndefined, options));
 };
 
 const extractQueueNameFromARN = arn => {
@@ -29,7 +40,7 @@ class ServerlessOfflineSQS {
     this.serverless = serverless;
     this.service = serverless.service;
     this.options = options;
-    this.config = getConfig(this.service, 'serverless-offline-sqs');
+    this.config = getConfig(this.service, this.options, 'serverless-offline-sqs');
 
     this.commands = {};
 
@@ -82,7 +93,7 @@ class ServerlessOfflineSQS {
     const streamName = this.getQueueName(queueEvent);
     this.serverless.cli.log(`${streamName} (λ: ${functionName})`);
 
-    const {location = this.options.location || '.'} = getConfig(this.service, 'serverless-offline');
+    const {location = '.'} = getConfig(this.service, this.options, 'serverless-offline');
 
     const __function = this.service.getFunction(functionName);
 
@@ -99,7 +110,7 @@ class ServerlessOfflineSQS {
     const servicePath = join(this.serverless.config.servicePath, location);
 
     const funOptions = getFunctionOptions(__function, functionName, servicePath, serviceRuntime);
-    const handler = createHandler(funOptions, Object.assign({}, this.options, this.config));
+    const handler = createHandler(funOptions, this.config);
 
     const lambdaContext = createLambdaContext(__function, (err, data) => {
       this.serverless.cli.log(
