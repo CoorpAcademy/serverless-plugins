@@ -142,11 +142,10 @@ class ServerlessOfflineSQS {
       )
     };
 
-    if (handler.length < 3)
-      handler(event, lambdaContext)
-        .then(res => lambdaContext.done(null, res))
-        .catch(lambdaContext.done);
-    else handler(event, lambdaContext, lambdaContext.done);
+    const x = handler(event, lambdaContext, lambdaContext.done);
+    if (x && typeof x.then === 'function' && typeof x.catch === 'function')
+      x.then(lambdaContext.succeed).catch(lambdaContext.fail);
+    else if (x instanceof Error) lambdaContext.fail(x);
 
     process.env = env;
   }
