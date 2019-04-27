@@ -1,8 +1,0 @@
-{
-    "scripts": {
-        "start": "../../../node_modules/.bin/serverless offline",
-        "pretest": "docker-compose stop kinesis && docker-compose rm -f kinesis && docker-compose run kinesis-create",
-        "test": "if test $(npm run start -- --exec ./test.sh | sed -n '/[✔]/p' | wc -l) != 4 ; then exit 1; fi;",
-        "test": "npm run start -- --exec ./test.sh"
-    }
-}

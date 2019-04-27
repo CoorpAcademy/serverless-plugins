@@ -23,7 +23,7 @@ plugins:
   - serverless-offline
 ```
 
-[See example](./example/README.md)
+[See example](../serverless-offline-kinesis-integration/README.md)
 
 ## Configure
 

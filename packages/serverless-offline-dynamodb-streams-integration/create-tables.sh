@@ -16,8 +16,8 @@ do
         --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1 \
         --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES \
         > /dev/null 2> /dev/null
-    done
-done &
+    done &
+done
 
 wait
 

@@ -23,7 +23,7 @@ plugins:
   - serverless-offline
 ```
 
-[See example](./example/README.md)
+[See example](../serverless-offline-dynamodb-streams-integration/README.md)
 
 ## Configure
 

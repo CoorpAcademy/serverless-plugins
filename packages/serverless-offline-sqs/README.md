@@ -24,13 +24,13 @@ plugins:
   - serverless-offline
 ```
 
-[See example](./example/README.md)
+[See example](../serverless-offline-sqs-integration/README.md)
 
 ## How it works?
 
 To be able to emulate AWS SQS queue on local machine there should be some queue system actually running. One of the existing implementations suitable for the task is [ElasticMQ](https://github.com/adamw/elasticmq).
 
-[ElasticMQ](https://github.com/adamw/elasticmq) is a standalone in-memory queue system, which implements AWS SQS compatible interface. It can be run either stand-alone or inside Docker container. See [example](./example/docker-compose.yml) `sqs` service setup.
+[ElasticMQ](https://github.com/adamw/elasticmq) is a standalone in-memory queue system, which implements AWS SQS compatible interface. It can be run either stand-alone or inside Docker container. See [example](../serverless-offline-sqs-integration/docker-compose.yml) `sqs` service setup.
 
 We also need to setup actual queue in ElasticMQ server, we can use [AWS cli](https://aws.amazon.com/cli/) tools for that. In example, we spawn-up another container with `aws-cli` pre-installed and run initialization script, against ElasticMQ server in separate container.
 

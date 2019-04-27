@@ -12,8 +12,8 @@ do
         aws sqs --endpoint-url ${AWS_ENDPOINT_URL} create-queue \
             --queue-name ${QUEUE} \
             > /dev/null 2> /dev/null
-    done
-done &
+    done &
+done
 
 wait
 

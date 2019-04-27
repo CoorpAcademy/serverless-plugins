@@ -8,33 +8,39 @@
             "type": "node",
             "request": "launch",
             "name": "SQS",
-            "program": "${workspaceFolder}/node_modules/.bin/serverless",
-            "cwd": "${workspaceFolder}/packages/serverless-offline-sqs/example",
+            "program": "${workspaceFolder}/packages/serverless-offline-sqs-integration/node_modules/.bin/serverless",
+            "cwd": "${workspaceFolder}/packages/serverless-offline-sqs-integration",
+            "env": {
+                "PATH": "${env:PATH}:${workspaceFolder}/packages/serverless-offline-sqs-integration/node_modules/.bin" 
+            },
             "args": [
-                "offline",
-                "start"
+                "offline"
             ]
         },
         {
             "type": "node",
             "request": "launch",
             "name": "DynamoDB Streams",
-            "program": "${workspaceFolder}/node_modules/.bin/serverless",
-            "cwd": "${workspaceFolder}/packages/serverless-offline-dynamodb-streams/example",
+            "program": "${workspaceFolder}/packages/serverless-offline-dynamodb-streams-integration/node_modules/.bin/serverless",
+            "cwd": "${workspaceFolder}/packages/serverless-offline-dynamodb-streams-integration",
+            "env": {
+                "PATH": "${env:PATH}:${workspaceFolder}/packages/serverless-offline-dynamodb-streams-integration/node_modules/.bin" 
+            },
             "args": [
-                "offline",
-                "start"
+                "offline"
             ]
         },
         {
             "type": "node",
             "request": "launch",
             "name": "Kinesis",
-            "program": "${workspaceFolder}/node_modules/.bin/serverless",
-            "cwd": "${workspaceFolder}/packages/serverless-offline-kinesis/example",
+            "program": "${workspaceFolder}/packages/serverless-offline-kinesis-integration/node_modules/.bin/serverless",
+            "cwd": "${workspaceFolder}/packages/serverless-offline-kinesis-integration",
+            "env": {
+                "PATH": "${env:PATH}:${workspaceFolder}/packages/serverless-offline-kinesis-integration/node_modules/.bin" 
+            },
             "args": [
-                "offline",
-                "start"
+                "offline"
             ]
         }
     ]

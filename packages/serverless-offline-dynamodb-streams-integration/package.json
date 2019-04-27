@@ -1,0 +1,19 @@
+{
+    "name": "serverless-offline-dynamodb-streams-integration",
+    "private": true,
+    "scripts": {
+      "start": "sls offline",
+      "pretest": "docker-compose stop dynamodb && docker-compose rm -f dynamodb && docker-compose run dynamodb-create",
+      "test": "node ./test.js"
+    },
+    "dependencies": {
+      "aws-sdk": "^2.444.0",
+      "figures": "^3.0.0",
+      "lodash": "^4.17.11",
+      "serverless": "^1.41.1",
+      "serverless-offline": "^4.9.4",
+      "serverless-offline-dynamodb-streams": "1.5.1",
+      "signal-exit": "^3.0.2"
+    }
+  }
+  

@@ -10,8 +10,8 @@ services:
       - sqs
     entrypoint: sh
     volumes:
-      - ./example/:/project
-      - ./example/create-queues.sh:/project/create-queues.sh:ro
+      - ./:/project
+      - ./create-queues.sh:/project/create-queues.sh:ro
     environment:
       - AWS_ACCESS_KEY_ID=local
       - AWS_SECRET_ACCESS_KEY=local
