@@ -48,6 +48,7 @@ class ServerlessOfflineDynamoDBStreams {
     this.commands = {};
 
     this.hooks = {
+      'before:offline:start': this.offlineStartInit.bind(this),
       'before:offline:start:init': this.offlineStartInit.bind(this),
       'before:offline:start:end': this.offlineStartEnd.bind(this)
     };

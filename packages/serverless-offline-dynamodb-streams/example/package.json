@@ -1,6 +1,6 @@
 {
     "scripts": {
-        "start": "../../../node_modules/.bin/serverless offline start",
+        "start": "../../../node_modules/.bin/serverless offline",
         "pretest": "docker-compose stop dynamodb && docker-compose rm -f dynamodb && docker-compose run dynamodb-create",
         "test": "if test $(npm run start -- --exec ./test.sh | sed -n '/[✔]/p' | wc -l) != 4 ; then exit 1; fi;",
         "test": "npm run start -- --exec ./test.sh"
