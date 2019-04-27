@@ -105,6 +105,12 @@ function DynamoDBStreamReadable(client, arn, options) {
         pending--;
 
         if (err) {
+          if (err.name === 'TrimmedDataAccessException') {
+            return describeStream(function(e) {
+              if (e) return checkpoint.emit('error', e);
+              read(callback);
+            });
+          }
           return callback(err);
         }
 

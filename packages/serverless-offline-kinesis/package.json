@@ -16,11 +16,8 @@
   ],
   "author": "godu",
   "license": "MIT",
-  "scripts": {
-    "test": "cd example && npm test"
-  },
   "dependencies": {
-    "aws-sdk": "^2.443.0",
+    "aws-sdk": "^2.444.0",
     "figures": "^3.0.0",
     "kinesis-readable": "^1.2.0",
     "lodash": "^4.17.11",

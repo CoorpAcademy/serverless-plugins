@@ -13,8 +13,8 @@ do
         --stream-name ${STREAM} \
         --shard-count 1 \
         > /dev/null 2> /dev/null
-    done
-done &
+    done &
+done
 
 wait
 

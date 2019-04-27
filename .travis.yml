@@ -1,4 +1,5 @@
 language: node_js
+
 node_js:
   - "10"
   - "8"
@@ -7,8 +8,9 @@ sudo: required
 services:
   - docker
 
+cache: npm
+
 addons:
-  chrome: stable
   apt:
     sources:
       - ubuntu-toolchain-r-test

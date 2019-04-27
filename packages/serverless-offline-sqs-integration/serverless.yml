@@ -27,6 +27,10 @@ functions:
             Fn::GetAtt:
               - MyThirdQueue
               - Arn
+  myPythonHandler:
+    runtime: python2.7
+    handler: handler.handler
+    events:
       - sqs:
           arn:
             Fn::GetAtt:

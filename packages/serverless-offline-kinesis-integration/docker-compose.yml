@@ -10,8 +10,8 @@ services:
       - kinesis
     entrypoint: sh
     volumes:
-      - ./example/:/project
-      - ./example/create-streams.sh:/project/create-streams.sh:ro
+      - ./:/project
+      - ./create-streams.sh:/project/create-streams.sh:ro
     environment:
       - AWS_ACCESS_KEY_ID=local
       - AWS_SECRET_ACCESS_KEY=local

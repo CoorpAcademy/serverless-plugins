@@ -1,0 +1,19 @@
+{
+
+  "name": "serverless-offline-kinesis-integration",
+  "private": true,
+  "scripts": {
+    "start": "sls offline",
+    "pretest": "docker-compose stop kinesis && docker-compose rm -f kinesis && docker-compose run kinesis-create",
+    "test": "node ./test.js"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.444.0",
+    "figures": "^3.0.0",
+    "lodash": "^4.17.11",
+    "serverless": "^1.41.1",
+    "serverless-offline": "^4.9.4",
+    "serverless-offline-kinesis": "1.5.1",
+    "signal-exit": "^3.0.2"
+  }
+}
