@@ -12,13 +12,16 @@ plugins:
     - serverless-offline
 
 functions:
-  myHandler:
-    handler: handler.handler
+  myPromiseHandler:
+    handler: handler.promise
     events:
       - stream: arn:aws:kinesis:region:XXXXXX:stream/MyFirstStream 
       - stream:
           type: kinesis
           arn: arn:aws:kinesis:region:XXXXXX:stream/MySecondStream
+  myCallbackHandler:
+    handler: handler.callback
+    events:
       - stream:
           type: kinesis
           streamName: MyThirdStream

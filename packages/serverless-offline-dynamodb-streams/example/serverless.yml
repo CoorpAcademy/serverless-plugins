@@ -12,13 +12,16 @@ plugins:
     - serverless-offline
 
 functions:
-  myHandler:
-    handler: handler.handler
+  myPromiseHandler:
+    handler: handler.promise
     events:
       - stream: arn:aws:dynamodb:region:XXXXXX:table/MyFirstTable
       - stream:
           type: dynamodb
           arn: arn:aws:dynamodb:region:XXXXXX:table/MySecondTable
+  myCallbackHandler:
+    handler: handler.callback
+    events:
       - stream:
           type: dynamodb
           streamName: MyThirdTable
