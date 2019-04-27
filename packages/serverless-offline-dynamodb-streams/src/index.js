@@ -16,7 +16,7 @@ const {
   pipe,
   startsWith
 } = require('lodash/fp');
-const {createHandler, getFunctionOptions} = require('serverless-offline/src/functionHelper');
+const functionHelper = require('serverless-offline/src/functionHelper');
 const createLambdaContext = require('serverless-offline/src/createLambdaContext');
 const DynamoDBReadable = require('dynamodb-streams-readable');
 
@@ -96,8 +96,13 @@ class ServerlessOfflineDynamoDBStreams {
 
     const serviceRuntime = this.service.provider.runtime;
     const servicePath = join(this.serverless.config.servicePath, location);
-    const funOptions = getFunctionOptions(__function, functionName, servicePath, serviceRuntime);
-    const handler = createHandler(funOptions, this.config);
+    const funOptions = functionHelper.getFunctionOptions(
+      __function,
+      functionName,
+      servicePath,
+      serviceRuntime
+    );
+    const handler = functionHelper.createHandler(funOptions, this.config);
 
     const lambdaContext = createLambdaContext(__function, (err, data) => {
       this.serverless.cli.log(
