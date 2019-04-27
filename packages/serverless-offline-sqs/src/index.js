@@ -169,22 +169,24 @@ class ServerlessOfflineSQS {
       );
 
       if (Messages) {
-        await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb)).catch(
-          () => {}
-        );
+        try {
+          await fromCallback(cb => this.eventHandler(queueEvent, functionName, Messages, cb));
 
-        await fromCallback(cb =>
-          client.deleteMessageBatch(
-            {
-              Entries: (Messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
-                Id,
-                ReceiptHandle
-              })),
-              QueueUrl
-            },
-            () => cb()
-          )
-        );
+          await fromCallback(cb =>
+            client.deleteMessageBatch(
+              {
+                Entries: (Messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
+                  Id,
+                  ReceiptHandle
+                })),
+                QueueUrl
+              },
+              () => cb()
+            )
+          );
+        } catch (err) {
+          this.serverless.cli.log(err.stack);
+        }
       }
 
       next();
