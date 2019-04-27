@@ -12,12 +12,15 @@ plugins:
     - serverless-offline
 
 functions:
-  myHandler:
-    handler: handler.handler
+  myPromiseHandler:
+    handler: handler.promise
     events:
       - sqs: arn:aws:sqs:region:XXXXXX:MyFirstQueue
       - sqs:
           arn: arn:aws:sqs:region:XXXXXX:MySecondQueue
+  myCallbackHandler:
+    handler: handler.callback
+    events:
       - sqs:
           queueName: MyThirdQueue
           arn:
