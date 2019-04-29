@@ -161,8 +161,10 @@ class ServerlessOfflineSQS {
 
     this.serverless.cli.log(`${queueName}`);
 
-    const params = {QueueName: queueName};
-    await fromCallback(cb => client.createQueue(params, cb));
+    if (this.config.autoCreate) {
+      const params = {QueueName: queueName};
+      await fromCallback(cb => client.createQueue(params, cb));
+    }
 
     const {QueueUrl} = await fromCallback(cb =>
       client.getQueueUrl(
