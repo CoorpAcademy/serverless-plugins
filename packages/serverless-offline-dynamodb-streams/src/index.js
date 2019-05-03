@@ -7,6 +7,7 @@ const {
   filter,
   forEach,
   get,
+  getOr,
   isEmpty,
   isUndefined,
   map,
@@ -31,7 +32,7 @@ const fromCallback = fun =>
 const printBlankLine = () => console.log();
 
 const getConfig = (service, options, pluginName) => {
-  return Object.assign(get(['custom', pluginName], service), omitBy(isUndefined, options));
+  return Object.assign(getOr({}, ['custom', pluginName], service), omitBy(isUndefined, options));
 };
 
 const extractTableNameFromARN = arn => {
