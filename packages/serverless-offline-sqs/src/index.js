@@ -27,7 +27,8 @@ const fromCallback = fun =>
 const printBlankLine = () => console.log();
 
 const getConfig = (service, options, pluginName) => {
-  return Object.assign(get(['custom', pluginName], service), omitBy(isUndefined, options));
+  const config = get(['custom', pluginName], service);
+  return config ? Object.assign(config, omitBy(isUndefined, options)) : {};
 };
 
 const extractQueueNameFromARN = arn => {
