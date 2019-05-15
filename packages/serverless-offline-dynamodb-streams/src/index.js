@@ -104,7 +104,7 @@ class ServerlessOfflineDynamoDBStreams {
     );
     const handler = functionHelper.createHandler(funOptions, this.config);
 
-    const lambdaContext = createLambdaContext(__function, (err, data) => {
+    const lambdaContext = createLambdaContext(__function, this.service.provider, (err, data) => {
       this.serverless.cli.log(
         `[${err ? figures.cross : figures.tick}] ${JSON.stringify(data) || ''}`
       );

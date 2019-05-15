@@ -11,8 +11,8 @@
       "figures": "^3.0.0",
       "lodash": "^4.17.11",
       "serverless": "^1.41.1",
-      "serverless-offline": "^4.9.4",
-      "serverless-offline-dynamodb-streams": "1.5.1",
+      "serverless-offline": "^4.10.0",
+      "serverless-offline-dynamodb-streams": "1.6.0",
       "signal-exit": "^3.0.2"
     }
   }

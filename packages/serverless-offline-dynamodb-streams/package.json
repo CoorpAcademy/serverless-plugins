@@ -21,7 +21,7 @@
     "dynamodb-streams-readable": "^1.0.4",
     "figures": "^3.0.0",
     "lodash": "^4.17.11",
-    "serverless-offline": "^4.9.4"
+    "serverless-offline": "^4.10.0"
   },
   "keywords": [
     "kinesis",
