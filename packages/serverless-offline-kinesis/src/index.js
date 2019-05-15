@@ -4,6 +4,8 @@ const figures = require('figures');
 const Kinesis = require('aws-sdk/clients/kinesis');
 const KinesisReadable = require('kinesis-readable');
 const {
+  assign,
+  assignAll,
   filter,
   forEach,
   get,
@@ -30,7 +32,7 @@ const fromCallback = fun =>
 const printBlankLine = () => console.log();
 
 const getConfig = (service, options, pluginName) => {
-  return Object.assign(get(['custom', pluginName], service), omitBy(isUndefined, options));
+  return assign(get(['custom', pluginName], service), omitBy(isUndefined, options));
 };
 
 const extractStreamNameFromARN = arn => {
@@ -58,7 +60,7 @@ class ServerlessOfflineKinesis {
   }
 
   getClient() {
-    const awsConfig = Object.assign(
+    const awsConfig = assign(
       {
         region: this.options.region || this.service.provider.region || 'us-west-2'
       },
@@ -76,12 +78,11 @@ class ServerlessOfflineKinesis {
     const __function = this.service.getFunction(functionName);
 
     const {env} = process;
-    const functionEnv = Object.assign(
-      {},
+    const functionEnv = assignAll([
       env,
       get('service.provider.environment', this),
       get('environment', __function)
-    );
+    ]);
     process.env = functionEnv;
 
     const serviceRuntime = this.service.provider.runtime;
@@ -172,7 +173,7 @@ class ServerlessOfflineKinesis {
       const readable = KinesisReadable(
         client,
         streamName,
-        Object.assign({}, this.config, {
+        assign(this.config, {
           shardId,
           limit: streamEvent.batchSize,
           iterator: streamEvent.startingPosition || 'TRIM_HORIZON'
