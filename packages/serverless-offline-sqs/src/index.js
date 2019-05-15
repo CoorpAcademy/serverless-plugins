@@ -153,6 +153,8 @@ class ServerlessOfflineSQS {
     else if (x instanceof Error) lambdaContext.fail(x);
 
     process.env = env;
+
+    cb();
   }
 
   async createQueueReadable(functionName, queueEvent) {
