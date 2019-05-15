@@ -4,6 +4,8 @@ const figures = require('figures');
 const DynamoDBStreams = require('aws-sdk/clients/dynamodbstreams');
 const DynamoDB = require('aws-sdk/clients/dynamodb');
 const {
+  assign,
+  assignAll,
   filter,
   forEach,
   get,
@@ -31,7 +33,7 @@ const fromCallback = fun =>
 const printBlankLine = () => console.log();
 
 const getConfig = (service, options, pluginName) => {
-  return Object.assign(get(['custom', pluginName], service), omitBy(isUndefined, options));
+  return assign(get(['custom', pluginName], service), omitBy(isUndefined, options));
 };
 
 const extractTableNameFromARN = arn => {
@@ -59,7 +61,7 @@ class ServerlessOfflineDynamoDBStreams {
   }
 
   getDynamoDBClient() {
-    const awsConfig = Object.assign(
+    const awsConfig = assign(
       {
         region: this.options.region || this.service.provider.region || 'us-west-2'
       },
@@ -69,7 +71,7 @@ class ServerlessOfflineDynamoDBStreams {
   }
 
   getDynamoDBStreamsClient() {
-    const awsConfig = Object.assign(
+    const awsConfig = assign(
       {
         region: this.options.region || this.service.provider.region || 'us-west-2'
       },
@@ -86,12 +88,12 @@ class ServerlessOfflineDynamoDBStreams {
     const __function = this.service.getFunction(functionName);
 
     const {env} = process;
-    const functionEnv = Object.assign(
+    const functionEnv = assignAll([
       {},
       env,
       get('service.provider.environment', this),
       get('environment', __function)
-    );
+    ]);
     process.env = functionEnv;
 
     const serviceRuntime = this.service.provider.runtime;
@@ -153,7 +155,7 @@ class ServerlessOfflineDynamoDBStreams {
       const readable = DynamoDBReadable(
         dynamodbStreamsClient,
         streamARN,
-        Object.assign({}, this.config, {
+        assign(this.config, {
           shardId,
           limit: tableEvent.batchSize,
           iterator: tableEvent.startingPosition || 'TRIM_HORIZON'
