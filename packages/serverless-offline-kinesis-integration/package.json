@@ -2,6 +2,7 @@
 
   "name": "serverless-offline-kinesis-integration",
   "private": true,
+  "version": "0.0.0",
   "scripts": {
     "start": "sls offline",
     "pretest": "docker-compose stop kinesis && docker-compose rm -f kinesis && docker-compose run kinesis-create",
