@@ -12,7 +12,7 @@
     "lodash": "^4.17.11",
     "serverless": "^1.41.1",
     "serverless-offline": "^4.10.0",
-    "serverless-offline-sqs": "2.0.0",
+    "serverless-offline-sqs": "2.0.1",
     "signal-exit": "^3.0.2"
   }
 }
