@@ -32,10 +32,6 @@ const fromCallback = fun =>
 
 const printBlankLine = () => console.log();
 
-const getConfig = (service, options, pluginName) => {
-  return assign(get(['custom', pluginName], service), omitBy(isUndefined, options));
-};
-
 const extractTableNameFromARN = arn => {
   const [, , , , , TableURI] = arn.split(':');
   const [, TableName] = TableURI.split('/');
@@ -47,7 +43,6 @@ class ServerlessOfflineDynamoDBStreams {
     this.serverless = serverless;
     this.service = serverless.service;
     this.options = options;
-    this.config = getConfig(this.service, this.options, 'serverless-offline-dynamodb-streams');
 
     this.commands = {};
 
@@ -60,30 +55,28 @@ class ServerlessOfflineDynamoDBStreams {
     this.streams = [];
   }
 
+  getConfig() {
+    return assignAll([
+      omitBy(isUndefined, this.options),
+      omitBy(isUndefined, this.service),
+      omitBy(isUndefined, this.service.provider),
+      omitBy(isUndefined, get(['custom', 'serverless-offline'], this.service)),
+      omitBy(isUndefined, get(['custom', 'serverless-offline-dynamodb-streams'], this.service))
+    ]);
+  }
+
   getDynamoDBClient() {
-    const awsConfig = assign(
-      {
-        region: this.options.region || this.service.provider.region || 'us-west-2'
-      },
-      this.config
-    );
-    return new DynamoDB(awsConfig);
+    return new DynamoDB(this.getConfig());
   }
 
   getDynamoDBStreamsClient() {
-    const awsConfig = assign(
-      {
-        region: this.options.region || this.service.provider.region || 'us-west-2'
-      },
-      this.config
-    );
-    return new DynamoDBStreams(awsConfig);
+    return new DynamoDBStreams(this.getConfig());
   }
 
   eventHandler(streamARN, functionName, shardId, Records, cb) {
     this.serverless.cli.log(`${extractTableNameFromARN(streamARN)} (λ: ${functionName})`);
 
-    const {location = '.'} = getConfig(this.service, this.options, 'serverless-offline');
+    const {location = '.'} = this.getConfig();
 
     const __function = this.service.getFunction(functionName);
 
@@ -104,7 +97,7 @@ class ServerlessOfflineDynamoDBStreams {
       servicePath,
       serviceRuntime
     );
-    const handler = functionHelper.createHandler(funOptions, this.config);
+    const handler = functionHelper.createHandler(funOptions, this.getConfig());
 
     const lambdaContext = createLambdaContext(__function, this.service.provider, (err, data) => {
       this.serverless.cli.log(
@@ -155,7 +148,7 @@ class ServerlessOfflineDynamoDBStreams {
       const readable = DynamoDBReadable(
         dynamodbStreamsClient,
         streamARN,
-        assign(this.config, {
+        assign(this.getConfig(), {
           shardId,
           limit: tableEvent.batchSize,
           iterator: tableEvent.startingPosition || 'TRIM_HORIZON'

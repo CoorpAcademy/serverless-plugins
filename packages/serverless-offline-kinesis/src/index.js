@@ -31,10 +31,6 @@ const fromCallback = fun =>
 
 const printBlankLine = () => console.log();
 
-const getConfig = (service, options, pluginName) => {
-  return assign(get(['custom', pluginName], service), omitBy(isUndefined, options));
-};
-
 const extractStreamNameFromARN = arn => {
   const [, , , , , StreamURI] = arn.split(':');
   const [, ...StreamNames] = StreamURI.split('/');
@@ -46,7 +42,6 @@ class ServerlessOfflineKinesis {
     this.serverless = serverless;
     this.service = serverless.service;
     this.options = options;
-    this.config = getConfig(this.service, this.config, 'serverless-offline-kinesis');
 
     this.commands = {};
 
@@ -59,21 +54,25 @@ class ServerlessOfflineKinesis {
     this.streams = [];
   }
 
+  getConfig() {
+    return assignAll([
+      omitBy(isUndefined, this.options),
+      omitBy(isUndefined, this.service),
+      omitBy(isUndefined, this.service.provider),
+      omitBy(isUndefined, get(['custom', 'serverless-offline'], this.service)),
+      omitBy(isUndefined, get(['custom', 'serverless-offline-kinesis'], this.service))
+    ]);
+  }
+
   getClient() {
-    const awsConfig = assign(
-      {
-        region: this.options.region || this.service.provider.region || 'us-west-2'
-      },
-      this.config
-    );
-    return new Kinesis(awsConfig);
+    return new Kinesis(this.getConfig());
   }
 
   eventHandler(streamEvent, functionName, shardId, chunk, cb) {
     const streamName = this.getStreamName(streamEvent);
     this.serverless.cli.log(`${streamName} (λ: ${functionName})`);
 
-    const {location = '.'} = getConfig(this.service, this.config, 'serverless-offline');
+    const {location = '.'} = this.getConfig();
 
     const __function = this.service.getFunction(functionName);
 
@@ -93,7 +92,7 @@ class ServerlessOfflineKinesis {
       servicePath,
       serviceRuntime
     );
-    const handler = functionHelper.createHandler(funOptions, this.config);
+    const handler = functionHelper.createHandler(funOptions, this.getConfig());
     const lambdaContext = createLambdaContext(__function, this.service.provider, (err, data) => {
       this.serverless.cli.log(
         `[${err ? figures.cross : figures.tick}] ${JSON.stringify(data) || ''}`
@@ -173,7 +172,7 @@ class ServerlessOfflineKinesis {
       const readable = KinesisReadable(
         client,
         streamName,
-        assign(this.config, {
+        assign(this.getConfig(), {
           shardId,
           limit: streamEvent.batchSize,
           iterator: streamEvent.startingPosition || 'TRIM_HORIZON'

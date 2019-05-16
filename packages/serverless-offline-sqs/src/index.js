@@ -2,7 +2,6 @@ const {join} = require('path');
 const figures = require('figures');
 const SQS = require('aws-sdk/clients/sqs');
 const {
-  assign,
   assignAll,
   filter,
   forEach,
@@ -28,10 +27,6 @@ const fromCallback = fun =>
 
 const printBlankLine = () => console.log();
 
-const getConfig = (service, options, pluginName) => {
-  return assign(get(['custom', pluginName], service), omitBy(isUndefined, options));
-};
-
 const extractQueueNameFromARN = arn => {
   const [, , , , , QueueName] = arn.split(':');
   return QueueName;
@@ -42,7 +37,6 @@ class ServerlessOfflineSQS {
     this.serverless = serverless;
     this.service = serverless.service;
     this.options = options;
-    this.config = getConfig(this.service, this.options, 'serverless-offline-sqs');
 
     this.commands = {};
 
@@ -55,14 +49,18 @@ class ServerlessOfflineSQS {
     this.streams = [];
   }
 
+  getConfig() {
+    return assignAll([
+      omitBy(isUndefined, this.options),
+      omitBy(isUndefined, this.service),
+      omitBy(isUndefined, this.service.provider),
+      omitBy(isUndefined, get(['custom', 'serverless-offline'], this.service)),
+      omitBy(isUndefined, get(['custom', 'serverless-offline-sqs'], this.service))
+    ]);
+  }
+
   getClient() {
-    const awsConfig = assign(
-      {
-        region: this.options.region || this.service.provider.region || 'us-west-2'
-      },
-      this.config
-    );
-    return new SQS(awsConfig);
+    return new SQS(this.getConfig());
   }
 
   getQueueName(queueEvent) {
@@ -95,7 +93,7 @@ class ServerlessOfflineSQS {
     const streamName = this.getQueueName(queueEvent);
     this.serverless.cli.log(`${streamName} (λ: ${functionName})`);
 
-    const {location = '.'} = getConfig(this.service, this.options, 'serverless-offline');
+    const {location = '.'} = this.getConfig();
 
     const __function = this.service.getFunction(functionName);
 
@@ -116,7 +114,7 @@ class ServerlessOfflineSQS {
       servicePath,
       serviceRuntime
     );
-    const handler = functionHelper.createHandler(funOptions, this.config);
+    const handler = functionHelper.createHandler(funOptions, this.getConfig());
 
     const lambdaContext = createLambdaContext(__function, this.service.provider, (err, data) => {
       this.serverless.cli.log(
@@ -162,7 +160,7 @@ class ServerlessOfflineSQS {
 
     this.serverless.cli.log(`${queueName}`);
 
-    if (this.config.autoCreate) {
+    if (this.getConfig().autoCreate) {
       const params = {QueueName: queueName};
       await fromCallback(cb => client.createQueue(params, cb));
     }
