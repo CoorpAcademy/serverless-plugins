@@ -1,7 +1,7 @@
 {
   "name": "serverless-offline-sqs-integration",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "scripts": {
     "start": "sls offline",
     "pretest": "docker-compose stop sqs && docker-compose rm -f sqs && docker-compose run sqs-create",
@@ -13,7 +13,7 @@
     "lodash": "^4.17.11",
     "serverless": "^1.41.1",
     "serverless-offline": "^4.10.0",
-    "serverless-offline-sqs": "2.0.1",
+    "serverless-offline-sqs": "^2.0.2",
     "signal-exit": "^3.0.2"
   }
 }
