@@ -93,7 +93,8 @@ class ServerlessOfflineSQS {
     const streamName = this.getQueueName(queueEvent);
     this.serverless.cli.log(`${streamName} (λ: ${functionName})`);
 
-    const {location = '.'} = this.getConfig();
+    const config = this.getConfig()
+    const {location = '.'} = config;
 
     const __function = this.service.getFunction(functionName);
 
@@ -114,7 +115,7 @@ class ServerlessOfflineSQS {
       servicePath,
       serviceRuntime
     );
-    const handler = functionHelper.createHandler(funOptions, this.getConfig());
+    const handler = functionHelper.createHandler(funOptions, config);
 
     const lambdaContext = createLambdaContext(__function, this.service.provider, (err, data) => {
       this.serverless.cli.log(
@@ -122,6 +123,11 @@ class ServerlessOfflineSQS {
       );
       cb(err, data);
     });
+
+    const awsRegion = config.region || 'us-west-2';
+    const awsAccountId = config.accountId || '000000000000';
+    const eventSourceARN = (typeof(queueEvent.arn) === 'string') ?
+          queueEvent.arn : `arn:aws:sqs:${awsRegion}:${awsAccountId}:${streamName}`;
 
     const event = {
       Records: messages.map(
@@ -140,8 +146,8 @@ class ServerlessOfflineSQS {
           messageAttributes,
           md5OfBody,
           eventSource: 'aws:sqs',
-          eventSourceARN: queueEvent.arn,
-          awsRegion: 'us-west-2'
+          eventSourceARN,
+          awsRegion
         })
       )
     };
