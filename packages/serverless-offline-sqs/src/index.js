@@ -100,6 +100,7 @@ class ServerlessOfflineSQS {
     const {env} = process;
     const functionEnv = assignAll([
       env,
+      { AWS_REGION: this.service.provider.region },
       get('service.provider.environment', this),
       get('environment', __function)
     ]);
