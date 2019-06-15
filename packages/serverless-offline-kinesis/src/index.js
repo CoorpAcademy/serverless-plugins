@@ -78,6 +78,7 @@ class ServerlessOfflineKinesis {
 
     const {env} = process;
     const functionEnv = assignAll([
+      {AWS_REGION: get('service.provider.region', this)},
       env,
       get('service.provider.environment', this),
       get('environment', __function)
