@@ -40,7 +40,7 @@ Once ElasticMQ is running and initialized, we can proceed with the configuration
 
 ### Functions
 
-Ths configuration of function of the plugin follows the [serverless documentation](https://serverless.com/framework/docs/providers/aws/events/sqs/).
+The configuration of function of the plugin follows the [serverless documentation](https://serverless.com/framework/docs/providers/aws/events/sqs/).
 
 ```yml
 functions:
