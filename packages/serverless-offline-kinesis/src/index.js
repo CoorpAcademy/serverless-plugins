@@ -183,7 +183,13 @@ class ServerlessOfflineKinesis {
         new Writable({
           objectMode: true,
           write: (chunk, encoding, cb) => {
-            this.eventHandler(streamEvent, functionName, shardId, chunk, cb);
+            const handleAttempt = () => {
+              this.eventHandler(streamEvent, functionName, shardId, chunk, err =>
+                err ? handleAttempt() : cb()
+              );
+            };
+
+            handleAttempt();
           }
         })
       );
