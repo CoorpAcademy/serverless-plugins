@@ -86,3 +86,19 @@ custom:
     secretAccessKey: root
     skipCacheInvalidation: false
 ```
+
+### Example with Nodejs
+```
+const sqs = new AWS.SQS({
+        region: 'localhost',
+        endpoint: 'http://localhost:9324'
+    })
+const queue_name = 'my_queue'
+const queue_params = {
+        MessageBody: JSON.stringify({any_message:'that I want'}),
+        QueueUrl: `${sqs.endpoint.href}queue/${queue_name}`
+    }
+sqs.sendMessage(queue_params)
+    .promise()
+    .then( () => console.log('success') )
+```
