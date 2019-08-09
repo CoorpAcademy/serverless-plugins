@@ -106,7 +106,12 @@ class ServerlessOfflineDynamoDBStreams {
       cb(err, data);
     });
     const event = {
-      Records
+      Records: Records.map(
+        assign({
+          eventSourceARN: streamARN,
+          awsRegion: get('service.provider.region', this)
+        })
+      )
     };
 
     const x = handler(event, lambdaContext, lambdaContext.done);

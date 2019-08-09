@@ -115,7 +115,7 @@ class ServerlessOfflineKinesis {
         eventVersion: '1.0',
         eventName: 'aws:kinesis:record',
         eventSourceARN: streamEvent.arn,
-        awsRegion: 'us-west-2'
+        awsRegion: get('service.provider.region', this)
       }))
     };
 
