@@ -106,7 +106,7 @@ class ServerlessOfflineDynamoDBStreams {
       cb(err, data);
     });
     const event = {
-      Records
+      Records: Records.map(record => Object.assign({}, record, {eventSourceARN: streamARN}))
     };
 
     const x = handler(event, lambdaContext, lambdaContext.done);
