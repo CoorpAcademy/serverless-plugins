@@ -35,5 +35,11 @@
     "kinesis",
     "serverless",
     "lambda"
-  ]
+  ],
+  "devDependencies": {
+    "jest": "^24.9.0"
+  },
+  "scripts": {
+    "test": "jest"
+  }
 }
