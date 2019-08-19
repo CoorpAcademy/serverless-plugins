@@ -1,6 +1,6 @@
 {
   "name": "@gorillastack/serverless-offline-kinesis",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Emulate AWS λ and Kinesis locally when developing your Serverless project",
   "main": "src",
   "repository": {
@@ -15,8 +15,13 @@
     "src/index.js"
   ],
   "authors": [
-    { "name": "godu" },
-    { "name": "Chris Armstrong", "url": "https://github.com/chris-armstrong" }
+    {
+      "name": "godu"
+    },
+    {
+      "name": "Chris Armstrong",
+      "url": "https://github.com/chris-armstrong"
+    }
   ],
   "license": "MIT",
   "dependencies": {
