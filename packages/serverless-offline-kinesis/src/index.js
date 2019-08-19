@@ -1,4 +1,4 @@
-const {join} = require('path');
+const path = require('path');
 const {Writable} = require('stream');
 const figures = require('figures');
 const Kinesis = require('aws-sdk/clients/kinesis');
@@ -19,6 +19,8 @@ const {
   matchesProperty,
   omitBy,
   isString,
+  isObject,
+  isArray,
   pipe,
   startsWith
 } = require('lodash/fp');
@@ -34,6 +36,22 @@ const extractStreamNameFromARN = arn => {
   const [, , , , , StreamURI] = arn.split(':');
   const [, ...StreamNames] = StreamURI.split('/');
   return StreamNames.join('/');
+};
+
+const extractStreamNameFromGetAtt = getAtt => {
+  if (isArray(getAtt)) return getAtt[0];
+  if (isString(getAtt) && getAtt.endsWith('.Arn')) return getAtt.replace(/\.Arn$/, '');
+  throw new Error('Unable to parse Fn::GetAtt for stream cross-reference');
+};
+
+const extractStreamNameFromJoin = ([delimiter, parts]) => {
+  const resolvedParts = parts.map(part => {
+    if (isString(part)) return part;
+    // TODO maybe handle getAtt in Join?
+    if (isObject(part)) return ''; // empty string as placeholder
+    return '';
+  });
+  return extractStreamNameFromARN(resolvedParts.join(delimiter));
 };
 
 class ServerlessOfflineKinesis {
@@ -87,7 +105,7 @@ class ServerlessOfflineKinesis {
     process.env = functionEnv;
 
     const serviceRuntime = this.service.provider.runtime;
-    const servicePath = join(this.serverless.config.servicePath, location);
+    const servicePath = path.join(this.serverless.config.servicePath, location);
     const funOptions = functionHelper.getFunctionOptions(
       __function,
       functionName,
@@ -134,11 +152,18 @@ class ServerlessOfflineKinesis {
     if (isString(streamEvent.arn)) return extractStreamNameFromARN(streamEvent.arn);
     if (isString(streamEvent.streamName)) return streamEvent.streamName;
 
-    if (streamEvent.arn['Fn::GetAtt']) {
-      const [ResourceName] = streamEvent.arn['Fn::GetAtt'];
+    const {'Fn::GetAtt': getAtt, 'Fn::Join': join} = streamEvent.arn;
+    if (getAtt) {
+      const [ResourceName] = streamEvent.arn[getAtt];
+      //  const logicalResourceName = extractStreamNameFromGetAtt(getAtt);
+      // const physicalResourceName = get(['service', 'resources', 'Resources', logicalResourceName, 'Properties', 'Name'])(this);
 
       const name = get(`resources.Resources.${ResourceName}.Properties.Name`, this.service);
       if (isString(name)) return name;
+    }
+    if (join) {
+      const physicalResourceName = extractStreamNameFromJoin(join); // Fixme name
+      if (isString(physicalResourceName)) return physicalResourceName;
     }
 
     throw new Error(
@@ -146,11 +171,40 @@ class ServerlessOfflineKinesis {
     );
   }
 
+  // FIXME: to really incorporate [to be done after conflict resolving]
+  pollStreamUntilActive(streamName, timeout) {
+    const client = this.getClient();
+    const lastTime = Date.now() + timeout;
+    return new Promise((resolve, reject) => {
+      const poll = async () => {
+        const {
+          StreamDescription: {StreamStatus}
+        } = await client.describeStream({StreamName: streamName}).promise();
+        if (StreamStatus === 'ACTIVE') {
+          resolve();
+        } else if (Date.now() > lastTime) {
+          reject(
+            new Error(
+              `Stream ${streamName} did not become active within timeout of ${Math.floor(
+                timeout / 1000
+              )}s`
+            )
+          );
+        } else {
+          setTimeout(poll, 1000);
+        }
+      };
+      poll();
+    });
+  }
+
   async createKinesisReadable(functionName, streamEvent, retry = false) {
     const client = this.getClient();
     const streamName = this.getStreamName(streamEvent);
 
-    this.serverless.cli.log(`${streamName}`);
+    this.serverless.cli.log(`Waiting for ${streamName} to become active`);
+
+    await this.pollStreamUntilActive(streamName, this.getConfig().waitForActiveTimeout || 30000); // FIXME
 
     const kinesisStream = await client
       .describeStream({
@@ -175,6 +229,7 @@ class ServerlessOfflineKinesis {
     const {
       StreamDescription: {Shards: shards}
     } = kinesisStream;
+    this.serverless.cli.log(`${streamName} - creating listeners for ${shards.length} shards`);
 
     forEach(({ShardId: shardId}) => {
       const readable = KinesisReadable(
@@ -244,3 +299,4 @@ class ServerlessOfflineKinesis {
 }
 
 module.exports = ServerlessOfflineKinesis;
+module.exports.extractStreamNameFromGetAtt = extractStreamNameFromGetAtt;
