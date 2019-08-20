@@ -166,6 +166,8 @@ class ServerlessOfflineKinesis {
       if (isString(physicalResourceName)) return physicalResourceName;
     }
 
+    this.serverless.cli.log(`Could not resolve stream name for spec: ${JSON.stringify(streamEvent, null, 2)}`);
+
     throw new Error(
       `StreamName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-kinesis#functions`
     );
