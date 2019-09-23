@@ -20,7 +20,10 @@
     "aws-sdk": "^2.444.0",
     "figures": "^3.0.0",
     "lodash": "^4.17.11",
-    "serverless-offline": "^4.10.0"
+    "serverless-offline": "^5.11.0"
+  },
+  "resolutions": {
+    "@hapi/subtext": ">=6.1.2"
   },
   "keywords": [
     "sqs",
