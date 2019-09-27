@@ -5,6 +5,7 @@
   "version": "independent",
   "command": {
     "bootstrap": {
+      "npmClientArgs": ["--no-package-lock"],
       "hoist": true
     }
   }
