@@ -1,9 +1,11 @@
+# :zap: Collection of Serverless Plugins :battery:
+
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
 [![Build Status](https://travis-ci.org/CoorpAcademy/serverless-plugins.svg?branch=master)](https://travis-ci.org/CoorpAcademy/serverless-plugins)
 [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
 
 
-|  Project      | Version       |
+|  Plugin       | Version       |
 | ------------- | ------------- |
 | [`dynamodb-streams-readable`](/packages/dynamodb-streams-readable) | [![npm](https://img.shields.io/npm/v/dynamodb-streams-readable.svg)](https://www.npmjs.com/package/dynamodb-streams-readable)|
 | [`serverless-apigateway-access-logs`](/packages/serverless-apigateway-access-logs)| [![npm](https://img.shields.io/npm/v/serverless-apigateway-access-logs.svg)](https://www.npmjs.com/package/serverless-apigateway-access-logs)|
