@@ -2,45 +2,49 @@
 const {Writable} = require('stream');
 const {spawn} = require('child_process');
 const onExit = require('signal-exit');
-const {DynamoDB} = require('aws-sdk');
+const {Kinesis} = require('aws-sdk');
 
-const client = new DynamoDB({
+const client = new Kinesis({
   region: 'eu-west-1',
   accessKeyId: 'local',
   secretAccessKey: 'local',
-  endpoint: 'http://localhost:8000'
+  endpoint: 'http://localhost:4567'
 });
 
-const putItems = () => {
+const putRecords = () => {
   return Promise.all([
     client
-      .putItem({
-        Item: {id: {S: 'MyFirstId'}},
-        TableName: 'MyFirstTable'
+      .putRecord({
+        StreamName: 'MyFirstStream',
+        PartitionKey: 'MyFirstMessage',
+        Data: 'MyFirstMessage'
       })
       .promise(),
     client
-      .putItem({
-        Item: {id: {S: 'MySecondId'}},
-        TableName: 'MySecondTable'
+      .putRecord({
+        StreamName: 'MySecondStream',
+        PartitionKey: 'MySecondMessage',
+        Data: 'MySecondMessage'
       })
       .promise(),
     client
-      .putItem({
-        Item: {id: {S: 'MyThirdId'}},
-        TableName: 'MyThirdTable'
+      .putRecord({
+        StreamName: 'MyThirdStream',
+        PartitionKey: 'MyThirdMessage',
+        Data: 'MyThirdMessage'
       })
       .promise(),
     client
-      .putItem({
-        Item: {id: {S: 'MyFourthId'}},
-        TableName: 'MyFourthTable'
+      .putRecord({
+        StreamName: 'MyFourthStream',
+        PartitionKey: 'MyFourthMessage',
+        Data: 'MyFourthMessage'
       })
       .promise()
   ]);
 };
 
-const serverless = spawn('sls', ['offline'], {
+const serverless = spawn('serverless', ['--config', 'serverless.kinesis.yml', 'offline'], {
   stdio: ['pipe', 'pipe', 'pipe'],
   cwd: __dirname
 });
@@ -51,7 +55,7 @@ serverless.stdout.pipe(
       const output = chunk.toString();
 
       if (/Offline listening on/.test(output)) {
-        putItems();
+        putRecords();
       }
 
       this.count = (this.count || 0) + (output.match(/\[✔\]/g) || []).length;
