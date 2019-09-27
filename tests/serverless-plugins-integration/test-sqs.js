@@ -40,7 +40,7 @@ const sendMessages = () => {
   ]);
 };
 
-const serverless = spawn('sls', ['offline'], {
+const serverless = spawn('serverless', ['--config', 'serverless.sqs.yml', 'offline'], {
   stdio: ['pipe', 'pipe', 'pipe'],
   cwd: __dirname
 });

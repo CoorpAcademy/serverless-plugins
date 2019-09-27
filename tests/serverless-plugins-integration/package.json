@@ -1,0 +1,26 @@
+{
+  "name": "serverless-offline-plugins-integration",
+  "private": true,
+  "version": "0.0.2",
+  "scripts": {
+    "start": "sls offline",
+    "test": "npm run test:sqs && npm run test:kinesis && npm run test:dynamodb-streams",
+    "pretest:dynamodb-streams": "./scripts/clean-start.sh dynamodb",
+    "test:dynamodb-streams": "node test-dynamodb-streams",
+    "test:sqs": "node test-sqs",
+    "pretest:sqs": "./scripts/clean-start.sh sqs",
+    "test:kinesis": "node test-kinesis",
+    "pretest:kinesis": "./scripts/clean-start.sh kinesis"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.444.0",
+    "figures": "^3.0.0",
+    "lodash": "^4.17.15",
+    "serverless": "^1.41.1",
+    "serverless-offline": "^4.10.0",
+    "serverless-offline-dynamodb-streams": "^2.0.0",
+    "serverless-offline-kinesis": "^2.0.0",
+    "serverless-offline-sqs": "^2.0.3",
+    "signal-exit": "^3.0.2"
+  }
+}

@@ -6,7 +6,7 @@ provider:
   runtime: nodejs8.10
 
 plugins:
-  localPath: '../..'
+  localPath: '../../packages'
   modules:
     - serverless-offline-sqs
     - serverless-offline
@@ -46,7 +46,7 @@ resources:
 
 custom:
   serverless-offline:
-    port: 3003
+    port: 3333
   serverless-offline-sqs:
     endpoint: http://0.0.0.0:9324
     region: ${self:provider.region}

@@ -6,7 +6,7 @@ provider:
   runtime: nodejs8.10
 
 plugins:
-  localPath: '../..'
+  localPath: '../../packages'
   modules:
     - serverless-offline-kinesis
     - serverless-offline
@@ -50,7 +50,7 @@ resources:
 
 custom:
   serverless-offline:
-    port: 3002
+    port: 3223
   serverless-offline-kinesis:
     endpoint: http://0.0.0.0:4567
     region: ${self:provider.region}

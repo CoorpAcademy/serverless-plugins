@@ -2,49 +2,45 @@
 const {Writable} = require('stream');
 const {spawn} = require('child_process');
 const onExit = require('signal-exit');
-const {Kinesis} = require('aws-sdk');
+const {DynamoDB} = require('aws-sdk');
 
-const client = new Kinesis({
+const client = new DynamoDB({
   region: 'eu-west-1',
   accessKeyId: 'local',
   secretAccessKey: 'local',
-  endpoint: 'http://localhost:4567'
+  endpoint: 'http://localhost:8000'
 });
 
-const putRecords = () => {
+const putItems = () => {
   return Promise.all([
     client
-      .putRecord({
-        StreamName: 'MyFirstStream',
-        PartitionKey: 'MyFirstMessage',
-        Data: 'MyFirstMessage'
+      .putItem({
+        Item: {id: {S: 'MyFirstId'}},
+        TableName: 'MyFirstTable'
       })
       .promise(),
     client
-      .putRecord({
-        StreamName: 'MySecondStream',
-        PartitionKey: 'MySecondMessage',
-        Data: 'MySecondMessage'
+      .putItem({
+        Item: {id: {S: 'MySecondId'}},
+        TableName: 'MySecondTable'
       })
       .promise(),
     client
-      .putRecord({
-        StreamName: 'MyThirdStream',
-        PartitionKey: 'MyThirdMessage',
-        Data: 'MyThirdMessage'
+      .putItem({
+        Item: {id: {S: 'MyThirdId'}},
+        TableName: 'MyThirdTable'
       })
       .promise(),
     client
-      .putRecord({
-        StreamName: 'MyFourthStream',
-        PartitionKey: 'MyFourthMessage',
-        Data: 'MyFourthMessage'
+      .putItem({
+        Item: {id: {S: 'MyFourthId'}},
+        TableName: 'MyFourthTable'
       })
       .promise()
   ]);
 };
 
-const serverless = spawn('sls', ['offline'], {
+const serverless = spawn('serverless', ['--config', 'serverless.dynamodb-stream.yml', 'offline'], {
   stdio: ['pipe', 'pipe', 'pipe'],
   cwd: __dirname
 });
@@ -55,7 +51,7 @@ serverless.stdout.pipe(
       const output = chunk.toString();
 
       if (/Offline listening on/.test(output)) {
-        putRecords();
+        putItems();
       }
 
       this.count = (this.count || 0) + (output.match(/\[✔\]/g) || []).length;

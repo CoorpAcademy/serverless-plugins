@@ -6,7 +6,7 @@ provider:
   runtime: nodejs8.10
 
 plugins:
-  localPath: '../..'
+  localPath: '../../packages'
   modules:
     - serverless-offline-dynamodb-streams
     - serverless-offline
@@ -60,7 +60,7 @@ resources:
 
 custom:
   serverless-offline:
-    port: 3001
+    port: 3443
   serverless-offline-dynamodb-streams:
     endpoint: http://0.0.0.0:8000
     region: ${self:provider.region}
