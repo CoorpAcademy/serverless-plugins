@@ -10,7 +10,7 @@
   "dependencies": {
     "aws-sdk": "^2.444.0",
     "figures": "^3.0.0",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.15",
     "serverless": "^1.41.1",
     "serverless-offline": "^4.10.0",
     "serverless-offline-dynamodb-streams": "^2.0.0",
