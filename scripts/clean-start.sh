@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 service=$1
-
+root=$( cd "$(dirname "${BASH_SOURCE[0]}")/.." ; pwd -P )
 function dc () {
-    docker-compose -f docker-compose.test.yml $@
+    (cd $root && docker-compose -f docker-compose.test.yml $@)
 }
 
 dc stop $service
