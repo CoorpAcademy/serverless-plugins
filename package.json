@@ -1,4 +1,5 @@
 {
+  "name": "serverless-plugins",
   "private": true,
   "scripts": {
     "postinstall": "lerna bootstrap",
@@ -12,9 +13,6 @@
     "test:integration": "lerna run test",
     "test": "npm run eslint && npm run test:unit && npm run test:integration",
     "publish": "lerna publish"
-  },
-  "engines": {
-    "npm": "6.4.1"
   },
   "dependencies": {
     "lerna": "^3.13.4",
