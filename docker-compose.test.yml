@@ -12,7 +12,6 @@ services:
     entrypoint: sh
     command: ./create-tables.sh
     volumes:
-      - ./:/project
       - ./scripts/create-tables.sh:/project/create-tables.sh:ro
     environment:
       - AWS_ACCESS_KEY_ID=local
@@ -31,7 +30,6 @@ services:
     entrypoint: sh
     command: ./create-queues.sh
     volumes:
-      - ./:/project
       - ./scripts/create-queues.sh:/project/create-queues.sh:ro
     environment:
       - AWS_ACCESS_KEY_ID=local
@@ -50,7 +48,6 @@ services:
     entrypoint: sh
     command: ./create-streams.sh
     volumes:
-      - ./:/project
       - ./scripts/create-streams.sh:/project/create-streams.sh:ro
     environment:
       - AWS_ACCESS_KEY_ID=local

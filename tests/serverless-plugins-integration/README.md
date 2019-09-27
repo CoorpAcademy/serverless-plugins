@@ -1,7 +1,5 @@
 # Getting started
 
-
-
 ### Dynamodb
 ```shell
 # Start containers
