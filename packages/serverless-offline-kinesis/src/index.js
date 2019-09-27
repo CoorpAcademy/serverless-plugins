@@ -25,6 +25,9 @@ const {
 const functionHelper = require('serverless-offline/src/functionHelper');
 const LambdaContext = require('serverless-offline/src/LambdaContext');
 
+const NO_KINESIS_FOUND = 'Could not find kinesis stream';
+const KINESIS_RETRY_DELAY = 2000;
+
 const fromCallback = fun =>
   new Promise((resolve, reject) => {
     fun((err, data) => {
@@ -151,22 +154,36 @@ class ServerlessOfflineKinesis {
     );
   }
 
-  async createKinesisReadable(functionName, streamEvent) {
+  async createKinesisReadable(functionName, streamEvent, retry = false) {
     const client = this.getClient();
     const streamName = this.getStreamName(streamEvent);
 
     this.serverless.cli.log(`${streamName}`);
 
-    const {
-      StreamDescription: {Shards: shards}
-    } = await fromCallback(cb =>
+    const kinesisStream = await fromCallback(cb =>
       client.describeStream(
         {
           StreamName: streamName
         },
         cb
       )
-    );
+    ).catch(err => null);
+    if (!kinesisStream) {
+      if (retry) {
+        this.serverless.cli.log(`${streamName} - not Found, retrying in ${KINESIS_RETRY_DELAY}ms`);
+        setTimeout(
+          this.createKinesisReadable.bind(this),
+          KINESIS_RETRY_DELAY,
+          functionName,
+          streamEvent,
+          retry
+        );
+        return;
+      } else throw new Error(NO_KINESIS_FOUND);
+    }
+    const {
+      StreamDescription: {Shards: shards}
+    } = kinesisStream;
 
     forEach(({ShardId: shardId}) => {
       const readable = KinesisReadable(
@@ -222,7 +239,7 @@ class ServerlessOfflineKinesis {
         this.serverless.cli.log(`Kinesis for ${functionName}:`);
 
         forEach(streamEvent => {
-          this.createKinesisReadable(functionName, streamEvent);
+          this.createKinesisReadable(functionName, streamEvent, true); // TMP: retry is not configurable so far
         }, streams);
 
         printBlankLine();
