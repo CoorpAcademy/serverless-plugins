@@ -137,7 +137,18 @@ class ServerlessOfflineSQS {
           receiptHandle,
           body,
           attributes,
-          messageAttributes,
+          messageAttributes: Object.keys(messageAttributes).reduce(
+            (prevAtt, attributeName) =>
+              Object.assign(prevAtt, {
+                [attributeName]: Object.keys(messageAttributes).reduce((prev, key) => {
+                  const lowerAttributeName = `${key.slice(0, 1).toLowerCase()}${key.slice(1)}`;
+                  return Object.assign(prev, {
+                    [lowerAttributeName]: messageAttributes[attributeName][key]
+                  });
+                }, {})
+              }),
+            {}
+          ),
           md5OfBody,
           eventSource: 'aws:sqs',
           eventSourceARN: queueEvent.arn,
