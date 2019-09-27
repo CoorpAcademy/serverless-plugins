@@ -13,6 +13,9 @@
     "test": "npm run eslint && npm run test:unit && npm run test:integration",
     "publish": "lerna publish"
   },
+  "engines": {
+    "npm": "6.4.1"
+  },
   "dependencies": {
     "lerna": "^3.13.4",
     "serverless": "^1.53.0"
