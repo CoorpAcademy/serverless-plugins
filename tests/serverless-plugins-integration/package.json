@@ -5,12 +5,13 @@
   "scripts": {
     "start": "sls offline",
     "test": "npm run test:sqs && npm run test:kinesis && npm run test:dynamodb-streams",
-    "pretest:dynamodb-streams": "./scripts/clean-start.sh dynamodb",
+    "setup-service": "../../scripts/clean-start.sh",
+    "pretest:dynamodb-streams": "npm run -s setup-service dynamodb",
     "test:dynamodb-streams": "node test-dynamodb-streams",
     "test:sqs": "node test-sqs",
-    "pretest:sqs": "./scripts/clean-start.sh sqs",
+    "pretest:sqs": "npm run -s setup-service sqs",
     "test:kinesis": "node test-kinesis",
-    "pretest:kinesis": "./scripts/clean-start.sh kinesis"
+    "pretest:kinesis": "npm run -s setup-service kinesis"
   },
   "dependencies": {
     "aws-sdk": "^2.444.0",

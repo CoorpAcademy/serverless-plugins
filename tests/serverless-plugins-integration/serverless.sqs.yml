@@ -13,13 +13,13 @@ plugins:
 
 functions:
   myPromiseHandler:
-    handler: handler.promise
+    handler: lambda/handler.promise
     events:
       - sqs: arn:aws:sqs:region:XXXXXX:MyFirstQueue
       - sqs:
           arn: arn:aws:sqs:region:XXXXXX:MySecondQueue
   myCallbackHandler:
-    handler: handler.callback
+    handler: lambda/handler.callback
     events:
       - sqs:
           queueName: MyThirdQueue
@@ -29,7 +29,7 @@ functions:
               - Arn
   myPythonHandler:
     runtime: python2.7
-    handler: handler.handler
+    handler: lambda/handler.handler
     events:
       - sqs:
           arn:

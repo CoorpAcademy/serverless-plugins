@@ -13,14 +13,14 @@ plugins:
 
 functions:
   myPromiseHandler:
-    handler: handler.promise
+    handler: lambda/handler.promise
     events:
       - stream: arn:aws:dynamodb:region:XXXXXX:table/MyFirstTable
       - stream:
           type: dynamodb
           arn: arn:aws:dynamodb:region:XXXXXX:table/MySecondTable
   myCallbackHandler:
-    handler: handler.callback
+    handler: lambda/handler.callback
     events:
       - stream:
           type: dynamodb
@@ -31,7 +31,7 @@ functions:
               - Arn
   myPythonHandler:
     runtime: python2.7
-    handler: handler.handler
+    handler: lambda/handler.handler
     events:
       - stream:
           type: dynamodb
