@@ -13,14 +13,14 @@ plugins:
 
 functions:
   myPromiseHandler:
-    handler: handler.promise
+    handler: lambda/handler.promise
     events:
       - stream: arn:aws:kinesis:region:XXXXXX:stream/MyFirstStream 
       - stream:
           type: kinesis
           arn: arn:aws:kinesis:region:XXXXXX:stream/MySecondStream
   myCallbackHandler:
-    handler: handler.callback
+    handler: lambda/handler.callback
     events:
       - stream:
           type: kinesis
@@ -31,7 +31,7 @@ functions:
               - Arn
   myPythonHandler:
     runtime: python2.7
-    handler: handler.handler
+    handler: lambda/handler.handler
     events:
       - stream:
           type: kinesis
