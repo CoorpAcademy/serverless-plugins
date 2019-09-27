@@ -12,9 +12,13 @@ const {
   isEmpty,
   isUndefined,
   map,
-  mapValues,
+  toPairs,
+  negate,
+  overEvery,
+  overSome,
   matchesProperty,
   omitBy,
+  isString,
   pipe,
   startsWith
 } = require('lodash/fp');
@@ -55,13 +59,15 @@ class ServerlessOfflineKinesis {
   }
 
   getConfig() {
-    return assignAll([
-      omitBy(isUndefined, this.options),
-      omitBy(isUndefined, this.service),
-      omitBy(isUndefined, this.service.provider),
-      omitBy(isUndefined, get(['custom', 'serverless-offline'], this.service)),
-      omitBy(isUndefined, get(['custom', 'serverless-offline-kinesis'], this.service))
-    ]);
+    return assignAll(
+      [
+        this.options,
+        this.service,
+        this.service.provider,
+        get(['custom', 'serverless-offline'], this.service),
+        get(['custom', 'serverless-offline-kinesis'], this.service)
+      ].map(omitBy(isUndefined))
+    );
   }
 
   getClient() {
@@ -128,23 +134,16 @@ class ServerlessOfflineKinesis {
   }
 
   getStreamName(streamEvent) {
-    if (typeof streamEvent === 'string' && startsWith('arn:aws:kinesis', streamEvent))
+    if (isString(streamEvent) && startsWith('arn:aws:kinesis', streamEvent))
       return extractStreamNameFromARN(streamEvent);
-    if (typeof streamEvent.arn === 'string') return extractStreamNameFromARN(streamEvent.arn);
-    if (typeof streamEvent.streamName === 'string') return streamEvent.streamName;
+    if (isString(streamEvent.arn)) return extractStreamNameFromARN(streamEvent.arn);
+    if (isString(streamEvent.streamName)) return streamEvent.streamName;
 
     if (streamEvent.arn['Fn::GetAtt']) {
       const [ResourceName] = streamEvent.arn['Fn::GetAtt'];
 
-      if (
-        this.service &&
-        this.service.resources &&
-        this.service.resources.Resources &&
-        this.service.resources.Resources[ResourceName] &&
-        this.service.resources.Resources[ResourceName].Properties &&
-        typeof this.service.resources.Resources[ResourceName].Properties.Name === 'string'
-      )
-        return this.service.resources.Resources[ResourceName].Properties.Name;
+      const name = get(`resources.Resources.${ResourceName}.Properties.Name`, this.service);
+      if (isString(name)) return name;
     }
 
     throw new Error(
@@ -200,31 +199,35 @@ class ServerlessOfflineKinesis {
   offlineStartInit() {
     this.serverless.cli.log(`Starting Offline Kinesis.`);
 
-    mapValues.convert({cap: false})((_function, functionName) => {
+    forEach(([functionName, functionConfiguration]) => {
       const streams = pipe(
         get('events'),
         filter(
-          event =>
-            !matchesProperty('stream.enabled', false)(event) &&
-            (matchesProperty('stream.type', 'kinesis')(event) ||
-              startsWith('arn:aws:kinesis', event.stream))
+          overEvery([
+            negate(matchesProperty('stream.enabled', false)),
+            overSome([
+              matchesProperty('stream.type', 'kinesis'),
+              pipe(
+                get('stream'),
+                startsWith('arn:aws:kinesis')
+              )
+            ])
+          ])
         ),
-        map(get('stream'))
-      )(_function);
+        map('stream')
+      )(functionConfiguration);
 
       if (!isEmpty(streams)) {
         printBlankLine();
         this.serverless.cli.log(`Kinesis for ${functionName}:`);
-      }
 
-      forEach(streamEvent => {
-        this.createKinesisReadable(functionName, streamEvent);
-      }, streams);
+        forEach(streamEvent => {
+          this.createKinesisReadable(functionName, streamEvent);
+        }, streams);
 
-      if (!isEmpty(streams)) {
         printBlankLine();
       }
-    }, this.service.functions);
+    })(toPairs(this.service.functions));
   }
 
   offlineStartEnd() {
