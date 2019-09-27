@@ -16,7 +16,10 @@ const sendMessages = () => {
     client
       .sendMessage({
         QueueUrl: 'http://localhost:9324/queue/MyFirstQueue',
-        MessageBody: 'MyFirstMessage'
+        MessageBody: 'MyFirstMessage',
+        MessageAttributes: {
+          myAttribute: {DataType: 'String', StringValue: 'myAttribute'}
+        }
       })
       .promise(),
     client

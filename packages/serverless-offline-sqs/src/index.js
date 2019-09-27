@@ -9,7 +9,9 @@ const {
   has,
   isEmpty,
   isUndefined,
+  lowerFirst,
   map,
+  mapKeys,
   mapValues,
   omitBy,
   pipe
@@ -146,7 +148,7 @@ class ServerlessOfflineSQS {
           receiptHandle,
           body,
           attributes,
-          messageAttributes,
+          messageAttributes: mapValues(mapKeys(lowerFirst), messageAttributes),
           md5OfBody,
           eventSource: 'aws:sqs',
           eventSourceARN,
