@@ -20,7 +20,7 @@
     "aws-sdk": "^2.444.0",
     "figures": "^3.0.0",
     "kinesis-readable": "^1.2.0",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.15",
     "serverless-offline": "^4.10.0"
   },
   "keywords": [
