@@ -1,15 +1,27 @@
 const fs = require('fs');
+const {fromPairs, get, map, pipe, split, trim} = require('lodash/fp');
 
-const getValues = (path = '.env') =>
-  fs
-    .readFileSync(path, {encoding: 'utf-8'})
-    .trim()
-    .split('\n')
-    .map(line => line.split(/=(.*)/))
-    .reduce((acc, [key, value]) => {
-      acc[key] = value;
-      return acc;
-    }, {});
+const fromCallback = fun => (...args) =>
+  new Promise((resolve, reject) =>
+    fun(...args, (err, data) => (err ? reject(err) : resolve(data)))
+  );
+const readFile = fromCallback(fs.readFile);
+
+const getValues = (path = '.ssm') => {
+  const values = (async () => {
+    try {
+      return pipe(
+        trim,
+        split('\n'),
+        map(split(/=(.*)/)),
+        fromPairs
+      )(await readFile(path, {encoding: 'utf-8'}));
+    } catch (err) {
+      return null;
+    }
+  })();
+  return key => values.then(get(key));
+};
 
 class ServerlessOfflineSSMProvider {
   constructor(serverless) {
@@ -24,17 +36,17 @@ class ServerlessOfflineSSMProvider {
       if (service !== 'SSM' || method !== 'getParameter')
         return request(service, method, params, options);
 
-      return request(service, method, params, options).catch(error => {
+      return request(service, method, params, options).catch(async error => {
         const {Name} = params;
-        const Value = this.values[Name];
+        const Value = await this.values(Name);
 
-        if (!Value) return Promise.reject(error);
+        if (!Value) throw error;
 
-        return Promise.resolve({
+        return {
           Parameter: {
             Value
           }
-        });
+        };
       });
     };
 

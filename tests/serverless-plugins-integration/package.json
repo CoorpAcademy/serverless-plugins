@@ -17,11 +17,12 @@
     "aws-sdk": "^2.538.0",
     "figures": "^3.0.0",
     "lodash": "^4.17.15",
-    "serverless": "^1.53.0",
-    "serverless-offline": "^5.11.0",
     "serverless-offline-dynamodb-streams": "^2.0.0",
     "serverless-offline-kinesis": "^2.0.0",
     "serverless-offline-sqs": "^2.0.3",
+    "serverless-offline-ssm-provider": "^1.0.5",
+    "serverless-offline": "^5.11.0",
+    "serverless": "^1.53.0",
     "signal-exit": "^3.0.2"
   }
 }

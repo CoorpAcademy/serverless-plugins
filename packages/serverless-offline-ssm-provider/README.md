@@ -23,5 +23,5 @@ plugins:
 ```yml
 custom:
   serverless-offline-ssm-provider:
-    file: .env
+    file: .ssm
 ```

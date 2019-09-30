@@ -8,6 +8,7 @@ provider:
 plugins:
   localPath: '../../packages'
   modules:
+    - serverless-offline-ssm-provider
     - serverless-offline-sqs
     - serverless-offline
 
@@ -47,9 +48,4 @@ resources:
 custom:
   serverless-offline:
     port: 3333
-  serverless-offline-sqs:
-    endpoint: http://0.0.0.0:9324
-    region: ${self:provider.region}
-    accessKeyId: root
-    secretAccessKey: root
-    skipCacheInvalidation: false
+  serverless-offline-sqs: ${file(./custom.yml):serverless-offline-sqs}

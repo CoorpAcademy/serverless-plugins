@@ -8,6 +8,7 @@ provider:
 plugins:
   localPath: '../../packages'
   modules:
+    - serverless-offline-ssm-provider
     - serverless-offline-kinesis
     - serverless-offline
 
@@ -51,9 +52,4 @@ resources:
 custom:
   serverless-offline:
     port: 3223
-  serverless-offline-kinesis:
-    endpoint: http://0.0.0.0:4567
-    region: ${self:provider.region}
-    accessKeyId: root
-    secretAccessKey: root
-    skipCacheInvalidation: false
+  serverless-offline-kinesis: ${file(./custom.yml):serverless-offline-kinesis}

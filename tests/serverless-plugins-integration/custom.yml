@@ -1,0 +1,18 @@
+serverless-offline-sqs:
+  endpoint: http://0.0.0.0:${ssm:/sqs/port}
+  region: ${self:provider.region}
+  accessKeyId: root
+  secretAccessKey: root
+  skipCacheInvalidation: false
+serverless-offline-dynamodb-streams:
+  endpoint: http://0.0.0.0:${ssm:/dynamodb/port}
+  region: ${self:provider.region}
+  accessKeyId: root
+  secretAccessKey: root
+  skipCacheInvalidation: false
+serverless-offline-kinesis:
+  endpoint: http://0.0.0.0:${ssm:/kinesis/port}
+  region: ${self:provider.region}
+  accessKeyId: root
+  secretAccessKey: root
+  skipCacheInvalidation: false

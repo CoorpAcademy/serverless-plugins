@@ -1,0 +1,3 @@
+/sqs/port=9324
+/dynamodb/port=8000
+/kinesis/port=4567

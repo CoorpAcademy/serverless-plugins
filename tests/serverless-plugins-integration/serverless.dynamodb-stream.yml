@@ -8,6 +8,7 @@ provider:
 plugins:
   localPath: '../../packages'
   modules:
+    - serverless-offline-ssm-provider
     - serverless-offline-dynamodb-streams
     - serverless-offline
 
@@ -61,9 +62,4 @@ resources:
 custom:
   serverless-offline:
     port: 3443
-  serverless-offline-dynamodb-streams:
-    endpoint: http://0.0.0.0:8000
-    region: ${self:provider.region}
-    accessKeyId: root
-    secretAccessKey: root
-    skipCacheInvalidation: false
+  serverless-offline-dynamodb-streams: ${file(./custom.yml):serverless-offline-dynamodb-streams}
