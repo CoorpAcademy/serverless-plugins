@@ -10,7 +10,7 @@
     "pretest:unit": "docker-compose up -d",
     "test:unit": "npm run nyc",
     "posttest:unit": "docker-compose stop",
-    "test:integration": "(cd tests/serverless-plugins-integration && npm test)",
+    "test:integration": "lerna run test --scope serverless-offline-plugins-integration",
     "test": "npm run eslint && npm run test:unit && npm run test:integration",
     "publish": "lerna publish"
   },
