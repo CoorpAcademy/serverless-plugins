@@ -54,7 +54,7 @@ serverless.stdout.pipe(
     write(chunk, enc, cb) {
       const output = chunk.toString();
 
-      if (/Offline listening on/.test(output)) {
+      if (/Offline \[HTTP\] listening on/.test(output)) {
         putRecords();
       }
 

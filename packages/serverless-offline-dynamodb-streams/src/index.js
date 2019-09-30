@@ -19,7 +19,7 @@ const {
   startsWith
 } = require('lodash/fp');
 const functionHelper = require('serverless-offline/src/functionHelper');
-const createLambdaContext = require('serverless-offline/src/createLambdaContext');
+const LambdaContext = require('serverless-offline/src/LambdaContext');
 const DynamoDBReadable = require('dynamodb-streams-readable');
 
 const fromCallback = fun =>
@@ -99,7 +99,7 @@ class ServerlessOfflineDynamoDBStreams {
     );
     const handler = functionHelper.createHandler(funOptions, this.getConfig());
 
-    const lambdaContext = createLambdaContext(__function, this.service.provider, (err, data) => {
+    const lambdaContext = new LambdaContext(__function, this.service.provider, (err, data) => {
       this.serverless.cli.log(
         `[${err ? figures.cross : figures.tick}] ${JSON.stringify(data) || ''}`
       );
