@@ -16,11 +16,16 @@
   ],
   "author": "godu",
   "license": "MIT",
+  "peerDependencies": {
+    "serverless-offline": "^5.11.0"
+  },
   "dependencies": {
-    "aws-sdk": "^2.444.0",
+    "aws-sdk": "^2.538.0",
     "figures": "^3.0.0",
-    "lodash": "^4.17.15",
-    "serverless-offline": "^4.10.0"
+    "lodash": "^4.17.15"
+  },
+  "devDependencies": {
+    "serverless-offline": "^5.11.0"
   },
   "keywords": [
     "sqs",
