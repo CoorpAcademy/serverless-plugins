@@ -181,7 +181,7 @@ class ServerlessOfflineDynamoDBStreams {
     if (typeof tableEvent === 'string' && startsWith('arn:aws:dynamodb', tableEvent))
       return extractTableNameFromARN(tableEvent);
     if (typeof tableEvent.arn === 'string') return extractTableNameFromARN(tableEvent.arn);
-    if (typeof tableEvent.streamName === 'string') return tableEvent.streamName;
+    if (typeof tableEvent.tableName === 'string') return tableEvent.tableName;
 
     if (tableEvent.arn['Fn::GetAtt']) {
       const [ResourceName] = tableEvent.arn['Fn::GetAtt'];
