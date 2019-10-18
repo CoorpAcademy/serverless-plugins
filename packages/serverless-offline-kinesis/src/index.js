@@ -29,6 +29,7 @@ const LambdaContext = require('serverless-offline/src/LambdaContext');
 
 const NO_KINESIS_FOUND = 'Could not find kinesis stream';
 const KINESIS_RETRY_DELAY = 200;
+const KINESIS_RETRY_TIMEOUT = 30000;
 
 const printBlankLine = () => console.log();
 
@@ -166,57 +167,37 @@ class ServerlessOfflineKinesis {
       if (isString(physicalResourceName)) return physicalResourceName;
     }
 
-    this.serverless.cli.log(`Could not resolve stream name for spec: ${JSON.stringify(streamEvent, null, 2)}`);
+    this.serverless.cli.log(
+      `Could not resolve stream name for spec: ${JSON.stringify(streamEvent, null, 2)}`
+    );
 
     throw new Error(
       `StreamName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-kinesis#functions`
     );
   }
 
-  // FIXME: to really incorporate [to be done after conflict resolving]
-  pollStreamUntilActive(streamName, timeout) {
-    const client = this.getClient();
-    const lastTime = Date.now() + timeout;
-    return new Promise((resolve, reject) => {
-      const poll = async () => {
-        const {
-          StreamDescription: {StreamStatus}
-        } = await client.describeStream({StreamName: streamName}).promise();
-        if (StreamStatus === 'ACTIVE') {
-          resolve();
-        } else if (Date.now() > lastTime) {
-          reject(
-            new Error(
-              `Stream ${streamName} did not become active within timeout of ${Math.floor(
-                timeout / 1000
-              )}s`
-            )
-          );
-        } else {
-          setTimeout(poll, 1000);
-        }
-      };
-      poll();
-    });
-  }
-
-  async createKinesisReadable(functionName, streamEvent, retry = false) {
+  async createKinesisReadable(functionName, streamEvent, delay = null) {
     const client = this.getClient();
     const streamName = this.getStreamName(streamEvent);
 
     this.serverless.cli.log(`Waiting for ${streamName} to become active`);
-
-    await this.pollStreamUntilActive(streamName, this.getConfig().waitForActiveTimeout || 30000); // FIXME
 
     const kinesisStream = await client
       .describeStream({
         StreamName: streamName
       })
       .promise()
+      .then(({StreamDescription}) => {
+        if (StreamDescription.StreamStatus !== 'ACTIVE')
+          throw new Error('Stream found but not yet active');
+        return {StreamDescription};
+      })
       .catch(err => err);
 
     if (kinesisStream instanceof Error) {
-      if (!retry) throw new Error(NO_KINESIS_FOUND);
+      if (delay === null) throw new Error(NO_KINESIS_FOUND);
+      if (delay < KINESIS_RETRY_DELAY)
+        throw new Error(`Stream ${streamName} did not become active within specified timeout`);
 
       this.serverless.cli.log(
         `${streamName} - not found because of ${
@@ -224,7 +205,7 @@ class ServerlessOfflineKinesis {
         }, retrying in ${KINESIS_RETRY_DELAY}ms`
       );
       return setTimeout(() => {
-        this.createKinesisReadable(functionName, streamEvent, retry);
+        this.createKinesisReadable(functionName, streamEvent, delay - KINESIS_RETRY_DELAY);
       }, KINESIS_RETRY_DELAY);
     }
 
@@ -286,8 +267,10 @@ class ServerlessOfflineKinesis {
         printBlankLine();
         this.serverless.cli.log(`Kinesis for ${functionName}:`);
 
+        const waitForStreamDelay = this.getConfig().waitForActiveTimeout || KINESIS_RETRY_TIMEOUT;
+        // ! FIXME: probably rename (and document the variable name)
         forEach(streamEvent => {
-          this.createKinesisReadable(functionName, streamEvent, true); // TMP: retry is not configurable so far
+          this.createKinesisReadable(functionName, streamEvent, waitForStreamDelay);
         }, streams);
 
         printBlankLine();
