@@ -39,7 +39,7 @@ const extractStreamNameFromARN = arn => {
   return StreamNames.join('/');
 };
 
-const extractStreamNameFromGetAtt = getAtt => {
+const extractRessourceNameFromGetAtt = getAtt => {
   if (isArray(getAtt)) return getAtt[0];
   if (isString(getAtt) && getAtt.endsWith('.Arn')) return getAtt.replace(/\.Arn$/, '');
   throw new Error('Unable to parse Fn::GetAtt for stream cross-reference');
@@ -48,7 +48,6 @@ const extractStreamNameFromGetAtt = getAtt => {
 const extractStreamNameFromJoin = ([delimiter, parts]) => {
   const resolvedParts = parts.map(part => {
     if (isString(part)) return part;
-    // TODO maybe handle getAtt in Join?
     if (isObject(part)) return ''; // empty string as placeholder
     return '';
   });
@@ -155,16 +154,14 @@ class ServerlessOfflineKinesis {
 
     const {'Fn::GetAtt': getAtt, 'Fn::Join': join} = streamEvent.arn;
     if (getAtt) {
-      const [ResourceName] = streamEvent.arn[getAtt];
-      //  const logicalResourceName = extractStreamNameFromGetAtt(getAtt);
-      // const physicalResourceName = get(['service', 'resources', 'Resources', logicalResourceName, 'Properties', 'Name'])(this);
-
-      const name = get(`resources.Resources.${ResourceName}.Properties.Name`, this.service);
-      if (isString(name)) return name;
+      const ResourceName = extractRessourceNameFromGetAtt(getAtt);
+      const streamName = get(`resources.Resources.${ResourceName}.Properties.Name`, this.service);
+      if (isString(streamName)) return streamName;
     }
     if (join) {
-      const physicalResourceName = extractStreamNameFromJoin(join); // Fixme name
-      if (isString(physicalResourceName)) return physicalResourceName;
+      // TODO possible improvement: handle getAtt in Join
+      const streamName = extractStreamNameFromJoin(join);
+      if (isString(streamName)) return streamName;
     }
 
     this.serverless.cli.log(
@@ -284,4 +281,3 @@ class ServerlessOfflineKinesis {
 }
 
 module.exports = ServerlessOfflineKinesis;
-module.exports.extractStreamNameFromGetAtt = extractStreamNameFromGetAtt;
