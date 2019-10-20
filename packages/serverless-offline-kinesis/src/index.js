@@ -21,14 +21,6 @@ const {
 const functionHelper = require('serverless-offline/src/functionHelper');
 const LambdaContext = require('serverless-offline/src/LambdaContext');
 
-const fromCallback = fun =>
-  new Promise((resolve, reject) => {
-    fun((err, data) => {
-      if (err) return reject(err);
-      resolve(data);
-    });
-  });
-
 const printBlankLine = () => console.log();
 
 const extractStreamNameFromARN = arn => {
@@ -47,20 +39,21 @@ const extractStreamNameFromGetAtt = getAtt => {
     throw new Error('Unable to parse Fn::GetAtt for stream cross-reference');
   }
   return logicalResourceName;
-}
+};
 
-const extractStreamNameFromJoin = join => {
-  const [delimiter, parts] = join;
+const extractStreamNameFromJoin = joinparts => {
+  const [delimiter, parts] = joinparts;
   const resolvedParts = parts.map(part => {
     if (typeof part === 'string') {
-      return part
+      return part;
     } else if (typeof part === 'object') {
       return 'placeholder';
     }
+    return '';
   });
   const arn = resolvedParts.join(delimiter);
   return extractStreamNameFromARN(arn);
-}
+};
 
 class ServerlessOfflineKinesis {
   constructor(serverless, options) {
@@ -161,18 +154,25 @@ class ServerlessOfflineKinesis {
     const getAtt = streamEvent.arn['Fn::GetAtt'];
     if (getAtt) {
       const logicalResourceName = extractStreamNameFromGetAtt(getAtt);
-      const physicalResourceName = get(['service', 'resources', 'Resources', logicalResourceName, 'Properties', 'Name'])(this);
-      if (typeof physicalResourceName === 'string')
-        return physicalResourceName;
+      const physicalResourceName = get([
+        'service',
+        'resources',
+        'Resources',
+        logicalResourceName,
+        'Properties',
+        'Name'
+      ])(this);
+      if (typeof physicalResourceName === 'string') return physicalResourceName;
     }
-    const join = streamEvent.arn['Fn::Join'];
-    if (join) {
-      const physicalResourceName = extractStreamNameFromJoin(join);
-      if (typeof physicalResourceName === 'string')
-        return physicalResourceName;
+    const joinStatement = streamEvent.arn['Fn::Join'];
+    if (joinStatement) {
+      const physicalResourceName = extractStreamNameFromJoin(joinStatement);
+      if (typeof physicalResourceName === 'string') return physicalResourceName;
     }
 
-    this.serverless.cli.log(`Could not resolve stream name for spec: ${JSON.stringify(streamEvent, null, 2)}`);
+    this.serverless.cli.log(
+      `Could not resolve stream name for spec: ${JSON.stringify(streamEvent, null, 2)}`
+    );
 
     throw new Error(
       `StreamName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-kinesis#functions`
@@ -184,11 +184,19 @@ class ServerlessOfflineKinesis {
     const lastTime = Date.now() + timeout;
     return new Promise((resolve, reject) => {
       const poll = async () => {
-        const { StreamDescription: { StreamStatus } } = await client.describeStream({ StreamName: streamName }).promise();
+        const {
+          StreamDescription: {StreamStatus}
+        } = await client.describeStream({StreamName: streamName}).promise();
         if (StreamStatus === 'ACTIVE') {
           resolve();
         } else if (Date.now() > lastTime) {
-          reject(new Error(`Stream ${streamName} did not become active within timeout of ${Math.floor(timeout/1000)}s`));
+          reject(
+            new Error(
+              `Stream ${streamName} did not become active within timeout of ${Math.floor(
+                timeout / 1000
+              )}s`
+            )
+          );
         } else {
           setTimeout(poll, 1000);
         }
@@ -207,11 +215,11 @@ class ServerlessOfflineKinesis {
 
     const {
       StreamDescription: {Shards: shards}
-    } = await client.describeStream(
-      {
+    } = await client
+      .describeStream({
         StreamName: streamName
-      },
-    ).promise();
+      })
+      .promise();
     this.serverless.cli.log(`${streamName} - creating listeners for ${shards.length} shards`);
 
     forEach(({ShardId: shardId}) => {
