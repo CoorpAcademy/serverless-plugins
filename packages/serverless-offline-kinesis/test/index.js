@@ -1,15 +1,17 @@
-const ServerlessOfflineKinesis = require('.');
+const test = require('ava');
+
+const ServerlessOfflineKinesis = require('../src');
 
 const {extractStreamNameFromGetAtt} = ServerlessOfflineKinesis;
 
-test('extractStreamNameFromGetAtt handles array Fn::GetAtt', () => {
-  expect(extractStreamNameFromGetAtt(['MyResource', 'Arn'])).toEqual('MyResource');
+test('extractStreamNameFromGetAtt handles array Fn::GetAtt', t => {
+  t.is(extractStreamNameFromGetAtt(['MyResource', 'Arn']), 'MyResource');
 });
-test('extractStreamNameFromGetAtt handles string Fn::GetAtt', () => {
-  expect(extractStreamNameFromGetAtt('MyResource.Arn')).toEqual('MyResource');
+test('extractStreamNameFromGetAtt handles string Fn::GetAtt', t => {
+  t.is(extractStreamNameFromGetAtt('MyResource.Arn'), 'MyResource');
 });
-test('extractStreamNameFromGetAtt throws on other cases', () => {
-  expect(() => extractStreamNameFromGetAtt({MyResource: 'Arn'})).toThrow();
+test('extractStreamNameFromGetAtt throws on other cases', t => {
+  t.throws(() => extractStreamNameFromGetAtt({MyResource: 'Arn'}));
 });
 
 const baseServerless = {
@@ -27,55 +29,60 @@ const baseServerless = {
   }
 };
 
-test('getStreamName handles a directly specified ARN', () => {
+test('getStreamName handles a directly specified ARN', t => {
   const plugin = new ServerlessOfflineKinesis(baseServerless);
-  expect(plugin.getStreamName('arn:aws:kinesis:us-east-1:123456789012:stream/TestStream')).toEqual(
+  t.is(
+    plugin.getStreamName('arn:aws:kinesis:us-east-1:123456789012:stream/TestStream'),
     'TestStream'
   );
 });
 
-test('getStreamName handles an object with a arn string property', () => {
+test('getStreamName handles an object with a arn string property', t => {
   const plugin = new ServerlessOfflineKinesis(baseServerless);
-  expect(
+  t.is(
     plugin.getStreamName({
       arn: 'arn:aws:kinesis:us-east-1:123456789012:stream/TestStream'
-    })
-  ).toEqual('TestStream');
+    }),
+    'TestStream'
+  );
 });
 
-test('getStreamName handles an object with a streamName property', () => {
+test('getStreamName handles an object with a streamName property', t => {
   const plugin = new ServerlessOfflineKinesis(baseServerless);
-  expect(
+  t.is(
     plugin.getStreamName({
       streamName: 'TestStream'
-    })
-  ).toEqual('TestStream');
+    }),
+    'TestStream'
+  );
 });
 
-test('getStreamName handles an object with an arn Fn::GetAtt lookup (array form)', () => {
+test('getStreamName handles an object with an arn Fn::GetAtt lookup (array form)', t => {
   const plugin = new ServerlessOfflineKinesis(baseServerless);
-  expect(
+  t.is(
     plugin.getStreamName({
       arn: {
         'Fn::GetAtt': ['TestStream', 'Arn']
       }
-    })
-  ).toEqual('test-stream-dev');
+    }),
+    'test-stream-dev'
+  );
 });
 
-test('getStreamName handles an object with an arn Fn::GetAtt lookup (string form)', () => {
+test('getStreamName handles an object with an arn Fn::GetAtt lookup (string form)', t => {
   const plugin = new ServerlessOfflineKinesis(baseServerless);
-  expect(
+  t.is(
     plugin.getStreamName({
       arn: {
         'Fn::GetAtt': 'TestStream.Arn'
       }
-    })
-  ).toEqual('test-stream-dev');
+    }),
+    'test-stream-dev'
+  );
 });
-test('getStreamName makes a naïve attempt to parse an arn Fn::Join lookup', () => {
+test('getStreamName makes a naïve attempt to parse an arn Fn::Join lookup', t => {
   const plugin = new ServerlessOfflineKinesis(baseServerless);
-  expect(
+  t.is(
     plugin.getStreamName({
       arn: {
         'Fn::Join': [
@@ -90,6 +97,7 @@ test('getStreamName makes a naïve attempt to parse an arn Fn::Join lookup', () 
           ]
         ]
       }
-    })
-  ).toEqual('my-stream-dev');
+    }),
+    'my-stream-dev'
+  );
 });
