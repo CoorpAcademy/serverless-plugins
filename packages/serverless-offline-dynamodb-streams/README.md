@@ -75,3 +75,13 @@ functions:
           type: dynamodb
           tableName: myTable
 ```
+
+### Retries
+
+By default if function fails it will be invoked in a loop until it succeeds. You can specify a finite number of retries instead:
+
+```yml
+custom:
+  serverless-offline-dynamodb-streams:
+    retries: 0 # disables retries
+```
