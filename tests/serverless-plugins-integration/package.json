@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.3",
   "scripts": {
-    "start": "sls offline",
+    "start:kinesis": "sls --config serverless.kinesis.yml offline",
+    "start:sqs": "sls --config serverless.sqs.yml offline",
+    "start:dynamodb-streams": "sls --config serverless.dynamodb-streams.yml offline",
     "test": "npm run test:sqs && npm run test:kinesis && npm run test:dynamodb-streams",
     "setup-service": "../../scripts/clean-start.sh",
     "pretest:dynamodb-streams": "npm run -s setup-service dynamodb",

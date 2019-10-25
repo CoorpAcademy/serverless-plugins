@@ -24,7 +24,7 @@ plugins:
   - serverless-offline
 ```
 
-[See example](../serverless-offline-sqs-integration/README.md)
+[See example](../../tests/serverless-plugins-integration/README.md#sqs)
 
 ## How it works?
 
