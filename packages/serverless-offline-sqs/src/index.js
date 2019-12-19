@@ -70,7 +70,16 @@ class ServerlessOfflineSQS {
     if (typeof queueEvent.arn === 'string') return extractQueueNameFromARN(queueEvent.arn);
     if (typeof queueEvent.queueName === 'string') return queueEvent.queueName;
 
-    if (queueEvent.arn['Fn::GetAtt']) {
+    const queueName = this.getProperty(queueEvent, 'QueueName', 'string');
+    if (queueName !== null) return queueName;
+
+    throw new Error(
+      `QueueName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-sqs#functions`
+    );
+  }
+
+  getProperty(queueEvent, propertyName, propertyType) {
+    if (queueEvent && queueEvent.arn['Fn::GetAtt']) {
       const [ResourceName] = queueEvent.arn['Fn::GetAtt'];
 
       if (
@@ -79,14 +88,12 @@ class ServerlessOfflineSQS {
         this.service.resources.Resources &&
         this.service.resources.Resources[ResourceName] &&
         this.service.resources.Resources[ResourceName].Properties &&
-        typeof this.service.resources.Resources[ResourceName].Properties.QueueName === 'string'
+        typeof this.service.resources.Resources[ResourceName].Properties[propertyName] ===
+          propertyType
       )
-        return this.service.resources.Resources[ResourceName].Properties.QueueName;
+        return this.service.resources.Resources[ResourceName].Properties[propertyName];
     }
-
-    throw new Error(
-      `QueueName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-sqs#functions`
-    );
+    return null;
   }
 
   eventHandler(queueEvent, functionName, messages, cb) {
@@ -172,7 +179,20 @@ class ServerlessOfflineSQS {
     this.serverless.cli.log(`${queueName}`);
 
     if (this.getConfig().autoCreate) {
-      const params = {QueueName: queueName};
+      const attributes = {};
+
+      const fifoQueue = this.getProperty(queueEvent, 'FifoQueue', 'boolean');
+      if (fifoQueue !== null) attributes.FifoQueue = fifoQueue.toString();
+
+      const contentBasedDeduplication = this.getProperty(
+        queueEvent,
+        'ContentBasedDeduplication',
+        'boolean'
+      );
+      if (contentBasedDeduplication !== null)
+        attributes.ContentBasedDeduplication = contentBasedDeduplication.toString();
+
+      const params = {QueueName: queueName, Attributes: attributes};
       await fromCallback(cb => client.createQueue(params, cb));
     }
 

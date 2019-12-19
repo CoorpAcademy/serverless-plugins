@@ -61,12 +61,23 @@ functions:
             Fn::GetAtt:
               - MyFourthQueue
               - Arn
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - MyFifthQueue
+              - Arn
 resources:
   Resources:
     MyFourthQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: MyFourthQueue
+    MyFifthQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: MyFifthQueue.fifo
+        FifoQueue: true
+        ContentBasedDeduplication: true
 ```
 
 ### SQS
