@@ -71,10 +71,10 @@ class ServerlessOfflineSQS {
       const [ResourceName] = queueEvent.arn['Fn::GetAtt'];
 
       const propertyValue = get(
-        ['resources', 'Resources', ResourceName, 'Properties'],
+        ['resources', 'Resources', ResourceName, 'Properties', propertyName],
         this.service
       );
-      if (propertyValue && typeof propertyValue === propertyType) return propertyValue;
+      if (propertyValue && typeof propertyValue === propertyType) return propertyValue.toString();
     }
     return null;
   }
