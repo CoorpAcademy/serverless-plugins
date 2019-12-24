@@ -8,6 +8,7 @@ const {
   get,
   has,
   isEmpty,
+  isNil,
   isUndefined,
   lowerFirst,
   map,
@@ -65,35 +66,30 @@ class ServerlessOfflineSQS {
     return new SQS(this.getConfig());
   }
 
+  getProperty(queueEvent, propertyName, propertyType = 'string') {
+    if (queueEvent && queueEvent.arn['Fn::GetAtt']) {
+      const [ResourceName] = queueEvent.arn['Fn::GetAtt'];
+
+      const propertyValue = get(
+        ['resources', 'Resources', ResourceName, 'Properties'],
+        this.service
+      );
+      if (propertyValue && typeof propertyValue === propertyType) return propertyValue;
+    }
+    return null;
+  }
+
   getQueueName(queueEvent) {
     if (typeof queueEvent === 'string') return extractQueueNameFromARN(queueEvent);
     if (typeof queueEvent.arn === 'string') return extractQueueNameFromARN(queueEvent.arn);
     if (typeof queueEvent.queueName === 'string') return queueEvent.queueName;
 
-    const queueName = this.getProperty(queueEvent, 'QueueName', 'string');
-    if (queueName !== null) return queueName;
-
-    throw new Error(
-      `QueueName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-sqs#functions`
-    );
-  }
-
-  getProperty(queueEvent, propertyName, propertyType) {
-    if (queueEvent && queueEvent.arn['Fn::GetAtt']) {
-      const [ResourceName] = queueEvent.arn['Fn::GetAtt'];
-
-      if (
-        this.service &&
-        this.service.resources &&
-        this.service.resources.Resources &&
-        this.service.resources.Resources[ResourceName] &&
-        this.service.resources.Resources[ResourceName].Properties &&
-        typeof this.service.resources.Resources[ResourceName].Properties[propertyName] ===
-          propertyType
-      )
-        return this.service.resources.Resources[ResourceName].Properties[propertyName];
-    }
-    return null;
+    const queueName = this.getProperty(queueEvent, 'QueueName');
+    if (!queueName)
+      throw new Error(
+        `QueueName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-sqs#functions`
+      );
+    return queueName;
   }
 
   eventHandler(queueEvent, functionName, messages, cb) {
@@ -174,36 +170,25 @@ class ServerlessOfflineSQS {
 
   async createQueueReadable(functionName, queueEvent) {
     const client = this.getClient();
-    const queueName = this.getQueueName(queueEvent);
+    const QueueName = this.getQueueName(queueEvent);
 
-    this.serverless.cli.log(`${queueName}`);
+    this.serverless.cli.log(`${QueueName}`);
 
     if (this.getConfig().autoCreate) {
-      const attributes = {};
+      const attributes = {
+        FifoQueue: this.getProperty(queueEvent, 'FifoQueue', 'boolean'),
+        ContentBasedDeduplication: this.getProperty(
+          queueEvent,
+          'ContentBasedDeduplication',
+          'boolean'
+        )
+      };
 
-      const fifoQueue = this.getProperty(queueEvent, 'FifoQueue', 'boolean');
-      if (fifoQueue !== null) attributes.FifoQueue = fifoQueue.toString();
-
-      const contentBasedDeduplication = this.getProperty(
-        queueEvent,
-        'ContentBasedDeduplication',
-        'boolean'
-      );
-      if (contentBasedDeduplication !== null)
-        attributes.ContentBasedDeduplication = contentBasedDeduplication.toString();
-
-      const params = {QueueName: queueName, Attributes: attributes};
+      const params = {QueueName, Attributes: omitBy(isNil, attributes)};
       await fromCallback(cb => client.createQueue(params, cb));
     }
 
-    const {QueueUrl} = await fromCallback(cb =>
-      client.getQueueUrl(
-        {
-          QueueName: queueName
-        },
-        cb
-      )
-    );
+    const {QueueUrl} = await fromCallback(cb => client.getQueueUrl({QueueName}, cb));
 
     const next = async () => {
       const {Messages} = await fromCallback(cb =>
