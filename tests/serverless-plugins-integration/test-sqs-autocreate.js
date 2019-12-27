@@ -21,8 +21,9 @@ const sendMessages = () => {
       .promise(),
     client
       .sendMessage({
-        QueueUrl: 'http://localhost:9324/queue/AutocreatedFifoQueue',
-        MessageBody: 'AutocreatedFifoQueue'
+        QueueUrl: 'http://localhost:9324/queue/AutocreatedFifoQueue.fifo',
+        MessageBody: 'AutocreatedFifoQueue',
+        MessageGroupId: '1'
       })
       .promise()
   ]);
@@ -68,7 +69,7 @@ async function pruneQueue(QueueName) {
 }
 
 async function cleanUp() {
-  await Promise.all([pruneQueue('AutocreatedQueue'), pruneQueue('AutocreatedFifoQueue')]);
+  await Promise.all([pruneQueue('AutocreatedQueue'), pruneQueue('AutocreatedFifoQueue.fifo')]);
 }
 
 serverless.on('close', code => {

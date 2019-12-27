@@ -23,7 +23,7 @@ functions:
               - AutocreatedQueue
               - Arn
       - sqs:
-          queueName: AutocreatedFifoQueue
+          queueName: AutocreatedFifoQueue.fifo
           arn:
             Fn::GetAtt:
               - AutocreatedFifoQueue
@@ -38,7 +38,7 @@ resources:
     AutocreatedFifoQueue:
       Type: AWS::SQS::Queue
       Properties:
-        QueueName: AutocreatedFifoQueue
+        QueueName: AutocreatedFifoQueue.fifo
         FifoQueue: true
         ContentBasedDeduplication: true
 
