@@ -20,7 +20,7 @@ services:
       - AWS_ENDPOINT_URL=http://dynamodb:8000
 
   sqs:
-    image: s12v/elasticmq:latest
+    image: softwaremill/elasticmq:latest
     ports:
       - "9324:9324"
   sqs-create:

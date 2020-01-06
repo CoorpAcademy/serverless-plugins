@@ -1,0 +1,54 @@
+service: serverless-offline-sqs
+
+provider:
+  name: aws
+  region: us-west-2
+  runtime: nodejs8.10
+
+plugins:
+  localPath: '../../packages'
+  modules:
+    - serverless-offline-ssm-provider
+    - serverless-offline-sqs
+    - serverless-offline
+
+functions:
+  autoCreatedHandler:
+    handler: lambda/handler.callback
+    events:
+      - sqs:
+          queueName: AutocreatedQueue
+          arn:
+            Fn::GetAtt:
+              - AutocreatedQueue
+              - Arn
+      - sqs:
+          queueName: AutocreatedFifoQueue.fifo
+          arn:
+            Fn::GetAtt:
+              - AutocreatedFifoQueue
+              - Arn
+
+resources:
+  Resources:
+    AutocreatedQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: AutocreatedQueue
+    AutocreatedFifoQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: AutocreatedFifoQueue.fifo
+        FifoQueue: true
+        ContentBasedDeduplication: true
+
+custom:
+  serverless-offline:
+    port: 3223
+  serverless-offline-sqs:
+    endpoint: http://0.0.0.0:${ssm:/sqs/port}
+    region: ${self:provider.region}
+    accessKeyId: root
+    secretAccessKey: root
+    skipCacheInvalidation: false
+    autoCreate: true

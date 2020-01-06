@@ -11,6 +11,6 @@ services:
       - "8000:8000"
 
   sqs:
-    image: s12v/elasticmq:latest
+    image: softwaremill/elasticmq:latest
     ports:
       - "9324:9324"
