@@ -6,14 +6,16 @@ const {
   filter,
   forEach,
   get,
+  getOr,
+  result,
   has,
   isEmpty,
-  isNil,
   isUndefined,
   lowerFirst,
   map,
   mapKeys,
   mapValues,
+  omit,
   omitBy,
   pipe
 } = require('lodash/fp');
@@ -66,17 +68,19 @@ class ServerlessOfflineSQS {
     return new SQS(this.getConfig());
   }
 
-  getProperty(queueEvent, propertyName, propertyType = 'string') {
+  getProperties(queueEvent) {
     if (queueEvent && queueEvent.arn['Fn::GetAtt']) {
-      const [ResourceName] = queueEvent.arn['Fn::GetAtt'];
-
-      const propertyValue = get(
-        ['resources', 'Resources', ResourceName, 'Properties', propertyName],
-        this.service
-      );
-      if (propertyValue && typeof propertyValue === propertyType) return propertyValue.toString();
+      const [resourceName] = queueEvent.arn['Fn::GetAtt'];
+      const properties = get(['resources', 'Resources', resourceName, 'Properties'], this.service);
+      if (!properties) throw new Error(`No resource defined with name ${resourceName}`);
+      return mapValues(result('toString'), properties);
     }
     return null;
+  }
+
+  getProperty(queueEvent, propertyName) {
+    const properties = this.getProperties(queueEvent);
+    return getOr(null, propertyName, properties);
   }
 
   getQueueName(queueEvent) {
@@ -175,16 +179,8 @@ class ServerlessOfflineSQS {
     this.serverless.cli.log(`${QueueName}`);
 
     if (this.getConfig().autoCreate) {
-      const attributes = {
-        FifoQueue: this.getProperty(queueEvent, 'FifoQueue', 'boolean'),
-        ContentBasedDeduplication: this.getProperty(
-          queueEvent,
-          'ContentBasedDeduplication',
-          'boolean'
-        )
-      };
-
-      const params = {QueueName, Attributes: omitBy(isNil, attributes)};
+      const properties = this.getProperties(queueEvent);
+      const params = {QueueName, Attributes: omit(['QueueName'], properties)};
       await fromCallback(cb => client.createQueue(params, cb));
     }
 
