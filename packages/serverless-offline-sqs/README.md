@@ -36,6 +36,8 @@ We also need to setup actual queue in ElasticMQ server, we can use [AWS cli](htt
 
 Once ElasticMQ is running and initialized, we can proceed with the configuration of the plugin.
 
+Note that starting from version v3.1 of the plugin, it supports autocreation of SQS fifo queues that are specified in the cloudformation `Resources`.
+
 ## Configure
 
 ### Functions
@@ -72,7 +74,8 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: MyFourthQueue
-    MyFifthQueue:
+
+    MyFifthQueue: # Support for Fifo queue creation starts from 3.1 only
       Type: AWS::SQS::Queue
       Properties:
         QueueName: MyFifthQueue.fifo
