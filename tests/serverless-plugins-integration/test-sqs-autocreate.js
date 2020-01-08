@@ -15,6 +15,12 @@ const sendMessages = () => {
   return Promise.all([
     client
       .sendMessage({
+        QueueUrl: 'http://localhost:9324/queue/AutocreatedImplicitQueue',
+        MessageBody: 'AutocreatedImplicitQueue'
+      })
+      .promise(),
+    client
+      .sendMessage({
         QueueUrl: 'http://localhost:9324/queue/AutocreatedQueue',
         MessageBody: 'AutocreatedQueue'
       })
@@ -64,12 +70,22 @@ serverless.stderr.on('data', data => {
 });
 
 async function pruneQueue(QueueName) {
-  const {QueueUrl} = await client.getQueueUrl({QueueName}).promise();
-  await client.deleteQueue({QueueUrl}).promise();
+  const {QueueUrl} = await client
+    .getQueueUrl({QueueName})
+    .promise()
+    .catch(err => {
+      console.log(`Ignore issue that occured pruning ${QueueName}: ${err.message}`);
+      return {QueueUrl: null};
+    });
+  if (QueueUrl) await client.deleteQueue({QueueUrl}).promise();
 }
 
 async function cleanUp() {
-  await Promise.all([pruneQueue('AutocreatedQueue'), pruneQueue('AutocreatedFifoQueue.fifo')]);
+  await Promise.all([
+    pruneQueue('AutocreatedImplicitQueue'),
+    pruneQueue('AutocreatedQueue'),
+    pruneQueue('AutocreatedFifoQueue.fifo')
+  ]);
 }
 
 serverless.on('close', code => {
