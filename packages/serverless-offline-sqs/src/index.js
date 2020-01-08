@@ -69,8 +69,9 @@ class ServerlessOfflineSQS {
   }
 
   getProperties(queueEvent) {
-    if (queueEvent && queueEvent.arn['Fn::GetAtt']) {
-      const [resourceName] = queueEvent.arn['Fn::GetAtt'];
+    const getAtt = get(['arn', 'Fn::GetAtt'], queueEvent);
+    if (getAtt) {
+      const [resourceName] = getAtt;
       const properties = get(['resources', 'Resources', resourceName, 'Properties'], this.service);
       if (!properties) throw new Error(`No resource defined with name ${resourceName}`);
       return mapValues(result('toString'), properties);
