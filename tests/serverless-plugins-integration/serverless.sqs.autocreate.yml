@@ -16,6 +16,7 @@ functions:
   autoCreatedHandler:
     handler: lambda/handler.callback
     events:
+      - sqs: arn:aws:sqs:region:XXXXXX:AutocreatedImplicitQueue
       - sqs:
           queueName: AutocreatedQueue
           arn:
