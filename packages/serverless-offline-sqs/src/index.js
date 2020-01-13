@@ -184,7 +184,8 @@ class ServerlessOfflineSQS {
 
     if (this.getConfig().autoCreate) {
       const properties = this.getProperties(queueEvent);
-      const params = {QueueName, Attributes: omit(['QueueName'], properties)};
+      const params = {QueueName, Attributes: omit(['QueueName', 'RedrivePolicy'], properties)};
+      // RedrivePolicy for now, until proper Cfn resolving is introduced: cf https://github.com/CoorpAcademy/serverless-plugins/issues/111
       await fromCallback(cb => client.createQueue(params, cb));
     }
 
