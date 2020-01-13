@@ -7,10 +7,10 @@ const {
   forEach,
   get,
   getOr,
-  result,
   has,
   isEmpty,
   isUndefined,
+  isPlainObject,
   lowerFirst,
   map,
   mapKeys,
@@ -74,7 +74,10 @@ class ServerlessOfflineSQS {
       const [resourceName] = getAtt;
       const properties = get(['resources', 'Resources', resourceName, 'Properties'], this.service);
       if (!properties) throw new Error(`No resource defined with name ${resourceName}`);
-      return mapValues(result('toString'), properties);
+      return mapValues(
+        value => (isPlainObject(value) ? JSON.stringify(value) : value.toString()),
+        properties
+      );
     }
     return null;
   }
