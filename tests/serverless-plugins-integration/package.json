@@ -1,7 +1,7 @@
 {
   "name": "serverless-offline-plugins-integration",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "scripts": {
     "start:kinesis": "sls --config serverless.kinesis.yml offline",
     "start:sqs": "sls --config serverless.sqs.yml offline",
@@ -25,7 +25,7 @@
     "serverless-offline": "^5.11.0",
     "serverless-offline-dynamodb-streams": "^3.0.1",
     "serverless-offline-kinesis": "^3.0.1",
-    "serverless-offline-sqs": "^3.1.1",
+    "serverless-offline-sqs": "^3.1.2",
     "serverless-offline-ssm-provider": "^2.0.0",
     "signal-exit": "^3.0.2"
   }
