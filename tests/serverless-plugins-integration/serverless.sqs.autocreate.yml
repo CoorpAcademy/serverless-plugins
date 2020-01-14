@@ -43,10 +43,13 @@ resources:
         FifoQueue: true
         RedrivePolicy:
           deadLetterTargetArn:
-            arn:whatever:willbeignore:for:now
+            Fn::GetAtt:
+              - SomeDeadQueueLetterIWouldHaveDefinedButIgnoredAsCfnResolvingNotSupported
+              - Arn
           maxReceiveCount: 12
         MessageRetentionPeriod: 1209600
         ContentBasedDeduplication: true
+        Policy: {Ref: "whatever the policy, i'll ignore it"}
 
 custom:
   serverless-offline:

@@ -4,20 +4,25 @@ const SQS = require('aws-sdk/clients/sqs');
 const {
   assignAll,
   filter,
+  compact,
   forEach,
+  fromPairs,
   get,
   getOr,
   has,
   isEmpty,
   isUndefined,
   isPlainObject,
+  keys,
   lowerFirst,
   map,
   mapKeys,
   mapValues,
   omit,
   omitBy,
-  pipe
+  pipe,
+  toPairs,
+  values
 } = require('lodash/fp');
 const functionHelper = require('serverless-offline/src/functionHelper');
 const LambdaContext = require('serverless-offline/src/LambdaContext');
@@ -74,10 +79,25 @@ class ServerlessOfflineSQS {
       const [resourceName] = getAtt;
       const properties = get(['resources', 'Resources', resourceName, 'Properties'], this.service);
       if (!properties) throw new Error(`No resource defined with name ${resourceName}`);
-      return mapValues(
-        value => (isPlainObject(value) ? JSON.stringify(value) : value.toString()),
-        properties
-      );
+      return pipe(
+        toPairs,
+        map(([key, value]) => {
+          if (!isPlainObject(value)) return [key, value.toString()];
+          if (
+            keys(value).some(k => k === 'Ref' || k.startsWith('Fn::')) ||
+            values(value).some(isPlainObject)
+          ) {
+            return this.serverless.cli.log(
+              `WARN ignore property '${key}' in config as it is some cloudformation reference: ${JSON.stringify(
+                value
+              )}`
+            );
+          }
+          return [key, JSON.stringify(value)];
+        }),
+        compact,
+        fromPairs
+      )(properties);
     }
     return null;
   }
@@ -184,8 +204,7 @@ class ServerlessOfflineSQS {
 
     if (this.getConfig().autoCreate) {
       const properties = this.getProperties(queueEvent);
-      const params = {QueueName, Attributes: omit(['QueueName', 'RedrivePolicy'], properties)};
-      // RedrivePolicy for now, until proper Cfn resolving is introduced: cf https://github.com/CoorpAcademy/serverless-plugins/issues/111
+      const params = {QueueName, Attributes: omit(['QueueName'], properties)};
       await fromCallback(cb => client.createQueue(params, cb));
     }
 
