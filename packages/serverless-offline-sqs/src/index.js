@@ -27,6 +27,23 @@ const {
 const functionHelper = require('serverless-offline/src/functionHelper');
 const LambdaContext = require('serverless-offline/src/LambdaContext');
 
+const patchEnv = pipe(
+  toPairs,
+  map(([key, newValue]) => {
+    const originalValue = process.env[key];
+    process.env[key] = newValue;
+    return [key, originalValue === undefined ? null : originalValue];
+  }),
+  fromPairs
+);
+const restoreEnv = pipe(
+  toPairs,
+  map(([key, value]) => {
+    if (value === null) delete process.env[key];
+    else process.env[key] = value;
+  })
+);
+
 const fromCallback = fun =>
   new Promise((resolve, reject) => {
     fun((err, data) => {
@@ -130,15 +147,11 @@ class ServerlessOfflineSQS {
     const {location = '.'} = config;
 
     const __function = this.service.getFunction(functionName);
-
-    const {env} = process;
-    const functionEnv = assignAll([
+    const envToInject = assignAll([
       {AWS_REGION: get('service.provider.region', this)},
-      env,
       get('service.provider.environment', this),
       get('environment', __function)
     ]);
-    process.env = functionEnv;
 
     const serviceRuntime = this.service.provider.runtime;
     const servicePath = join(this.serverless.config.servicePath, location);
@@ -188,12 +201,13 @@ class ServerlessOfflineSQS {
       )
     };
 
+    const envPatchToRemove = patchEnv(envToInject);
     const x = handler(event, lambdaContext, lambdaContext.done);
     if (x && typeof x.then === 'function' && typeof x.catch === 'function')
       x.then(lambdaContext.succeed).catch(lambdaContext.fail);
     else if (x instanceof Error) lambdaContext.fail(x);
 
-    process.env = env;
+    restoreEnv(envPatchToRemove);
   }
 
   async createQueueReadable(functionName, queueEvent) {
