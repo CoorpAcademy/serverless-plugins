@@ -152,6 +152,7 @@ class ServerlessOfflineSQS {
       get('service.provider.environment', this),
       get('environment', __function)
     ]);
+    const envPatchToRemove = patchEnv(envToInject);
 
     const serviceRuntime = this.service.provider.runtime;
     const servicePath = join(this.serverless.config.servicePath, location);
@@ -201,7 +202,6 @@ class ServerlessOfflineSQS {
       )
     };
 
-    const envPatchToRemove = patchEnv(envToInject);
     const x = handler(event, lambdaContext, lambdaContext.done);
     if (x && typeof x.then === 'function' && typeof x.catch === 'function')
       x.then(lambdaContext.succeed).catch(lambdaContext.fail);

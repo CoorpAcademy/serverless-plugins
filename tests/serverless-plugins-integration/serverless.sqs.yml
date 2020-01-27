@@ -4,6 +4,8 @@ provider:
   name: aws
   region: us-west-2
   runtime: nodejs8.10
+  environment:
+    WHOAMI: 'sqs-offline'
 
 plugins:
   localPath: '../../packages'
@@ -19,6 +21,8 @@ functions:
       - sqs: arn:aws:sqs:region:XXXXXX:MyFirstQueue
       - sqs:
           arn: arn:aws:sqs:region:XXXXXX:MySecondQueue
+    environment:
+      WHOAMI: 'sqs-offline overrided in da function'
   myCallbackHandler:
     handler: lambda/handler.callback
     events:
