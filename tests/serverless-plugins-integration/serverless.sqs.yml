@@ -33,7 +33,7 @@ functions:
               - MyThirdQueue
               - Arn
   myPythonHandler:
-    runtime: python2.7
+    runtime: python3.6
     handler: lambda/handler.handler
     events:
       - sqs:

@@ -63,6 +63,7 @@ serverless.stdout.pipe(
       envMatch.push(...(output.match(/>> I am sqs-offline( overrided in da function)?/g) || []));
 
       if (this.count === 4) serverless.kill();
+
       cb();
     }
   })
@@ -80,8 +81,7 @@ serverless.stderr.on('data', data => {
 serverless.on('close', code => {
   console.log(envMatch);
   const functionOverrides = envMatch.filter(msg => msg.endsWith('overrided in da function'));
-  if (envMatch.length !== 3) {
-    // ! FIXME: for some reason python doesnt emit anything for now!
+  if (envMatch.length !== 4) {
     console.error('Looks like there was some issue with the env logs: missing env');
     process.exit(2);
   }
