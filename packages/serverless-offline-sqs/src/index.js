@@ -208,7 +208,9 @@ class ServerlessOfflineSQS {
       await fromCallback(cb => client.createQueue(params, cb));
     }
 
-    const {QueueUrl} = await fromCallback(cb => client.getQueueUrl({QueueName}, cb));
+    let {QueueUrl} = await fromCallback(cb => client.getQueueUrl({QueueName}, cb));
+    const endpointWithoutHost = QueueUrl.replace(/^[a-z]{4,5}\:\/{2}[a-z]{1,}\:[0-9]{1,4}.(.*)/, '$1');
+    QueueUrl = `${this.getConfig().endpoint}/${endpointWithoutHost}`;
 
     const next = async () => {
       const {Messages} = await fromCallback(cb =>
