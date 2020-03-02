@@ -92,6 +92,7 @@ You could use [ElasticMQ](https://github.com/adamw/elasticmq) with the following
 ```yml
 custom:
   serverless-offline-sqs:
+    enabled: true                     # if is not set, true by default
     autoCreate: true                 # create queue if not exists
     apiVersion: '2012-11-05'
     endpoint: http://0.0.0.0:9324

@@ -44,19 +44,25 @@ const extractQueueNameFromARN = arn => {
 
 class ServerlessOfflineSQS {
   constructor(serverless, options) {
-    this.serverless = serverless;
-    this.service = serverless.service;
-    this.options = options;
+    const isEnabled = getOr(true, 'enabled', options);
 
-    this.commands = {};
+    if (isEnabled) {
+      this.serverless = serverless;
+      this.service = serverless.service;
+      this.options = options;
 
-    this.hooks = {
-      'before:offline:start': this.offlineStartInit.bind(this),
-      'before:offline:start:init': this.offlineStartInit.bind(this),
-      'before:offline:start:end': this.offlineStartEnd.bind(this)
-    };
+      this.commands = {};
 
-    this.streams = [];
+      this.hooks = {
+        'before:offline:start': this.offlineStartInit.bind(this),
+        'before:offline:start:init': this.offlineStartInit.bind(this),
+        'before:offline:start:end': this.offlineStartEnd.bind(this)
+      };
+
+      this.streams = [];
+    } else {
+      serverless.cli.log('WARN Serverless Offline SQS is Disabled');
+    }
   }
 
   getConfig() {
