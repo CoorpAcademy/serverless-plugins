@@ -45,7 +45,7 @@ serverless.stdout.pipe(
     write(chunk, enc, cb) {
       const output = chunk.toString();
 
-      if (/Offline \[HTTP\] listening on/.test(output)) {
+      if (/Offline \[HTTP] listening on/.test(output)) {
         sendMessages()
           .then(() => console.log('sucessfully send messages'))
           .catch(err => {
@@ -53,7 +53,7 @@ serverless.stdout.pipe(
           });
       }
 
-      this.count = (this.count || 0) + (output.match(/\[✔\]/g) || []).length;
+      this.count = (this.count || 0) + (output.match(/\[✔]/g) || []).length;
       if (this.count === 2) serverless.kill();
       cb();
     }

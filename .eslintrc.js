@@ -15,7 +15,9 @@ module.exports = {
     'no-console': 'off',
     'promise/no-native': 'off',
     'no-param-reassign': 'off',
-    'import/no-extraneous-dependencies': 'off'
+    'import/no-extraneous-dependencies': 'off',
+    'unicorn/no-unreadable-array-destructuring': 'off',
+    'unicorn/consistent-function-scoping': 'off'
   },
   overrides: [
     {
