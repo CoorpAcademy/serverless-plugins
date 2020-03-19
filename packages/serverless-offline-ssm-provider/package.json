@@ -15,6 +15,10 @@
     "src/index.js"
   ],
   "author": "godu",
+  "maintainers": [
+    "godu",
+    "Adrien Becchis @AdrieanKhisbe"
+  ],
   "license": "MIT",
   "dependencies": {
     "lodash": "^4.17.15"
@@ -22,6 +26,7 @@
   "keywords": [
     "ssm",
     "serverless",
+    "serverless-offline",
     "lambda"
   ]
 }
