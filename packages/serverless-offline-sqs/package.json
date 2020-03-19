@@ -21,15 +21,15 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "serverless-offline": "^5.11.0"
+    "serverless-offline": "^5.12.1"
   },
   "dependencies": {
-    "aws-sdk": "^2.538.0",
-    "figures": "^3.0.0",
+    "aws-sdk": "^2.642.0",
+    "figures": "^3.2.0",
     "lodash": "^4.17.15"
   },
   "devDependencies": {
-    "serverless-offline": "^5.11.0"
+    "serverless-offline": "^5.12.1"
   },
   "keywords": [
     "sqs",
