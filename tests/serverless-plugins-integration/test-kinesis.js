@@ -54,11 +54,11 @@ serverless.stdout.pipe(
     write(chunk, enc, cb) {
       const output = chunk.toString();
 
-      if (/Offline \[HTTP\] listening on/.test(output)) {
+      if (/Offline \[HTTP] listening on/.test(output)) {
         putRecords();
       }
 
-      this.count = (this.count || 0) + (output.match(/\[✔\]/g) || []).length;
+      this.count = (this.count || 0) + (output.match(/\[✔]/g) || []).length;
       if (this.count === 4) serverless.kill();
       cb();
     }

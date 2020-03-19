@@ -8,6 +8,9 @@
     "bootstrap": {
       "npmClientArgs": ["--no-package-lock"],
       "hoist": true
+    },
+    "publish": {
+      "message": "New release :zap:"
     }
   }
 }
