@@ -21,20 +21,38 @@ const {
 const functionHelper = require('serverless-offline/src/functionHelper');
 const LambdaContext = require('serverless-offline/src/LambdaContext');
 
-const fromCallback = fun =>
-  new Promise((resolve, reject) => {
-    fun((err, data) => {
-      if (err) return reject(err);
-      resolve(data);
-    });
-  });
-
 const printBlankLine = () => console.log();
 
 const extractStreamNameFromARN = arn => {
   const [, , , , , StreamURI] = arn.split(':');
   const [, ...StreamNames] = StreamURI.split('/');
   return StreamNames.join('/');
+};
+
+const extractStreamNameFromGetAtt = getAtt => {
+  let logicalResourceName;
+  if (Array.isArray(getAtt)) {
+    logicalResourceName = getAtt[0];
+  } else if (typeof getAtt === 'string' && /\w+\.Arn$/.test(getAtt)) {
+    logicalResourceName = /(\w+)\.Arn$/.exec(getAtt)[1];
+  } else {
+    throw new Error('Unable to parse Fn::GetAtt for stream cross-reference');
+  }
+  return logicalResourceName;
+};
+
+const extractStreamNameFromJoin = joinparts => {
+  const [delimiter, parts] = joinparts;
+  const resolvedParts = parts.map(part => {
+    if (typeof part === 'string') {
+      return part;
+    } else if (typeof part === 'object') {
+      return 'placeholder';
+    }
+    return '';
+  });
+  const arn = resolvedParts.join(delimiter);
+  return extractStreamNameFromARN(arn);
 };
 
 class ServerlessOfflineKinesis {
@@ -133,41 +151,76 @@ class ServerlessOfflineKinesis {
     if (typeof streamEvent.arn === 'string') return extractStreamNameFromARN(streamEvent.arn);
     if (typeof streamEvent.streamName === 'string') return streamEvent.streamName;
 
-    if (streamEvent.arn['Fn::GetAtt']) {
-      const [ResourceName] = streamEvent.arn['Fn::GetAtt'];
-
-      if (
-        this.service &&
-        this.service.resources &&
-        this.service.resources.Resources &&
-        this.service.resources.Resources[ResourceName] &&
-        this.service.resources.Resources[ResourceName].Properties &&
-        typeof this.service.resources.Resources[ResourceName].Properties.Name === 'string'
-      )
-        return this.service.resources.Resources[ResourceName].Properties.Name;
+    const getAtt = streamEvent.arn['Fn::GetAtt'];
+    if (getAtt) {
+      const logicalResourceName = extractStreamNameFromGetAtt(getAtt);
+      const physicalResourceName = get([
+        'service',
+        'resources',
+        'Resources',
+        logicalResourceName,
+        'Properties',
+        'Name'
+      ])(this);
+      if (typeof physicalResourceName === 'string') return physicalResourceName;
     }
+    const joinStatement = streamEvent.arn['Fn::Join'];
+    if (joinStatement) {
+      const physicalResourceName = extractStreamNameFromJoin(joinStatement);
+      if (typeof physicalResourceName === 'string') return physicalResourceName;
+    }
+
+    this.serverless.cli.log(
+      `Could not resolve stream name for spec: ${JSON.stringify(streamEvent, null, 2)}`
+    );
 
     throw new Error(
       `StreamName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-kinesis#functions`
     );
   }
 
+  pollStreamUntilActive(streamName, timeout) {
+    const client = this.getClient();
+    const lastTime = Date.now() + timeout;
+    return new Promise((resolve, reject) => {
+      const poll = async () => {
+        const {
+          StreamDescription: {StreamStatus}
+        } = await client.describeStream({StreamName: streamName}).promise();
+        if (StreamStatus === 'ACTIVE') {
+          resolve();
+        } else if (Date.now() > lastTime) {
+          reject(
+            new Error(
+              `Stream ${streamName} did not become active within timeout of ${Math.floor(
+                timeout / 1000
+              )}s`
+            )
+          );
+        } else {
+          setTimeout(poll, 1000);
+        }
+      };
+      poll();
+    });
+  }
+
   async createKinesisReadable(functionName, streamEvent) {
     const client = this.getClient();
     const streamName = this.getStreamName(streamEvent);
 
-    this.serverless.cli.log(`${streamName}`);
+    this.serverless.cli.log(`Waiting for ${streamName} to become active`);
+
+    await this.pollStreamUntilActive(streamName, this.getConfig().waitForActiveTimeout || 30000);
 
     const {
       StreamDescription: {Shards: shards}
-    } = await fromCallback(cb =>
-      client.describeStream(
-        {
-          StreamName: streamName
-        },
-        cb
-      )
-    );
+    } = await client
+      .describeStream({
+        StreamName: streamName
+      })
+      .promise();
+    this.serverless.cli.log(`${streamName} - creating listeners for ${shards.length} shards`);
 
     forEach(({ShardId: shardId}) => {
       const readable = KinesisReadable(
@@ -233,3 +286,4 @@ class ServerlessOfflineKinesis {
 }
 
 module.exports = ServerlessOfflineKinesis;
+module.exports.extractStreamNameFromGetAtt = extractStreamNameFromGetAtt;
