@@ -126,6 +126,7 @@ class ServerlessOfflineDynamoDBStreams {
     const dynamodbClient = this.getDynamoDBClient();
     const dynamodbStreamsClient = this.getDynamoDBStreamsClient();
     const tableName = this.getTableName(tableEvent);
+    const {retries = Infinity} = this.getConfig();
 
     const streamARN = await fromCallback(cb =>
       dynamodbClient.describeTable(
@@ -164,9 +165,11 @@ class ServerlessOfflineDynamoDBStreams {
         new Writable({
           objectMode: true,
           write: (chunk, encoding, cb) => {
+            let attempts = 0;
             const handleAttempt = () => {
+              if (retries < Infinity) attempts += 1;
               this.eventHandler(streamARN, functionName, shardId, chunk, err =>
-                err ? handleAttempt() : cb()
+                err && attempts <= retries ? handleAttempt() : cb()
               );
             };
 
