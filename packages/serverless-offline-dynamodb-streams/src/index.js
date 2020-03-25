@@ -41,7 +41,6 @@ const extractTableNameFromARN = arn => {
 class ServerlessOfflineDynamoDBStreams {
   constructor(serverless, options) {
     this.serverless = serverless;
-    this.service = serverless.service;
     this.options = options;
 
     this.commands = {};
@@ -55,13 +54,17 @@ class ServerlessOfflineDynamoDBStreams {
     this.streams = [];
   }
 
+  service() {
+    return this.serverless.service;
+  }
+
   getConfig() {
     return assignAll([
       omitBy(isUndefined, this.options),
-      omitBy(isUndefined, this.service),
-      omitBy(isUndefined, this.service.provider),
-      omitBy(isUndefined, get(['custom', 'serverless-offline'], this.service)),
-      omitBy(isUndefined, get(['custom', 'serverless-offline-dynamodb-streams'], this.service))
+      omitBy(isUndefined, this.service()),
+      omitBy(isUndefined, this.service().provider),
+      omitBy(isUndefined, get(['custom', 'serverless-offline'], this.service())),
+      omitBy(isUndefined, get(['custom', 'serverless-offline-dynamodb-streams'], this.service()))
     ]);
   }
 
@@ -78,18 +81,18 @@ class ServerlessOfflineDynamoDBStreams {
 
     const {location = '.'} = this.getConfig();
 
-    const __function = this.service.getFunction(functionName);
+    const __function = this.service().getFunction(functionName);
 
     const {env} = process;
     const functionEnv = assignAll([
-      {AWS_REGION: get('service.provider.region', this)},
+      {AWS_REGION: get('provider.region', this.service())},
       env,
-      get('service.provider.environment', this),
+      get('provider.environment', this.service()),
       get('environment', __function)
     ]);
     process.env = functionEnv;
 
-    const serviceRuntime = this.service.provider.runtime;
+    const serviceRuntime = this.service().provider.runtime;
     const servicePath = join(this.serverless.config.servicePath, location);
     const funOptions = functionHelper.getFunctionOptions(
       __function,
@@ -99,7 +102,7 @@ class ServerlessOfflineDynamoDBStreams {
     );
     const handler = functionHelper.createHandler(funOptions, this.getConfig());
 
-    const lambdaContext = new LambdaContext(__function, this.service.provider, (err, data) => {
+    const lambdaContext = new LambdaContext(__function, this.service().provider, (err, data) => {
       this.serverless.cli.log(
         `[${err ? figures.cross : figures.tick}] ${functionName} ${JSON.stringify(data) || ''}`
       );
@@ -109,7 +112,7 @@ class ServerlessOfflineDynamoDBStreams {
       Records: Records.map(
         assign({
           eventSourceARN: streamARN,
-          awsRegion: get('service.provider.region', this)
+          awsRegion: get('provider.region', this.service())
         })
       )
     };
@@ -187,14 +190,14 @@ class ServerlessOfflineDynamoDBStreams {
       const [ResourceName] = tableEvent.arn['Fn::GetAtt'];
 
       if (
-        this.service &&
-        this.service.resources &&
-        this.service.resources.Resources &&
-        this.service.resources.Resources[ResourceName] &&
-        this.service.resources.Resources[ResourceName].Properties &&
-        typeof this.service.resources.Resources[ResourceName].Properties.TableName === 'string'
+        this.service() &&
+        this.service().resources &&
+        this.service().resources.Resources &&
+        this.service().resources.Resources[ResourceName] &&
+        this.service().resources.Resources[ResourceName].Properties &&
+        typeof this.service().resources.Resources[ResourceName].Properties.TableName === 'string'
       )
-        return this.service.resources.Resources[ResourceName].Properties.TableName;
+        return this.service().resources.Resources[ResourceName].Properties.TableName;
     }
 
     throw new Error(
@@ -229,7 +232,7 @@ class ServerlessOfflineDynamoDBStreams {
       if (!isEmpty(streams)) {
         printBlankLine();
       }
-    }, this.service.functions);
+    }, this.service().functions);
   }
 
   offlineStartEnd() {

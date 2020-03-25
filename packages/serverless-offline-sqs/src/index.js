@@ -45,7 +45,6 @@ const extractQueueNameFromARN = arn => {
 class ServerlessOfflineSQS {
   constructor(serverless, options) {
     this.serverless = serverless;
-    this.service = serverless.service;
     this.options = options;
 
     this.commands = {};
@@ -59,13 +58,17 @@ class ServerlessOfflineSQS {
     this.streams = [];
   }
 
+  service() {
+    return this.serverless.service;
+  }
+
   getConfig() {
     return assignAll([
       omitBy(isUndefined, this.options),
-      omitBy(isUndefined, this.service),
-      omitBy(isUndefined, this.service.provider),
-      omitBy(isUndefined, get(['custom', 'serverless-offline'], this.service)),
-      omitBy(isUndefined, get(['custom', 'serverless-offline-sqs'], this.service))
+      omitBy(isUndefined, this.service()),
+      omitBy(isUndefined, this.service().provider),
+      omitBy(isUndefined, get(['custom', 'serverless-offline'], this.service())),
+      omitBy(isUndefined, get(['custom', 'serverless-offline-sqs'], this.service()))
     ]);
   }
 
@@ -77,7 +80,10 @@ class ServerlessOfflineSQS {
     const getAtt = get(['arn', 'Fn::GetAtt'], queueEvent);
     if (getAtt) {
       const [resourceName] = getAtt;
-      const properties = get(['resources', 'Resources', resourceName, 'Properties'], this.service);
+      const properties = get(
+        ['resources', 'Resources', resourceName, 'Properties'],
+        this.service()
+      );
       if (!properties) throw new Error(`No resource defined with name ${resourceName}`);
       return pipe(
         toPairs,
@@ -129,18 +135,18 @@ class ServerlessOfflineSQS {
     const config = this.getConfig();
     const {location = '.'} = config;
 
-    const __function = this.service.getFunction(functionName);
+    const __function = this.service().getFunction(functionName);
 
     const {env} = process;
     const functionEnv = assignAll([
-      {AWS_REGION: get('service.provider.region', this)},
+      {AWS_REGION: get('provider.region', this.service())},
       env,
-      get('service.provider.environment', this),
+      get('provider.environment', this.service()),
       get('environment', __function)
     ]);
     process.env = functionEnv;
 
-    const serviceRuntime = this.service.provider.runtime;
+    const serviceRuntime = this.service().provider.runtime;
     const servicePath = join(this.serverless.config.servicePath, location);
 
     const funOptions = functionHelper.getFunctionOptions(
@@ -151,7 +157,7 @@ class ServerlessOfflineSQS {
     );
     const handler = functionHelper.createHandler(funOptions, config);
 
-    const lambdaContext = new LambdaContext(__function, this.service.provider, (err, data) => {
+    const lambdaContext = new LambdaContext(__function, this.service().provider, (err, data) => {
       this.serverless.cli.log(
         `[${err ? figures.cross : figures.tick}] ${functionName} ${JSON.stringify(data) || ''}`
       );
@@ -269,7 +275,7 @@ class ServerlessOfflineSQS {
       if (!isEmpty(queues)) {
         printBlankLine();
       }
-    }, this.service.functions);
+    }, this.service().functions);
   }
 
   offlineStartEnd() {
