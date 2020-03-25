@@ -5,7 +5,7 @@
   "scripts": {
     "start:kinesis": "sls --config serverless.kinesis.yml offline",
     "start:sqs": "sls --config serverless.sqs.yml offline",
-    "start:dynamodb-streams": "sls --config serverless.dynamodb-streams.yml offline",
+    "start:dynamodb-streams": "sls --config serverless.dynamodb-stream.yml offline",
     "test": "npm run test:sqs && npm run test:sqs:autocreate && npm run test:kinesis && npm run test:dynamodb-streams",
     "setup-service": "../../scripts/clean-start.sh",
     "pretest:dynamodb-streams": "npm run -s setup-service dynamodb",
