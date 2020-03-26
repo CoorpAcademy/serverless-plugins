@@ -192,8 +192,6 @@ class ServerlessOfflineSQS {
     if (x && typeof x.then === 'function' && typeof x.catch === 'function')
       x.then(lambdaContext.succeed).catch(lambdaContext.fail);
     else if (x instanceof Error) lambdaContext.fail(x);
-
-    process.env = env;
   }
 
   async createQueueReadable(functionName, queueEvent) {
