@@ -136,6 +136,9 @@ class ServerlessOfflineDynamoDBStreams {
       )
     ).then(get('Table.LatestStreamArn'));
 
+    if (!streamARN) {
+      throw new Error(`Table ${tableName} does not have streams`);
+    }
     this.serverless.cli.log(`${streamARN}`);
 
     const {
