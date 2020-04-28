@@ -45,7 +45,7 @@ serverless.stdout.pipe(
     write(chunk, enc, cb) {
       const output = chunk.toString();
 
-      if (/Offline \[HTTP] listening on/.test(output)) {
+      if (/Offline.+listening on/.test(output)) {
         sendMessages()
           .then(() => console.log('sucessfully send messages'))
           .catch(err => {
