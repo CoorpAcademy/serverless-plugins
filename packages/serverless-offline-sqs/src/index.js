@@ -54,6 +54,10 @@ class ServerlessOfflineSQS {
       "before:offline:start:end": this.offlineStartEnd.bind(this),
     };
 
+    this.serverlessOfflinePlugin = this.serverless.pluginManager.plugins.find(
+      (plugin) => !!plugin.commands.offline
+    );
+
     this.streams = [];
   }
 
@@ -178,9 +182,24 @@ class ServerlessOfflineSQS {
       ),
     };
 
-    const lambdaFunction = this.serverless.get(functionName);
+    this.serverless.cli.log(
+      `${streamName} (λ: ${this.serverless.pluginManager.plugins})`
+    );
+
+    const lambdaFunction = this.getLambdaFunction(functionName);
     lambdaFunction.setEvent(event);
     await lambdaFunction.runHandler();
+  }
+
+  getLambdaFunction(functionName) {
+    if (!this.serverlessOfflinePlugin) {
+      throw new Error("Missing serverless-offline plugin");
+    }
+
+    // TODO: Find a better way to hook into serverless-offline Lambda
+    const lambda = this.serverlessOfflinePlugin.__private_5_lambda;
+    const lambdaFunction = lambda.get(functionName);
+    return lambdaFunction;
   }
 
   async createQueueReadable(functionName, queueEvent) {
