@@ -175,7 +175,20 @@ class ServerlessOfflineSQS {
 
     const lambdaFunction = this.getLambdaFunction(functionName);
     lambdaFunction.setEvent(event);
-    await lambdaFunction.runHandler();
+
+    let err = null;
+    let data = null;
+    try {
+      data = await lambdaFunction.runHandler();
+    } catch (executionError) {
+      err = executionError;
+    } finally {
+      this.serverless.cli.log(
+        `${streamName} (λ: ${functionName}) [${
+          err ? figures.cross : figures.tick
+        }] ${JSON.stringify(data) || ""}`
+      );
+    }
   }
 
   getLambdaFunction(functionName) {
