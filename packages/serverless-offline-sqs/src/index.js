@@ -1,6 +1,5 @@
-const { join } = require("path");
-const figures = require("figures");
-const SQS = require("aws-sdk/clients/sqs");
+const figures = require('figures');
+const SQS = require('aws-sdk/clients/sqs');
 const {
   assignAll,
   filter,
@@ -22,10 +21,10 @@ const {
   omitBy,
   pipe,
   toPairs,
-  values,
-} = require("lodash/fp");
+  values
+} = require('lodash/fp');
 
-const fromCallback = (fun) =>
+const fromCallback = fun =>
   new Promise((resolve, reject) => {
     fun((err, data) => {
       if (err) return reject(err);
@@ -35,8 +34,8 @@ const fromCallback = (fun) =>
 
 const printBlankLine = () => console.log();
 
-const extractQueueNameFromARN = (arn) => {
-  const [, , , , , QueueName] = arn.split(":");
+const extractQueueNameFromARN = arn => {
+  const [, , , , , QueueName] = arn.split(':');
   return QueueName;
 };
 
@@ -49,17 +48,17 @@ class ServerlessOfflineSQS {
     this.commands = {};
 
     this.hooks = {
-      "before:offline:start": this.offlineStartInit.bind(this),
-      "before:offline:start:init": this.offlineStartInit.bind(this),
-      "before:offline:start:end": this.offlineStartEnd.bind(this),
+      'before:offline:start': this.offlineStartInit.bind(this),
+      'before:offline:start:init': this.offlineStartInit.bind(this),
+      'before:offline:start:end': this.offlineStartEnd.bind(this)
     };
 
     this.serverlessOfflinePlugin = this.serverless.pluginManager.plugins.find(
-      (plugin) => plugin.commands && plugin.commands.offline
+      plugin => plugin.commands && plugin.commands.offline
     );
 
     if (!this.serverlessOfflinePlugin) {
-      throw new Error("Missing serverless-offline plugin");
+      throw new Error('Missing serverless-offline plugin');
     }
 
     this.streams = [];
@@ -70,11 +69,8 @@ class ServerlessOfflineSQS {
       omitBy(isUndefined, this.options),
       omitBy(isUndefined, this.service),
       omitBy(isUndefined, this.service.provider),
-      omitBy(isUndefined, get(["custom", "serverless-offline"], this.service)),
-      omitBy(
-        isUndefined,
-        get(["custom", "serverless-offline-sqs"], this.service)
-      ),
+      omitBy(isUndefined, get(['custom', 'serverless-offline'], this.service)),
+      omitBy(isUndefined, get(['custom', 'serverless-offline-sqs'], this.service))
     ]);
   }
 
@@ -83,21 +79,17 @@ class ServerlessOfflineSQS {
   }
 
   getProperties(queueEvent) {
-    const getAtt = get(["arn", "Fn::GetAtt"], queueEvent);
+    const getAtt = get(['arn', 'Fn::GetAtt'], queueEvent);
     if (getAtt) {
       const [resourceName] = getAtt;
-      const properties = get(
-        ["resources", "Resources", resourceName, "Properties"],
-        this.service
-      );
-      if (!properties)
-        throw new Error(`No resource defined with name ${resourceName}`);
+      const properties = get(['resources', 'Resources', resourceName, 'Properties'], this.service);
+      if (!properties) throw new Error(`No resource defined with name ${resourceName}`);
       return pipe(
         toPairs,
         map(([key, value]) => {
           if (!isPlainObject(value)) return [key, value.toString()];
           if (
-            keys(value).some((k) => k === "Ref" || k.startsWith("Fn::")) ||
+            keys(value).some(k => k === 'Ref' || k.startsWith('Fn::')) ||
             values(value).some(isPlainObject)
           ) {
             return this.serverless.cli.log(
@@ -121,13 +113,11 @@ class ServerlessOfflineSQS {
   }
 
   getQueueName(queueEvent) {
-    if (typeof queueEvent === "string")
-      return extractQueueNameFromARN(queueEvent);
-    if (typeof queueEvent.arn === "string")
-      return extractQueueNameFromARN(queueEvent.arn);
-    if (typeof queueEvent.queueName === "string") return queueEvent.queueName;
+    if (typeof queueEvent === 'string') return extractQueueNameFromARN(queueEvent);
+    if (typeof queueEvent.arn === 'string') return extractQueueNameFromARN(queueEvent.arn);
+    if (typeof queueEvent.queueName === 'string') return queueEvent.queueName;
 
-    const queueName = this.getProperty(queueEvent, "QueueName");
+    const queueName = this.getProperty(queueEvent, 'QueueName');
     if (!queueName)
       throw new Error(
         `QueueName not found. See https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-sqs#functions`
@@ -143,10 +133,10 @@ class ServerlessOfflineSQS {
 
     const config = this.getConfig();
 
-    const awsRegion = config.region || "us-west-2";
-    const awsAccountId = config.accountId || "000000000000";
+    const awsRegion = config.region || 'us-west-2';
+    const awsAccountId = config.accountId || '000000000000';
     const eventSourceARN =
-      typeof queueEvent.arn === "string"
+      typeof queueEvent.arn === 'string'
         ? queueEvent.arn
         : `arn:aws:sqs:${awsRegion}:${awsAccountId}:${streamName}`;
 
@@ -158,7 +148,7 @@ class ServerlessOfflineSQS {
           Body: body,
           Attributes: attributes,
           MessageAttributes: messageAttributes,
-          MD5OfBody: md5OfBody,
+          MD5OfBody: md5OfBody
         }) => ({
           messageId,
           receiptHandle,
@@ -166,11 +156,11 @@ class ServerlessOfflineSQS {
           attributes,
           messageAttributes: mapValues(mapKeys(lowerFirst), messageAttributes),
           md5OfBody,
-          eventSource: "aws:sqs",
+          eventSource: 'aws:sqs',
           eventSourceARN,
-          awsRegion,
+          awsRegion
         })
-      ),
+      )
     };
 
     const lambdaFunction = this.getLambdaFunction(functionName);
@@ -186,7 +176,7 @@ class ServerlessOfflineSQS {
       this.serverless.cli.log(
         `${streamName} (λ: ${functionName}) [${
           err ? figures.cross : figures.tick
-        }] ${JSON.stringify(data) || ""}`
+        }] ${JSON.stringify(data) || ''}`
       );
     }
   }
@@ -206,23 +196,21 @@ class ServerlessOfflineSQS {
 
     if (this.getConfig().autoCreate) {
       const properties = this.getProperties(queueEvent);
-      const params = { QueueName, Attributes: omit(["QueueName"], properties) };
-      await fromCallback((cb) => client.createQueue(params, cb));
+      const params = {QueueName, Attributes: omit(['QueueName'], properties)};
+      await fromCallback(cb => client.createQueue(params, cb));
     }
 
-    const { QueueUrl } = await fromCallback((cb) =>
-      client.getQueueUrl({ QueueName }, cb)
-    );
+    const {QueueUrl} = await fromCallback(cb => client.getQueueUrl({QueueName}, cb));
 
     const next = async () => {
-      const { Messages } = await fromCallback((cb) =>
+      const {Messages} = await fromCallback(cb =>
         client.receiveMessage(
           {
             QueueUrl,
             MaxNumberOfMessages: queueEvent.batchSize,
-            AttributeNames: ["All"],
-            MessageAttributeNames: ["All"],
-            WaitTimeSeconds: 20,
+            AttributeNames: ['All'],
+            MessageAttributeNames: ['All'],
+            WaitTimeSeconds: 20
           },
           cb
         )
@@ -232,16 +220,14 @@ class ServerlessOfflineSQS {
         try {
           await this.eventHandler(queueEvent, functionName, Messages);
 
-          await fromCallback((cb) =>
+          await fromCallback(cb =>
             client.deleteMessageBatch(
               {
-                Entries: (Messages || []).map(
-                  ({ MessageId: Id, ReceiptHandle }) => ({
-                    Id,
-                    ReceiptHandle,
-                  })
-                ),
-                QueueUrl,
+                Entries: (Messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
+                  Id,
+                  ReceiptHandle
+                })),
+                QueueUrl
               },
               () => cb()
             )
@@ -260,19 +246,15 @@ class ServerlessOfflineSQS {
   offlineStartInit() {
     this.serverless.cli.log(`Starting Offline SQS.`);
 
-    mapValues.convert({ cap: false })((_function, functionName) => {
-      const queues = pipe(
-        get("events"),
-        filter(has("sqs")),
-        map(get("sqs"))
-      )(_function);
+    mapValues.convert({cap: false})((_function, functionName) => {
+      const queues = pipe(get('events'), filter(has('sqs')), map(get('sqs')))(_function);
 
       if (!isEmpty(queues)) {
         printBlankLine();
         this.serverless.cli.log(`SQS for ${functionName}:`);
       }
 
-      forEach((queueEvent) => {
+      forEach(queueEvent => {
         this.createQueueReadable(functionName, queueEvent);
       }, queues);
 
@@ -283,7 +265,7 @@ class ServerlessOfflineSQS {
   }
 
   offlineStartEnd() {
-    this.serverless.cli.log("offline-start-end");
+    this.serverless.cli.log('offline-start-end');
   }
 }
 
