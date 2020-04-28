@@ -172,6 +172,7 @@ class ServerlessOfflineSQS {
       data = await lambdaFunction.runHandler();
     } catch (executionError) {
       err = executionError;
+      throw err;
     } finally {
       this.serverless.cli.log(
         `${streamName} (λ: ${functionName}) [${
