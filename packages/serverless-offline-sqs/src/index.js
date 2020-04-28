@@ -55,8 +55,12 @@ class ServerlessOfflineSQS {
     };
 
     this.serverlessOfflinePlugin = this.serverless.pluginManager.plugins.find(
-      (plugin) => !!plugin.commands.offline
+      (plugin) => plugin.commands && plugin.commands.offline
     );
+
+    if (!this.serverlessOfflinePlugin) {
+      throw new Error("Missing serverless-offline plugin");
+    }
 
     this.streams = [];
   }
@@ -138,19 +142,6 @@ class ServerlessOfflineSQS {
     this.serverless.cli.log(`${streamName} (λ: ${functionName})`);
 
     const config = this.getConfig();
-    const { location = "." } = config;
-
-    // const { env } = process;
-    // const functionEnv = assignAll([
-    //   { AWS_REGION: get("service.provider.region", this) },
-    //   env,
-    //   get("service.provider.environment", this),
-    //   get("environment", __function),
-    // ]);
-    // process.env = functionEnv;
-
-    // const serviceRuntime = this.service.provider.runtime;
-    // const servicePath = join(this.serverless.config.servicePath, location);
 
     const awsRegion = config.region || "us-west-2";
     const awsAccountId = config.accountId || "000000000000";
@@ -182,20 +173,12 @@ class ServerlessOfflineSQS {
       ),
     };
 
-    this.serverless.cli.log(
-      `${streamName} (λ: ${this.serverless.pluginManager.plugins})`
-    );
-
     const lambdaFunction = this.getLambdaFunction(functionName);
     lambdaFunction.setEvent(event);
     await lambdaFunction.runHandler();
   }
 
   getLambdaFunction(functionName) {
-    if (!this.serverlessOfflinePlugin) {
-      throw new Error("Missing serverless-offline plugin");
-    }
-
     // TODO: Find a better way to hook into serverless-offline Lambda
     const lambda = this.serverlessOfflinePlugin.__private_5_lambda;
     const lambdaFunction = lambda.get(functionName);
