@@ -2,8 +2,8 @@ service: serverless-offline-sqs
 
 provider:
   name: aws
-  region: us-west-2
-  runtime: nodejs8.10
+  region: eu-west-1
+  runtime: nodejs10.x
 
 plugins:
   localPath: '../../packages'
@@ -44,7 +44,7 @@ resources:
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt:
-              - SomeDeadQueueLetterIWouldHaveDefinedButIgnoredAsCfnResolvingNotSupported
+              - AutocreatedQueue
               - Arn
           maxReceiveCount: 12
         MessageRetentionPeriod: 1209600
@@ -55,9 +55,7 @@ custom:
   serverless-offline:
     port: 3223
   serverless-offline-sqs:
-    endpoint: http://0.0.0.0:${ssm:/sqs/port}
-    region: ${self:provider.region}
+    endpoint: http://localhost:${ssm:/sqs/port}
     accessKeyId: root
     secretAccessKey: root
-    skipCacheInvalidation: false
     autoCreate: true

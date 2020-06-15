@@ -35,17 +35,21 @@ const sendMessages = () => {
   ]);
 };
 
-const serverless = spawn('serverless', ['--config', 'serverless.sqs.autocreate.yml', 'offline'], {
-  stdio: ['pipe', 'pipe', 'pipe'],
-  cwd: __dirname
-});
+const serverless = spawn(
+  'npx',
+  ['serverless', '--config', 'serverless.sqs.autocreate.yml', 'offline', 'start'],
+  {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    cwd: __dirname
+  }
+);
 
 serverless.stdout.pipe(
   new Writable({
     write(chunk, enc, cb) {
       const output = chunk.toString();
 
-      if (/Offline \[HTTP] listening on/.test(output)) {
+      if (/Starting Offline SQS/.test(output)) {
         sendMessages()
           .then(() => console.log('sucessfully send messages'))
           .catch(err => {
@@ -53,8 +57,14 @@ serverless.stdout.pipe(
           });
       }
 
-      this.count = (this.count || 0) + (output.match(/\[✔]/g) || []).length;
-      if (this.count === 2) serverless.kill();
+      this.count =
+        (this.count || 0) +
+        (
+          output.match(
+            /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
+          ) || []
+        ).length;
+      if (this.count === 3) serverless.kill();
       cb();
     }
   })

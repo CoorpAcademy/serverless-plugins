@@ -44,7 +44,7 @@ const putRecords = () => {
   ]);
 };
 
-const serverless = spawn('serverless', ['--config', 'serverless.kinesis.yml', 'offline'], {
+const serverless = spawn('serverless', ['--config', 'serverless.kinesis.yml', 'offline', 'start'], {
   stdio: ['pipe', 'pipe', 'pipe'],
   cwd: __dirname
 });
@@ -54,11 +54,17 @@ serverless.stdout.pipe(
     write(chunk, enc, cb) {
       const output = chunk.toString();
 
-      if (/Offline \[HTTP] listening on/.test(output)) {
+      if (/Starting Offline Kinesis/.test(output)) {
         putRecords();
       }
 
-      this.count = (this.count || 0) + (output.match(/\[✔]/g) || []).length;
+      this.count =
+        (this.count || 0) +
+        (
+          output.match(
+            /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
+          ) || []
+        ).length;
       if (this.count === 4) serverless.kill();
       cb();
     }
