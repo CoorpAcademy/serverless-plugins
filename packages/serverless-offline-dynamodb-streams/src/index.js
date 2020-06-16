@@ -1,4 +1,4 @@
-const {assign, omitBy, isUndefined, get, startsWith} = require('lodash/fp');
+const {assign, omitBy, isUndefined, get, startsWith, pick} = require('lodash/fp');
 
 const debugLog = require('serverless-offline/dist/debugLog').default;
 const {default: serverlessLog, setLog} = require('serverless-offline/dist/serverlessLog');
@@ -6,6 +6,7 @@ const Lambda = require('serverless-offline/dist/lambda').default;
 
 const DynamodbStreams = require('./dynamodb-streams');
 
+const OFFLINE_OPTION = 'serverless-offline';
 const CUSTOM_OPTION = 'serverless-offline-dynamodb-streams';
 
 const SERVER_SHUTDOWN_TIMEOUT = 5000;
@@ -131,12 +132,14 @@ class ServerlessOfflineDynamodbStreams {
       service: {custom = {}, provider}
     } = this.serverless;
 
+    const offlineOptions = custom[OFFLINE_OPTION];
     const customOptions = custom[CUSTOM_OPTION];
 
     this.options = Object.assign(
       {},
       omitUndefined(defaultOptions),
       omitUndefined(provider),
+      omitUndefined(pick('location', offlineOptions)), // serverless-webpack support
       omitUndefined(customOptions),
       omitUndefined(this.cliOptions)
     );

@@ -7,6 +7,7 @@ const {
   isUndefined,
   map,
   omitBy,
+  pick,
   pipe,
   toPairs
 } = require('lodash/fp');
@@ -17,6 +18,7 @@ const Lambda = require('serverless-offline/dist/lambda').default;
 
 const SQS = require('./sqs');
 
+const OFFLINE_OPTION = 'serverless-offline';
 const CUSTOM_OPTION = 'serverless-offline-sqs';
 
 const SERVER_SHUTDOWN_TIMEOUT = 5000;
@@ -146,12 +148,14 @@ class ServerlessOfflineSQS {
       service: {custom = {}, provider}
     } = this.serverless;
 
+    const offlineOptions = custom[OFFLINE_OPTION];
     const customOptions = custom[CUSTOM_OPTION];
 
     this.options = Object.assign(
       {},
       omitUndefined(defaultOptions),
       omitUndefined(provider),
+      omitUndefined(pick('location', offlineOptions)), // serverless-webpack support
       omitUndefined(customOptions),
       omitUndefined(this.cliOptions)
     );
