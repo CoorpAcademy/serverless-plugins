@@ -12,23 +12,19 @@ class KinesisEventDefinition {
     this.startingPosition = 'LATEST';
 
     let enabled;
-    let arn;
     let streamName;
 
     if (typeof rawKinesisEventDefinition === 'string') {
-      arn = rawKinesisEventDefinition;
-      streamName = extractStreamNameFromARN(arn);
+      streamName = extractStreamNameFromARN(rawKinesisEventDefinition);
     } else if (typeof rawKinesisEventDefinition.arn === 'string') {
-      arn = rawKinesisEventDefinition.arn;
-      streamName = extractStreamNameFromARN(arn);
+      streamName = extractStreamNameFromARN(rawKinesisEventDefinition.arn);
     } else if (typeof rawKinesisEventDefinition.streamName === 'string') {
       streamName = rawKinesisEventDefinition.streamName;
-      arn = `arn:aws:kinesis:${region}:${accountId}:${streamName}`;
     }
 
     this.enabled = isNil(enabled) ? true : enabled;
 
-    this.arn = arn;
+    this.arn = `arn:aws:kinesis:${region}:${accountId}:${streamName}`;
     this.streamName = streamName;
 
     if (typeof rawKinesisEventDefinition !== 'string') {

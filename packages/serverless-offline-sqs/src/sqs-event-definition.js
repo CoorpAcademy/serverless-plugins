@@ -8,23 +8,19 @@ const extractQueueNameFromARN = arn => {
 class SQSEventDefinition {
   constructor(rawSqsEventDefinition, region, accountId) {
     let enabled;
-    let arn;
     let queueName;
 
     if (typeof rawSqsEventDefinition === 'string') {
-      arn = rawSqsEventDefinition;
-      queueName = extractQueueNameFromARN(arn);
+      queueName = extractQueueNameFromARN(rawSqsEventDefinition);
     } else if (typeof rawSqsEventDefinition.arn === 'string') {
-      arn = rawSqsEventDefinition.arn;
-      queueName = extractQueueNameFromARN(arn);
+      queueName = extractQueueNameFromARN(rawSqsEventDefinition.arn);
     } else if (typeof rawSqsEventDefinition.queueName === 'string') {
       queueName = rawSqsEventDefinition.queueName;
-      arn = `arn:aws:sqs:${region}:${accountId}:${queueName}`;
     }
 
     this.enabled = isNil(enabled) ? true : enabled;
 
-    this.arn = arn;
+    this.arn = `arn:aws:sqs:${region}:${accountId}:${queueName}`;
     this.queueName = queueName;
 
     if (typeof rawSqsEventDefinition !== 'string') {

@@ -13,23 +13,19 @@ class DynamodbStreamsEventDefinition {
     this.startingPosition = 'LATEST';
 
     let enabled;
-    let arn;
     let tableName;
 
     if (typeof rawSqsEventDefinition === 'string') {
-      arn = rawSqsEventDefinition;
-      tableName = extractTableNameFromARN(arn);
+      tableName = extractTableNameFromARN(rawSqsEventDefinition);
     } else if (typeof rawSqsEventDefinition.arn === 'string') {
-      arn = rawSqsEventDefinition.arn;
-      tableName = extractTableNameFromARN(arn);
+      tableName = extractTableNameFromARN(rawSqsEventDefinition.arn);
     } else if (typeof rawSqsEventDefinition.tableName === 'string') {
       tableName = rawSqsEventDefinition.tableName;
-      arn = `arn:aws:dynamodb:${region}:${accountId}:${tableName}`;
     }
 
     this.enabled = isNil(enabled) ? true : enabled;
 
-    this.arn = arn;
+    this.arn = `arn:aws:dynamodb:${region}:${accountId}:${tableName}`;
     this.tableName = tableName;
 
     if (typeof rawSqsEventDefinition !== 'string') {
