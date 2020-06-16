@@ -12,7 +12,10 @@
   },
   "homepage": "https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-kinesis#readme",
   "files": [
-    "src/index.js"
+    "src/index.js", 
+    "src/kinesis.js", 
+    "src/kinesis-event.js", 
+    "src/kinesis-event-definition.js"
   ],
   "author": "godu",
   "maintainers": [
