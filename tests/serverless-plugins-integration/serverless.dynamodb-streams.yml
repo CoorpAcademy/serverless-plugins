@@ -64,5 +64,5 @@ resources:
 
 custom:
   serverless-offline:
-    port: 3443
+    httpPort: 3443
   serverless-offline-dynamodb-streams: ${file(./custom.yml):serverless-offline-dynamodb-streams}

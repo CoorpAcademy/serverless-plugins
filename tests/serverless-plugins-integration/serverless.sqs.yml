@@ -47,5 +47,5 @@ resources:
 
 custom:
   serverless-offline:
-    port: 3333
+    httpPort: 3333
   serverless-offline-sqs: ${file(./custom.yml):serverless-offline-sqs}

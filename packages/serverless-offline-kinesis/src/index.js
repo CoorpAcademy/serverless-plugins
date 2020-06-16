@@ -45,7 +45,7 @@ class ServerlessOfflineKinesis {
 
     const {kinesisEvents, lambdas} = this._getEvents();
 
-    await this._createLambda(lambdas);
+    this._createLambda(lambdas);
 
     const eventModules = [];
 
@@ -90,7 +90,6 @@ class ServerlessOfflineKinesis {
 
     if (this.lambda) {
       eventModules.push(this.lambda.cleanup());
-      eventModules.push(this.lambda.stop(SERVER_SHUTDOWN_TIMEOUT));
     }
 
     if (this.kinesis) {
@@ -105,14 +104,10 @@ class ServerlessOfflineKinesis {
     }
   }
 
-  async _createLambda(lambdas, skipStart) {
+  _createLambda(lambdas) {
     this.lambda = new Lambda(this.serverless, this.options);
 
     this.lambda.create(lambdas);
-
-    if (!skipStart) {
-      await this.lambda.start();
-    }
   }
 
   async _createKinesis(events, skipStart) {
