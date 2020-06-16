@@ -1,6 +1,7 @@
 const {Writable} = require('stream');
 const KinesisClient = require('aws-sdk/clients/kinesis');
 const KinesisReadable = require('kinesis-readable');
+const {assign} = require('lodash/fp');
 const KinesisEventDefinition = require('./kinesis-event-definition');
 const KinesisEvent = require('./kinesis-event');
 
@@ -13,7 +14,6 @@ class Kinesis {
 
     this.lambda = lambda;
     this.options = options;
-
     this.client = new KinesisClient(this.options);
 
     this.readables = [];
@@ -42,7 +42,7 @@ class Kinesis {
   }
 
   async _kinesisEvent(functionKey, kinesisEvent) {
-    const {enabled, streamName, arn} = kinesisEvent;
+    const {enabled, streamName, arn, batchSize, startingPosition} = kinesisEvent;
 
     if (!enabled) return;
 
@@ -55,7 +55,15 @@ class Kinesis {
       .promise();
 
     shards.forEach(({ShardId: shardId}) => {
-      const readable = KinesisReadable(this.client, streamName, kinesisEvent);
+      const readable = KinesisReadable(
+        this.client,
+        streamName,
+        assign(kinesisEvent, {
+          shardId,
+          limit: batchSize,
+          iterator: startingPosition
+        })
+      );
 
       const writable = new Writable({
         objectMode: true,
