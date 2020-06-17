@@ -54,3 +54,29 @@ services:
       - AWS_SECRET_ACCESS_KEY=local
       - AWS_DEFAULT_REGION=eu-west-1
       - AWS_ENDPOINT_URL=http://kinesis:4567
+  s3:
+    image: minio/minio:RELEASE.2020-06-14T18-32-17Z
+    volumes:
+      - ./s3:/data
+    command: server /data
+    ports:
+      - "9000:9000"
+    environment:
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+      - AWS_DEFAULT_REGION=eu-west-1
+      - AWS_ENDPOINT_URL=http://s3:9000
+
+  s3-create:
+    image: infrastructureascode/aws-cli:latest
+    links:
+      - s3
+    entrypoint: sh
+    command: ./create-buckets.sh
+    volumes:
+      - ./scripts/create-buckets.sh:/project/create-buckets.sh:ro
+    environment:
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_DEFAULT_REGION=eu-west-1
+      - AWS_ENDPOINT_URL=http://s3:9000

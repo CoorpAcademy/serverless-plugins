@@ -1,0 +1,40 @@
+{
+  "name": "serverless-offline-s3",
+  "version": "3.1.3",
+  "description": "Emulate AWS λ and s3 locally when developing your Serverless project",
+  "main": "src",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:CoorpAcademy/serverless-plugins.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CoorpAcademy/serverless-plugins/issues"
+  },
+  "homepage": "https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-s3#readme",
+  "files": [
+    "src/index.js"
+  ],
+  "author": "coorp",
+  "maintainers": [
+    "@DjamelSoualmi",
+    "@godu"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "serverless-offline": "^5.12.1"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.642.0",
+    "figures": "^3.2.0",
+    "lodash": "^4.17.15"
+  },
+  "devDependencies": {
+    "serverless-offline": "^5.12.1"
+  },
+  "keywords": [
+    "s3",
+    "serverless",
+    "serverless-offline",
+    "lambda"
+  ]
+}
