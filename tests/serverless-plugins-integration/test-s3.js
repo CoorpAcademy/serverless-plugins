@@ -21,7 +21,7 @@ const uploadFiles = () => {
   ]);
 };
 
-const serverless = spawn('serverless', ['--config', 'serverless.s3.yml', 'offline'], {
+const serverless = spawn('serverless', ['--config', 'serverless.s3.yml', 'offline', 'start'], {
   stdio: ['pipe', 'pipe', 'pipe'],
   cwd: __dirname
 });
@@ -31,11 +31,17 @@ serverless.stdout.pipe(
     write(chunk, enc, cb) {
       const output = chunk.toString();
 
-      if (/Offline \[HTTP] listening on/.test(output)) {
+      if (/Starting Offline S3/.test(output)) {
         uploadFiles();
       }
 
-      this.count = (this.count || 0) + (output.match(/\[✔]/g) || []).length;
+      this.count =
+        (this.count || 0) +
+        (
+          output.match(
+            /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
+          ) || []
+        ).length;
       if (this.count === 3) serverless.kill();
       cb();
     }

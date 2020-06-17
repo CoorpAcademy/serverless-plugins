@@ -1,159 +1,181 @@
-const {join} = require('path');
-const figures = require('figures');
-const Minio = require('minio');
-const {
-  assignAll,
-  filter,
-  forEach,
-  get,
-  getOr,
-  has,
-  isEmpty,
-  isUndefined,
-  mapValues,
-  omitBy,
-  pipe
-} = require('lodash/fp');
-const functionHelper = require('serverless-offline/src/functionHelper');
-const LambdaContext = require('serverless-offline/src/LambdaContext');
+const {get, isUndefined, omitBy, pick} = require('lodash/fp');
 
-const fromCallback = fun =>
-  new Promise((resolve, reject) => {
-    fun((err, data) => {
-      if (err) return reject(err);
-      resolve(data);
-    });
-  });
+const debugLog = require('serverless-offline/dist/debugLog').default;
+const {default: serverlessLog, setLog} = require('serverless-offline/dist/serverlessLog');
+const Lambda = require('serverless-offline/dist/lambda').default;
 
-const printBlankLine = () => console.log();
+const S3 = require('./s3');
+
+const OFFLINE_OPTION = 'serverless-offline';
+const CUSTOM_OPTION = 'serverless-offline-s3';
+
+const SERVER_SHUTDOWN_TIMEOUT = 5000;
+
+const defaultOptions = {
+  batchSize: 100,
+  startingPosition: 'TRIM_HORIZON'
+};
+
+const omitUndefined = omitBy(isUndefined);
 
 class ServerlessOfflineS3 {
-  constructor(serverless, options) {
-    this.serverless = serverless;
-    this.service = serverless.service;
-    this.options = options;
+  constructor(serverless, cliOptions) {
+    this.cliOptions = null;
+    this.options = null;
+    this.s3 = null;
+    this.lambda = null;
+    this.serverless = null;
 
-    this.commands = {};
+    this.cliOptions = cliOptions;
+    this.serverless = serverless;
+
+    setLog((...args) => serverless.cli.log(...args));
 
     this.hooks = {
-      'before:offline:start': this.offlineStartInit.bind(this),
-      'before:offline:start:init': this.offlineStartInit.bind(this),
-      'before:offline:start:end': this.offlineStartEnd.bind(this)
+      'offline:start:init': this.start.bind(this),
+      'offline:start:ready': this.ready.bind(this),
+      'offline:start': this._startWithExplicitEnd.bind(this),
+      'offline:start:end': this.end.bind(this)
     };
-
-    this.streams = [];
   }
 
-  getConfig() {
-    return assignAll([
-      omitBy(isUndefined, this.options),
-      omitBy(isUndefined, this.service),
-      omitBy(isUndefined, this.service.provider),
-      omitBy(isUndefined, get(['custom', 'serverless-offline'], this.service)),
-      omitBy(isUndefined, get(['custom', 'serverless-offline-s3'], this.service))
-    ]);
+  async start() {
+    process.env.IS_OFFLINE = true;
+
+    this._mergeOptions();
+
+    const {s3Events, lambdas} = this._getEvents();
+
+    this._createLambda(lambdas);
+
+    const eventModules = [];
+
+    if (s3Events.length > 0) {
+      eventModules.push(this._createS3(s3Events));
+    }
+
+    await Promise.all(eventModules);
+
+    serverlessLog(`Starting Offline S3: ${this.options.endPoint}/${this.options.region}.`);
   }
 
-  getClient() {
-    return new Minio.Client(this.getConfig());
+  async ready() {
+    if (process.env.NODE_ENV !== 'test') {
+      await this._listenForTermination();
+    }
   }
 
-  getBucketName(S3Event) {
-    const bucketName = getOr(null, ['s3', 'bucket'], S3Event);
-    if (bucketName) return bucketName;
-    return this.serverless.cli.log('bucket name not found');
-  }
-
-  eventHandler(functionName, Records, cb) {
-    if (!Records) return cb();
-
-    const config = this.getConfig();
-    const {location = '.'} = config;
-
-    const __function = this.service.getFunction(functionName);
-
-    const {env} = process;
-    const functionEnv = assignAll([
-      {AWS_REGION: get('service.provider.region', this)},
-      env,
-      get('service.provider.environment', this),
-      get('environment', __function)
-    ]);
-    process.env = functionEnv;
-
-    const serviceRuntime = this.service.provider.runtime;
-    const servicePath = join(this.serverless.config.servicePath, location);
-
-    const funOptions = functionHelper.getFunctionOptions(
-      __function,
-      functionName,
-      servicePath,
-      serviceRuntime
-    );
-    const handler = functionHelper.createHandler(funOptions, config);
-
-    const lambdaContext = new LambdaContext(__function, this.service.provider, (err, data) => {
-      this.serverless.cli.log(
-        `[${err ? figures.cross : figures.tick}] ${functionName} ${JSON.stringify(data) || ''}`
-      );
-      cb(err, data);
+  // eslint-disable-next-line class-methods-use-this
+  async _listenForTermination() {
+    const command = await new Promise(resolve => {
+      process.on('SIGINT', () => resolve('SIGINT')).on('SIGTERM', () => resolve('SIGTERM'));
     });
 
-    const event = {Records};
-
-    const x = handler(event, lambdaContext, lambdaContext.done);
-    if (x && typeof x.then === 'function' && typeof x.catch === 'function')
-      x.then(lambdaContext.succeed).catch(lambdaContext.fail);
-    else if (x instanceof Error) lambdaContext.fail(x);
-
-    process.env = env;
+    serverlessLog(`Got ${command} signal. Offline Halting...`);
   }
 
-  createS3BucketReadable(functionName, S3Event) {
-    const client = this.getClient();
-    const bucketname = this.getBucketName(S3Event);
+  async _startWithExplicitEnd() {
+    await this.start();
+    await this.ready();
+    this.end();
+  }
 
-    const next = () => {
-      const listener = client.listenBucketNotification(bucketname, '*', '*', [
-        's3:ObjectCreated:Put'
-      ]);
-      listener.on('notification', async record => {
-        if (record) {
-          try {
-            await fromCallback(cb => this.eventHandler(functionName, record, cb));
-          } catch (err) {
-            this.serverless.cli.log(err.stack);
-          }
+  async end(skipExit) {
+    if (process.env.NODE_ENV === 'test' && skipExit === undefined) {
+      return;
+    }
+
+    serverlessLog('Halting offline server');
+
+    const eventModules = [];
+
+    if (this.lambda) {
+      eventModules.push(this.lambda.cleanup());
+    }
+
+    if (this.sqs) {
+      eventModules.push(this.s3.stop(SERVER_SHUTDOWN_TIMEOUT));
+    }
+
+    await Promise.all(eventModules);
+
+    if (!skipExit) {
+      // eslint-disable-next-line unicorn/no-process-exit
+      process.exit(0);
+    }
+  }
+
+  _createLambda(lambdas) {
+    this.lambda = new Lambda(this.serverless, this.options);
+
+    this.lambda.create(lambdas);
+  }
+
+  async _createS3(events) {
+    const resources = this._getResources();
+
+    this.s3 = new S3(this.lambda, resources, this.options);
+
+    await this.s3.create(events);
+  }
+
+  _mergeOptions() {
+    const {
+      service: {custom = {}, provider}
+    } = this.serverless;
+
+    const offlineOptions = custom[OFFLINE_OPTION];
+    const customOptions = custom[CUSTOM_OPTION];
+
+    this.options = Object.assign(
+      {},
+      omitUndefined(defaultOptions),
+      omitUndefined(provider),
+      omitUndefined(pick('location', offlineOptions)), // serverless-webpack support
+      omitUndefined(customOptions),
+      omitUndefined(this.cliOptions)
+    );
+
+    debugLog('options:', this.options);
+  }
+
+  _getEvents() {
+    const {service} = this.serverless;
+
+    const lambdas = [];
+    const s3Events = [];
+
+    const functionKeys = service.getAllFunctions();
+
+    functionKeys.forEach(functionKey => {
+      const functionDefinition = service.getFunction(functionKey);
+
+      lambdas.push({functionKey, functionDefinition});
+
+      const events = service.getAllEventsInFunction(functionKey) || [];
+
+      events.forEach(event => {
+        const {s3} = event;
+
+        if (s3 && functionDefinition.handler) {
+          s3Events.push({
+            functionKey,
+            handler: functionDefinition.handler,
+            s3
+          });
         }
-        next();
       });
+    });
+
+    return {
+      s3Events,
+      lambdas
     };
-    next();
   }
 
-  offlineStartInit() {
-    this.serverless.cli.log(`Starting Offline S3.`);
-
-    mapValues.convert({cap: false})((_function, functionName) => {
-      const S3 = pipe(get('events'), filter(has('s3')))(_function);
-
-      if (!isEmpty(S3)) {
-        printBlankLine();
-        this.serverless.cli.log(`S3 for ${functionName}:`);
-      }
-
-      forEach(S3Event => {
-        this.createS3BucketReadable(functionName, S3Event);
-      }, S3);
-
-      if (!isEmpty(S3)) {
-        printBlankLine();
-      }
-    }, this.service.functions);
-  }
-
-  offlineStartEnd() {
-    this.serverless.cli.log('offline-start-end');
+  _getResources() {
+    const Resources = get(['service', 'resources', 'Resources'], this.serverless);
+    return Resources;
   }
 }
 
