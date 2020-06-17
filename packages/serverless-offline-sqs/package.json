@@ -17,7 +17,7 @@
     "src/sqs-event.js",
     "src/sqs-event-definition.js"
   ],
-  "author": "godu",
+  "author": "Arthur Weber @godu",
   "maintainers": [
     "Arthur Weber @godu",
     "Adrien Becchis @AdrieanKhisbe"
@@ -27,7 +27,7 @@
     "serverless-offline": "^6.4.0"
   },
   "dependencies": {
-    "aws-sdk": "^2.696.0",
+    "aws-sdk": "^2.698.0",
     "lodash": "^4.17.15",
     "p-queue": "^6.4.0"
   },

@@ -3,12 +3,9 @@ serverless-offline-sqs:
   accessKeyId: local
   secretAccessKey: local
 serverless-offline-s3:
-  endPoint: 0.0.0.0
-  port: 9000
-  region: us-east-1
-  accessKey: minioadmin
-  secretKey: minioadmin
-  useSSL: false
+  endpoint: http://localhost:${ssm:/s3/port}
+  accessKey: local
+  secretKey: locallocal
 serverless-offline-dynamodb-streams:
   endpoint: http://localhost:${ssm:/dynamodb/port}
   accessKeyId: local

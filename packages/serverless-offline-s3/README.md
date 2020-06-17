@@ -46,28 +46,11 @@ The configuration of function of the plugin follows the [serverless documentatio
 
 ```yml
 functions:
-  myPromiseHandler:
-    handler: lambda/handler.promise
+  myS3Handler:
+    handler: handler.compute
     events:
       - s3:
-          bucket: documents
-          event: s3:ObjectCreated:Put
-      - s3:
-          bucket: pictures
-          event: s3:ObjectCreated:Put
-          
-  myCallbackHandler:
-    handler: lambda/handler.callback
-    events:
-      - s3:
-          bucket: files
-          event: s3:ObjectCreated:Put
-  myPythonHandler:
-    runtime: python2.7
-    handler: lambda/handler.handler
-    events:
-      - s3:
-          bucket: pictures
+          bucket: myBucket
           event: s3:ObjectCreated:Put
 ```
 
@@ -80,10 +63,8 @@ The configuration of [`aws.S3`'s client](https://docs.aws.amazon.com/AWSJavaScri
 ```yml
 custom:
 serverless-offline-s3:
-  endPoint: 0.0.0.0
-  port: 9000
-  region: us-east-1
+  endpoint: http://0.0.0.0:9000
+    region: eu-west-1
   accessKey: minioadmin
   secretKey: minioadmin
-  useSSL: false
 ```

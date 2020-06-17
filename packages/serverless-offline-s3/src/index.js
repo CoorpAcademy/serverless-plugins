@@ -93,7 +93,7 @@ class ServerlessOfflineS3 {
       eventModules.push(this.lambda.cleanup());
     }
 
-    if (this.sqs) {
+    if (this.s3) {
       eventModules.push(this.s3.stop(SERVER_SHUTDOWN_TIMEOUT));
     }
 
@@ -111,12 +111,16 @@ class ServerlessOfflineS3 {
     this.lambda.create(lambdas);
   }
 
-  async _createS3(events) {
+  async _createS3(events, skipStart) {
     const resources = this._getResources();
 
     this.s3 = new S3(this.lambda, resources, this.options);
 
     await this.s3.create(events);
+
+    if (!skipStart) {
+      await this.s3.start();
+    }
   }
 
   _mergeOptions() {

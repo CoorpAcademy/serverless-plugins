@@ -42,5 +42,19 @@
                 "offline",
                 "start"
             ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "S3",
+            "program": "${workspaceFolder}/tests/serverless-plugins-integration/node_modules/.bin/sls",
+            "cwd": "${workspaceFolder}/tests/serverless-plugins-integration",
+            "args": [
+                "--config",
+                "serverless.s3.yml",
+                "offline",
+                "start"
+            ]
         }
     ]
+}

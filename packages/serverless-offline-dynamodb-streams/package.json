@@ -17,18 +17,18 @@
     "src/dynamodb-streams-event.js",
     "src/dynamodb-streams-event-definition.js"
   ],
-  "author": "godu",
+  "author": "Arthur Weber @godu",
   "license": "MIT",
   "peerDependencies": {
-    "serverless-offline": "^5.12.1"
+    "serverless-offline": "^6.4.0"
   },
   "dependencies": {
-    "aws-sdk": "^2.696.0",
+    "aws-sdk": "^2.698.0",
     "dynamodb-streams-readable": "^1.0.6",
     "lodash": "^4.17.15"
   },
   "devDependencies": {
-    "serverless-offline": "^5.12.1"
+    "serverless-offline": "^6.4.0"
   },
   "keywords": [
     "kinesis",

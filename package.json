@@ -15,15 +15,13 @@
     "publish": "lerna publish"
   },
   "dependencies": {
-    "lerna": "^3.20.2",
-    "minio": "^7.0.16",
-    "serverless": "^1.66.0"
+    "lerna": "^3.22.1",
+    "serverless": "^1.73.1"
   },
   "devDependencies": {
     "@coorpacademy/eslint-plugin-coorpacademy": "^9.3.1",
-    "@types/minio": "^7.0.5",
     "ava": "^2.4.0",
     "eslint": "^6.8.0",
-    "nyc": "^15.0.0"
+    "nyc": "^15.1.0"
   }
 }

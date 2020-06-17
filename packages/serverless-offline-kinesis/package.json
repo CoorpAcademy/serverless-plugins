@@ -17,9 +17,9 @@
     "src/kinesis-event.js",
     "src/kinesis-event-definition.js"
   ],
-  "author": "godu",
+  "author": "Arthur Weber @godu",
   "maintainers": [
-    "godu",
+    "Arthur Weber @godu",
     "Adrien Becchis @AdrieanKhisbe"
   ],
   "license": "MIT",
@@ -27,7 +27,7 @@
     "serverless-offline": "^6.4.0"
   },
   "dependencies": {
-    "aws-sdk": "^2.696.0",
+    "aws-sdk": "^2.698.0",
     "kinesis-readable": "^1.2.0",
     "lodash": "^4.17.15"
   },

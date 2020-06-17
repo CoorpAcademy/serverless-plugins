@@ -1,5 +1,6 @@
 const Minio = require('minio');
 const {logWarning} = require('serverless-offline/dist/serverlessLog');
+const {assign, toNumber} = require('lodash/fp');
 const S3EventDefinition = require('./s3-event-definition');
 const S3Event = require('./s3-event');
 
@@ -13,11 +14,28 @@ class S3 {
     this.resources = resources;
     this.options = options;
 
-    this.client = new Minio.Client(this.options);
+    const s3Endpoint = this.options.endpoint ? new URL(this.options.endpoint) : {};
+    this.client = new Minio.Client(
+      assign(this.options, {
+        endPoint: s3Endpoint.hostname,
+        port: s3Endpoint.port ? toNumber(s3Endpoint.port) : undefined,
+        useSSL: s3Endpoint.protocol !== 'http:'
+      })
+    );
+
+    this.listeners = [];
   }
 
   create(events) {
     return Promise.all(events.map(({functionKey, s3}) => this._create(functionKey, s3)));
+  }
+
+  start() {
+    this.listeners.forEach(listener => listener.start());
+  }
+
+  stop(timeout) {
+    this.listeners.forEach(listener => listener.stop());
   }
 
   _create(functionKey, rawS3EventDefinition) {
@@ -28,27 +46,26 @@ class S3 {
   _s3Event(functionKey, s3Event) {
     const {event, bucket} = s3Event;
 
-    const job = () => {
-      const listener = this.client.listenBucketNotification(bucket, '*', '*', [event]);
-      listener.on('notification', async record => {
-        if (record) {
-          try {
-            const lambdaFunction = this.lambda.get(functionKey);
+    const listener = this.client.listenBucketNotification(bucket, '*', '*', [event]);
 
-            const s3Notification = new S3Event(record);
-            lambdaFunction.setEvent(s3Notification);
+    listener.on('notification', async record => {
+      if (record) {
+        try {
+          const lambdaFunction = this.lambda.get(functionKey);
 
-            await lambdaFunction.runHandler();
+          const s3Notification = new S3Event(record);
+          lambdaFunction.setEvent(s3Notification);
 
-            listener.stop();
-          } catch (err) {
-            logWarning(err.stack);
-          }
+          await lambdaFunction.runHandler();
+        } catch (err) {
+          logWarning(err.stack);
         }
-        job();
-      });
-    };
-    job();
+      }
+    });
+
+    listener.stop();
+
+    this.listeners.push(listener);
   }
 }
 module.exports = S3;

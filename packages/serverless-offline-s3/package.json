@@ -14,22 +14,23 @@
   "files": [
     "src/index.js"
   ],
-  "author": "coorp",
+  "author": "Djamel Soualmi @DjamelSoualmi",
   "maintainers": [
-    "@DjamelSoualmi",
-    "@godu"
+    "Djamel Soualmi @DjamelSoualmi",
+    "Arthur Weber @godu"
   ],
   "license": "MIT",
   "peerDependencies": {
-    "serverless-offline": "^5.12.1"
+    "serverless-offline": "^6.4.0"
   },
   "dependencies": {
-    "aws-sdk": "^2.642.0",
+    "aws-sdk": "^2.698.0",
     "figures": "^3.2.0",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.15",
+    "minio": "^7.0.16"
   },
   "devDependencies": {
-    "serverless-offline": "^5.12.1"
+    "serverless-offline": "^6.4.0"
   },
   "keywords": [
     "s3",

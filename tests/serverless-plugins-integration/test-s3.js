@@ -5,19 +5,25 @@ const onExit = require('signal-exit');
 const Minio = require('minio');
 
 const client = new Minio.Client({
-  endPoint: '0.0.0.0',
+  region: 'eu-west-1',
+  endPoint: 'localhost',
   port: 9000,
-  accessKey: 'minioadmin',
-  secretKey: 'minioadmin',
+  accessKey: 'local',
+  secretKey: 'locallocal',
   useSSL: false
 });
 
 const path = './files/test.txt';
-const uploadFiles = () => {
-  return Promise.all([
-    client.fPutObject('documents', 'test.txt', path),
-    client.fPutObject('pictures', 'test.txt', path),
-    client.fPutObject('files', 'test.txt', path)
+const uploadFiles = async () => {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  await Promise.all([
+    client.fPutObject('documents', 'first.txt', path),
+    client.fPutObject('pictures', 'first.txt', path),
+    client.fPutObject('files', 'first.txt', path),
+    client.fPutObject('documents', 'second.txt', path),
+    client.fPutObject('pictures', 'second.txt', path),
+    client.fPutObject('files', 'second.txt', path)
   ]);
 };
 
@@ -42,7 +48,7 @@ serverless.stdout.pipe(
             /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
           ) || []
         ).length;
-      if (this.count === 3) serverless.kill();
+      if (this.count === 6) serverless.kill();
       cb();
     }
   })

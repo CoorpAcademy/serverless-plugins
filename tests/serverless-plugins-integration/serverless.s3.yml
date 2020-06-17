@@ -2,8 +2,8 @@ service: serverless-offline-s3
 
 provider:
   name: aws
-  region: us-west-2
-  runtime: nodejs8.10
+  region: eu-west-1
+  runtime: nodejs10.x
 
 plugins:
   localPath: '../../packages'
@@ -30,7 +30,7 @@ functions:
           bucket: files
           event: s3:ObjectCreated:Put
   myPythonHandler:
-    runtime: python2.7
+    runtime: python3.7
     handler: lambda/handler.handler
     events:
       - s3:
@@ -39,5 +39,5 @@ functions:
 
 custom:
   serverless-offline:
-    port: 3333
+    httpPort: 3333
   serverless-offline-s3: ${file(./custom.yml):serverless-offline-s3}

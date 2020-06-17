@@ -16,6 +16,3 @@ coverage
 
 # Python
 *.pyc
-
-# S3
-s3
