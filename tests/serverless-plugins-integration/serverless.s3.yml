@@ -1,0 +1,43 @@
+service: serverless-offline-s3
+
+provider:
+  name: aws
+  region: eu-west-1
+  runtime: nodejs10.x
+
+plugins:
+  localPath: '../../packages'
+  modules:
+    - serverless-offline-ssm-provider
+    - serverless-offline-s3
+    - serverless-offline
+
+functions:
+  myPromiseHandler:
+    handler: lambda/handler.promise
+    events:
+      - s3:
+          bucket: documents
+          event: s3:ObjectCreated:Put
+      - s3:
+          bucket: pictures
+          event: s3:ObjectCreated:Put
+          
+  myCallbackHandler:
+    handler: lambda/handler.callback
+    events:
+      - s3:
+          bucket: files
+          event: s3:ObjectCreated:Put
+  myPythonHandler:
+    runtime: python3.7
+    handler: lambda/handler.handler
+    events:
+      - s3:
+          bucket: pictures
+          event: s3:ObjectCreated:Put
+
+custom:
+  serverless-offline:
+    httpPort: 3333
+  serverless-offline-s3: ${file(./custom.yml):serverless-offline-s3}

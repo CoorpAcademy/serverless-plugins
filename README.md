@@ -12,4 +12,5 @@
 | [`serverless-offline-kinesis`](/packages/serverless-offline-kinesis)| [![npm](https://img.shields.io/npm/v/serverless-offline-kinesis.svg)](https://www.npmjs.com/package/serverless-offline-kinesis)|
 | [`serverless-offline-dynamodb-streams`](/packages/serverless-offline-dynamodb-streams)| [![npm](https://img.shields.io/npm/v/serverless-offline-dynamodb-streams.svg)](https://www.npmjs.com/package/serverless-offline-dynamodb-streams)|
 | [`serverless-offline-sqs`](/packages/serverless-offline-sqs)| [![npm](https://img.shields.io/npm/v/serverless-offline-sqs.svg)](https://www.npmjs.com/package/serverless-offline-sqs)|
+| [`serverless-offline-s3`](/packages/serverless-offline-s3)| [![npm](https://img.shields.io/npm/v/serverless-offline-s3.svg)](https://www.npmjs.com/package/serverless-offline-s3)|
 | [`serverless-offline-ssm-provider`](/packages/serverless-offline-ssm-provider)| [![npm](https://img.shields.io/npm/v/serverless-offline-ssm-provider.svg)](https://www.npmjs.com/package/serverless-offline-ssm-provider)|

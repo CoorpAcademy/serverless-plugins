@@ -1,3 +1,4 @@
 /sqs/port=9324
+/s3/port=9000
 /dynamodb/port=8000
 /kinesis/port=4567

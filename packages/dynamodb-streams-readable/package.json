@@ -14,7 +14,7 @@
   "files": [
     "src/index.js"
   ],
-  "author": "godu",
+  "author": "Arthur Weber @godu",
   "license": "MIT",
   "devDependencies": {
     "uuid": "^8.1.0"
