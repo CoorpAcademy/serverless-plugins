@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-dynamodb-streams",
-  "version": "3.0.2",
+  "version": "4.0.0",
   "description": "Emulate AWS λ and DynamoDB streams locally when developing your Serverless project",
   "main": "src",
   "repository": {
@@ -12,9 +12,9 @@
   },
   "homepage": "https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-dynamodb-streams#readme",
   "files": [
-    "src/index.js", 
-    "src/dynamodb-streams.js", 
-    "src/dynamodb-streams-event.js", 
+    "src/index.js",
+    "src/dynamodb-streams.js",
+    "src/dynamodb-streams-event.js",
     "src/dynamodb-streams-event-definition.js"
   ],
   "author": "godu",
@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "aws-sdk": "^2.696.0",
-    "dynamodb-streams-readable": "^1.0.5",
+    "dynamodb-streams-readable": "^1.0.6",
     "lodash": "^4.17.15"
   },
   "devDependencies": {
