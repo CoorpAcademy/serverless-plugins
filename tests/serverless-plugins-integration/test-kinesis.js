@@ -11,8 +11,10 @@ const client = new Kinesis({
   endpoint: 'http://localhost:4567'
 });
 
-const putRecords = () => {
-  return Promise.all([
+const putRecords = async () => {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  await Promise.all([
     client
       .putRecord({
         StreamName: 'MyFirstStream',

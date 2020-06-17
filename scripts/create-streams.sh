@@ -1,7 +1,7 @@
 #!/bin/sh
 trap "exit 1" INT
 
-AWS_ENDPOINT_URL=${AWS_ENDPOINT_URL:-http://localhost:9324}
+AWS_ENDPOINT_URL=${AWS_ENDPOINT_URL:-http://localhost:4567}
 
 STREAMS="MyFirstStream MySecondStream MyThirdStream MyFourthStream";
 for STREAM in $STREAMS
