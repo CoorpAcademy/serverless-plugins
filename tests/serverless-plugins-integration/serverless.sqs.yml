@@ -2,8 +2,8 @@ service: serverless-offline-sqs
 
 provider:
   name: aws
-  region: us-west-2
-  runtime: nodejs8.10
+  region: eu-west-1
+  runtime: nodejs10.x
 
 plugins:
   localPath: '../../packages'
@@ -29,7 +29,7 @@ functions:
               - MyThirdQueue
               - Arn
   myPythonHandler:
-    runtime: python2.7
+    runtime: python3.7
     handler: lambda/handler.handler
     events:
       - sqs:
@@ -47,5 +47,5 @@ resources:
 
 custom:
   serverless-offline:
-    port: 3333
+    httpPort: 3333
   serverless-offline-sqs: ${file(./custom.yml):serverless-offline-sqs}

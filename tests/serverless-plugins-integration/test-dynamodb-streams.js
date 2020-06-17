@@ -11,50 +11,111 @@ const client = new DynamoDB({
   endpoint: 'http://localhost:8000'
 });
 
-const putItems = () => {
-  return Promise.all([
+const putItems = async () => {
+  // Dynamodb-local doesn't create stream until table isn't empty
+  await Promise.all([
     client
       .putItem({
-        Item: {id: {S: 'MyFirstId'}},
+        Item: {id: {S: `Bug`}},
         TableName: 'MyFirstTable'
       })
       .promise(),
     client
       .putItem({
-        Item: {id: {S: 'MySecondId'}},
+        Item: {id: {S: `Bug`}},
         TableName: 'MySecondTable'
       })
       .promise(),
     client
       .putItem({
-        Item: {id: {S: 'MyThirdId'}},
+        Item: {id: {S: `Bug`}},
         TableName: 'MyThirdTable'
       })
       .promise(),
     client
       .putItem({
-        Item: {id: {S: 'MyFourthId'}},
+        Item: {id: {S: `Bug`}},
+        TableName: 'MyFourthTable'
+      })
+      .promise()
+  ]);
+  // wait stream get a new iterator
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  await Promise.all([
+    client
+      .putItem({
+        Item: {id: {S: `MyFirstId`}},
+        TableName: 'MyFirstTable'
+      })
+      .promise(),
+    client
+      .putItem({
+        Item: {id: {S: `MySecondId`}},
+        TableName: 'MySecondTable'
+      })
+      .promise(),
+    client
+      .putItem({
+        Item: {id: {S: `MyThirdId`}},
+        TableName: 'MyThirdTable'
+      })
+      .promise(),
+    client
+      .putItem({
+        Item: {id: {S: `MyFourthId`}},
         TableName: 'MyFourthTable'
       })
       .promise()
   ]);
 };
 
-const serverless = spawn('serverless', ['--config', 'serverless.dynamodb-stream.yml', 'offline'], {
-  stdio: ['pipe', 'pipe', 'pipe'],
-  cwd: __dirname
-});
+const serverless = spawn(
+  'serverless',
+  ['--config', 'serverless.dynamodb-streams.yml', 'offline', 'start'],
+  {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    cwd: __dirname
+  }
+);
 
+const set = new Set();
 serverless.stdout.pipe(
   new Writable({
     write(chunk, enc, cb) {
       const output = chunk.toString();
 
-      if (/Offline \[HTTP] listening on/.test(output)) {
+      if (/Starting Offline Dynamodb Streams/.test(output)) {
         putItems();
       }
 
-      this.count = (this.count || 0) + (output.match(/\[✔]/g) || []).length;
+      const matches = /offline: \(λ: (.*)\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g.exec(
+        output
+      );
+
+      if (matches) set.add(matches[1]);
+
+      if (set.size === 4) serverless.kill();
+      cb();
+    }
+  })
+);
+serverless.stdout.pipe(
+  new Writable({
+    write(chunk, enc, cb) {
+      const output = chunk.toString();
+
+      if (/Starting Offline Dynamodb Streams/.test(output)) {
+        putItems();
+      }
+
+      this.count =
+        (this.count || 0) +
+        (
+          output.match(
+            /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
+          ) || []
+        ).length;
       if (this.count === 4) serverless.kill();
       cb();
     }

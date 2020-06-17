@@ -12,7 +12,10 @@
   },
   "homepage": "https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-dynamodb-streams#readme",
   "files": [
-    "src/index.js"
+    "src/index.js", 
+    "src/dynamodb-streams.js", 
+    "src/dynamodb-streams-event.js", 
+    "src/dynamodb-streams-event-definition.js"
   ],
   "author": "godu",
   "license": "MIT",
@@ -20,9 +23,8 @@
     "serverless-offline": "^5.12.1"
   },
   "dependencies": {
-    "aws-sdk": "^2.642.0",
+    "aws-sdk": "^2.696.0",
     "dynamodb-streams-readable": "^1.0.5",
-    "figures": "^3.2.0",
     "lodash": "^4.17.15"
   },
   "devDependencies": {

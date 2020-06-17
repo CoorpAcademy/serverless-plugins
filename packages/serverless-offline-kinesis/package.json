@@ -12,7 +12,10 @@
   },
   "homepage": "https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-kinesis#readme",
   "files": [
-    "src/index.js"
+    "src/index.js", 
+    "src/kinesis.js", 
+    "src/kinesis-event.js", 
+    "src/kinesis-event-definition.js"
   ],
   "author": "godu",
   "maintainers": [
@@ -21,16 +24,15 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "serverless-offline": "^5.12.1"
+    "serverless-offline": "^6.4.0"
   },
   "dependencies": {
-    "aws-sdk": "^2.642.0",
-    "figures": "^3.2.0",
+    "aws-sdk": "^2.696.0",
     "kinesis-readable": "^1.2.0",
     "lodash": "^4.17.15"
   },
   "devDependencies": {
-    "serverless-offline": "^5.12.1"
+    "serverless-offline": "^6.4.0"
   },
   "keywords": [
     "kinesis",

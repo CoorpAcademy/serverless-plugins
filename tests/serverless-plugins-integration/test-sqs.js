@@ -43,7 +43,7 @@ const sendMessages = () => {
   ]);
 };
 
-const serverless = spawn('serverless', ['--config', 'serverless.sqs.yml', 'offline'], {
+const serverless = spawn('serverless', ['--config', 'serverless.sqs.yml', 'offline', 'start'], {
   stdio: ['pipe', 'pipe', 'pipe'],
   cwd: __dirname
 });
@@ -53,11 +53,18 @@ serverless.stdout.pipe(
     write(chunk, enc, cb) {
       const output = chunk.toString();
 
-      if (/Offline \[HTTP] listening on/.test(output)) {
+      if (/Starting Offline SQS/.test(output)) {
         sendMessages();
       }
 
-      this.count = (this.count || 0) + (output.match(/\[✔]/g) || []).length;
+      this.count =
+        (this.count || 0) +
+        (
+          output.match(
+            /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
+          ) || []
+        ).length;
+
       if (this.count === 4) serverless.kill();
       cb();
     }

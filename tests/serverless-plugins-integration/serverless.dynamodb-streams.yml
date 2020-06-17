@@ -2,8 +2,8 @@ service: serverless-offline-dynamodb-streams
 
 provider:
   name: aws
-  region: us-west-2
-  runtime: nodejs8.10
+  region: eu-west-1
+  runtime: nodejs10.x
 
 plugins:
   localPath: '../../packages'
@@ -25,13 +25,16 @@ functions:
     events:
       - stream:
           type: dynamodb
-          streamName: MyThirdTable
+          tableName: MyThirdTable
+          batchSize: 100
+          maximumRetryAttempts: 10
+          startingPosition: LATEST
           arn:
             Fn::GetAtt:
               - MyThirdTable
               - Arn
   myPythonHandler:
-    runtime: python2.7
+    runtime: python3.7
     handler: lambda/handler.handler
     events:
       - stream:
@@ -61,5 +64,5 @@ resources:
 
 custom:
   serverless-offline:
-    port: 3443
+    httpPort: 3443
   serverless-offline-dynamodb-streams: ${file(./custom.yml):serverless-offline-dynamodb-streams}

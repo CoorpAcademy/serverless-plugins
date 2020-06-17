@@ -2,8 +2,8 @@ service: serverless-offline-kinesis
 
 provider:
   name: aws
-  region: us-west-2
-  runtime: nodejs8.10
+  region: eu-west-1
+  runtime: nodejs10.x
 
 plugins:
   localPath: '../../packages'
@@ -31,7 +31,7 @@ functions:
               - MyThirdStream
               - Arn
   myPythonHandler:
-    runtime: python2.7
+    runtime: python3.7
     handler: lambda/handler.handler
     events:
       - stream:
@@ -51,5 +51,5 @@ resources:
 
 custom:
   serverless-offline:
-    port: 3223
+    httpPort: 3223
   serverless-offline-kinesis: ${file(./custom.yml):serverless-offline-kinesis}
