@@ -1,4 +1,4 @@
-# serverless-offline-sqs
+# serverless-offline-s3
 
 This Serverless-offline plugin emulates AWS λ and S3 queue on your local machine. To do so, it listens S3 bucket events and invokes your handlers.
 
@@ -30,7 +30,7 @@ plugins:
 
 To be able to emulate AWS S3 Bucket on local machine there should be some bucket system actually running. One of the existing implementations suitable for the task is [Minio](https://github.com/minio/minio).
 
-[Minio](https://github.com/minio/minio) is a High Performance Object Storage released under Apache License v2.0. It is API compatible with Amazon S3 cloud storage service. Use MinIO to build high performance infrastructure for machine learning, analytics and application data workloads. See [example](../serverless-offline-sqs-integration/docker-compose.yml) `s3` service setup.
+[Minio](https://github.com/minio/minio) is a High Performance Object Storage released under Apache License v2.0. It is API compatible with Amazon S3 cloud storage service. Use MinIO to build high performance infrastructure for machine learning, analytics and application data workloads. See [example](../serverless-offline-s3-integration/docker-compose.yml) `s3` service setup.
 
 We also need to setup actual buckets in Minio server, we can use [AWS cli](https://aws.amazon.com/cli/) tools for that. In example, we spawn-up another container with `aws-cli` pre-installed and run initialization script, against Minio server in separate container.
 
