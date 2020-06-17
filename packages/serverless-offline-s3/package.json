@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-s3",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Emulate AWS λ and s3 locally when developing your Serverless project",
   "main": "src",
   "repository": {
