@@ -12,7 +12,10 @@
   },
   "homepage": "https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-s3#readme",
   "files": [
-    "src/index.js"
+    "src/index.js",
+    "src/s3.js",
+    "src/s3-event.js",
+    "src/s3-event-definition.js"
   ],
   "author": "Djamel Soualmi @DjamelSoualmi",
   "maintainers": [
