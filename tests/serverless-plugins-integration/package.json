@@ -7,7 +7,7 @@
     "start:sqs": "sls --config serverless.sqs.yml offline",
     "start:s3": "sls --config serverless.s3.yml offline",
     "start:dynamodb-streams": "sls --config serverless.dynamodb-streams.yml offline",
-    "test": "npm run test:s3 && npm run test:sqs && npm run test:sqs:autocreate && npm run test:kinesis && npm run test:dynamodb-streams",
+    "test": "npm run test:dynamodb-streams && npm run test:kinesis && npm run test:s3 && npm run test:sqs && npm run test:sqs:autocreate",
     "setup-service": "../../scripts/clean-start.sh",
     "pretest:dynamodb-streams": "npm run -s setup-service dynamodb",
     "test:dynamodb-streams": "node test-dynamodb-streams",
