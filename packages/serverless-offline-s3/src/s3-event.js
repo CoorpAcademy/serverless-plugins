@@ -1,6 +1,6 @@
 class S3Event {
-  constructor(records) {
-    this.Records = records;
+  constructor(record) {
+    this.Records = [record];
   }
 }
 module.exports = S3Event;
