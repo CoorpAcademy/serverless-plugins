@@ -77,8 +77,7 @@ class ServerlessOfflineDynamodbStreams {
 
   async _startWithExplicitEnd() {
     await this.start();
-    await this.ready();
-    this.end();
+    this.ready().then(() => this.end());
   }
 
   async end(skipExit) {
