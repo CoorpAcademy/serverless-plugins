@@ -75,7 +75,7 @@ class ServerlessOfflineKinesis {
 
   async _startWithExplicitEnd() {
     await this.start();
-    this.ready().then(this.end)
+    this.ready().then(this.end).catch(() => null);
   }
 
   async end(skipExit) {
