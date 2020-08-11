@@ -6,6 +6,8 @@ const {logWarning} = require('serverless-offline/dist/serverlessLog');
 const SQSEventDefinition = require('./sqs-event-definition');
 const SQSEvent = require('./sqs-event');
 
+const delay = timeout => new Promise(resolve => setTimeout(resolve, timeout));
+
 class SQS {
   constructor(lambda, resources, options) {
     this.lambda = null;
@@ -41,6 +43,15 @@ class SQS {
     );
 
     return this._sqsEvent(functionKey, sqsEvent);
+  }
+
+  async _getQueueUrl(queueName) {
+    try {
+      return await this.client.getQueueUrl({QueueName: queueName}).promise();
+    } catch (err) {
+      await delay(10000);
+      return this._getQueueUrl(queueName);
+    }
   }
 
   async _sqsEvent(functionKey, sqsEvent) {

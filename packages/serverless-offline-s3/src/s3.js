@@ -4,6 +4,8 @@ const {assign, toNumber} = require('lodash/fp');
 const S3EventDefinition = require('./s3-event-definition');
 const S3Event = require('./s3-event');
 
+const delay = timeout => new Promise(resolve => setTimeout(resolve, timeout));
+
 class S3 {
   constructor(lambda, resources, options) {
     this.lambda = null;
@@ -43,8 +45,17 @@ class S3 {
     return this._s3Event(functionKey, s3Event);
   }
 
-  _s3Event(functionKey, s3Event) {
+  async _waitFor(bucket) {
+    const exists = await this.client.bucketExists(bucket);
+    if (exists) return;
+
+    await delay(1000);
+    return this._waitFor(bucket);
+  }
+
+  async _s3Event(functionKey, s3Event) {
     const {event, bucket} = s3Event;
+    await this._waitFor(bucket);
 
     const listener = this.client.listenBucketNotification(bucket, '*', '*', [event]);
 
