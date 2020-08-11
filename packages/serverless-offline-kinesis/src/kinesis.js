@@ -41,6 +41,19 @@ class Kinesis {
     return this._kinesisEvent(functionKey, kinesisEvent);
   }
 
+  async _describeStream(streamName) {
+    try {
+      await this.client.waitFor('streamExists', {StreamName: streamName}).promise();
+      return await this.client
+        .describeStream({
+          StreamName: streamName
+        })
+        .promise();
+    } catch (err) {
+      return this._waitFor(streamName);
+    }
+  }
+
   async _kinesisEvent(functionKey, kinesisEvent) {
     const {enabled, streamName, arn, batchSize, startingPosition} = kinesisEvent;
 
@@ -48,11 +61,7 @@ class Kinesis {
 
     const {
       StreamDescription: {Shards: shards}
-    } = await this.client
-      .describeStream({
-        StreamName: streamName
-      })
-      .promise();
+    } = await this._describeStream(streamName);
 
     shards.forEach(({ShardId: shardId}) => {
       const readable = KinesisReadable(

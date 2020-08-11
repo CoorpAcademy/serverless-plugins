@@ -46,6 +46,19 @@ class DynamodbStreams {
     return this._dynamodbStreamsEvent(functionKey, dynamodbStreamsEvent);
   }
 
+  async _describeTable(tableName) {
+    try {
+      await this.client.waitFor('tableExists', {TableName: tableName}).promise();
+      return await this.client
+        .describeTable({
+          TableName: tableName
+        })
+        .promise();
+    } catch (err) {
+      return this._waitFor(tableName);
+    }
+  }
+
   async _dynamodbStreamsEvent(functionKey, dynamodbStreamsEvent) {
     const {
       enabled,
@@ -60,11 +73,7 @@ class DynamodbStreams {
 
     const {
       Table: {LatestStreamArn}
-    } = await this.client
-      .describeTable({
-        TableName: tableName
-      })
-      .promise();
+    } = await this._describeTable(tableName);
 
     const {
       StreamDescription: {Shards: shards}
