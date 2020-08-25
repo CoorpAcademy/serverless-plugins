@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-sqs",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "description": "Emulate AWS λ and SQS locally when developing your Serverless project",
   "main": "src",
   "repository": {

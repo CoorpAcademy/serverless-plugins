@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-dynamodb-streams",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "description": "Emulate AWS λ and DynamoDB streams locally when developing your Serverless project",
   "main": "src",
   "repository": {
