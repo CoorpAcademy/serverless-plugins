@@ -1,16 +1,16 @@
 {
-  "name": "serverless-offline-kinesis",
+  "name": "@deliverr/serverless-offline-kinesis",
   "version": "4.0.1",
   "description": "Emulate AWS λ and Kinesis locally when developing your Serverless project",
   "main": "src",
   "repository": {
     "type": "git",
-    "url": "git@github.com:CoorpAcademy/serverless-plugins.git"
+    "url": "git@github.com:deliverr/serverless-plugins.git"
   },
   "bugs": {
-    "url": "https://github.com/CoorpAcademy/serverless-plugins/issues"
+    "url": "https://github.com/deliverr/serverless-plugins/issues"
   },
-  "homepage": "https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-kinesis#readme",
+  "homepage": "https://github.com/deliverr/serverless-plugins/tree/master/packages/serverless-offline-kinesis#readme",
   "files": [
     "src/index.js",
     "src/kinesis.js",
@@ -20,7 +20,8 @@
   "author": "Arthur Weber @godu",
   "maintainers": [
     "Arthur Weber @godu",
-    "Adrien Becchis @AdrieanKhisbe"
+    "Adrien Becchis @AdrieanKhisbe",
+    "Umair Nadeem @umairnadeem"
   ],
   "license": "MIT",
   "peerDependencies": {
