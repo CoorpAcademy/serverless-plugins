@@ -10,65 +10,39 @@ const client = new DynamoDB({
   endpoint: 'http://localhost:8000'
 });
 
-const putItems = async () => {
-  // Dynamodb-local doesn't create stream until table isn't empty
-  await Promise.all([
-    client
-      .putItem({
-        Item: {id: {S: `Bug`}},
-        TableName: 'MyFirstTable'
-      })
-      .promise(),
-    client
-      .putItem({
-        Item: {id: {S: `Bug`}},
-        TableName: 'MySecondTable'
-      })
-      .promise(),
-    client
-      .putItem({
-        Item: {id: {S: `Bug`}},
-        TableName: 'MyThirdTable'
-      })
-      .promise(),
-    client
-      .putItem({
-        Item: {id: {S: `Bug`}},
-        TableName: 'MyFourthTable'
-      })
-      .promise()
-  ]);
-  // wait stream get a new iterator
-  await new Promise(resolve => {
-    setTimeout(resolve, 1000);
-  });
+// Dynamodb-local doesn't create stream until table isn't empty
+const unemptyTables = () =>
+  Promise.all(
+    ['MyFirstTable', 'MySecondTable', 'MyThirdTable', 'MyFourthTable'].map(TableName =>
+      client
+        .putItem({
+          Item: {id: {S: 'Stub'}},
+          TableName
+        })
+        .promise()
+    )
+  );
 
-  await Promise.all([
-    client
-      .putItem({
-        Item: {id: {S: `MyFirstId`}},
-        TableName: 'MyFirstTable'
-      })
-      .promise(),
-    client
-      .putItem({
-        Item: {id: {S: `MySecondId`}},
-        TableName: 'MySecondTable'
-      })
-      .promise(),
-    client
-      .putItem({
-        Item: {id: {S: `MyThirdId`}},
-        TableName: 'MyThirdTable'
-      })
-      .promise(),
-    client
-      .putItem({
-        Item: {id: {S: `MyFourthId`}},
-        TableName: 'MyFourthTable'
-      })
-      .promise()
-  ]);
+const putItems = () =>
+  Promise.all(
+    ['First', 'Second', 'Third', 'Fourth'].map(order =>
+      client
+        .putItem({
+          Item: {id: {S: `My${order}Id`}},
+          TableName: `My${order}Table`
+        })
+        .promise()
+    )
+  );
+
+let setupInProgress = true;
+const populateTables = async () => {
+  await unemptyTables();
+  await new Promise(resolve => {
+    setTimeout(resolve, 1200);
+  });
+  setupInProgress = false;
+  await putItems();
 };
 
 const serverless = spawn(
@@ -81,43 +55,28 @@ const serverless = spawn(
 );
 
 const set = new Set();
+let invocationCount = 0;
 serverless.stdout.pipe(
   new Writable({
     write(chunk, enc, cb) {
       const output = chunk.toString();
 
       if (/Starting Offline Dynamodb Streams/.test(output)) {
-        putItems();
+        populateTables(); // will run in the background
       }
+
+      if (setupInProgress) return cb(); // do not consider lambda executions before we post the real items
 
       const matches = /offline: \(λ: (.*)\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g.exec(
         output
       );
 
-      if (matches) set.add(matches[1]);
-
-      if (set.size === 4) serverless.kill();
-      cb();
-    }
-  })
-);
-serverless.stdout.pipe(
-  new Writable({
-    write(chunk, enc, cb) {
-      const output = chunk.toString();
-
-      if (/Starting Offline Dynamodb Streams/.test(output)) {
-        putItems();
+      if (matches) {
+        invocationCount++;
+        set.add(matches[1]);
       }
 
-      this.count =
-        (this.count || 0) +
-        (
-          output.match(
-            /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
-          ) || []
-        ).length;
-      if (this.count === 4) serverless.kill();
+      if (set.size === 3 && invocationCount === 4) serverless.kill(); // myPromiseHandler is mapped to two tables
       cb();
     }
   })
