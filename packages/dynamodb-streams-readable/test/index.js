@@ -4,24 +4,21 @@ const DynamoDB = require('aws-sdk/clients/dynamodb');
 const DynamoDBStreams = require('aws-sdk/clients/dynamodbstreams');
 const DynamoDBStreamReadable = require('..');
 
-const fromCallback = fun =>
-  new Promise((resolve, reject) => {
-    fun((err, data) => (err ? reject(err) : resolve(data)));
+const delay = timeout =>
+  new Promise(resolve => {
+    setTimeout(resolve, timeout);
   });
-const wait = duration => fromCallback(cb => setTimeout(cb, duration));
+
 const batchWriteItem = (dynamodb, tableName, items) =>
-  fromCallback(cb =>
-    dynamodb.batchWriteItem(
-      {
-        RequestItems: {
-          [tableName]: items.map(document => ({
-            PutRequest: document
-          }))
-        }
-      },
-      cb
-    )
-  );
+  dynamodb
+    .batchWriteItem({
+      RequestItems: {
+        [tableName]: items.map(document => ({
+          PutRequest: document
+        }))
+      }
+    })
+    .promise();
 
 test.before(t => {
   t.context.dynamodb = new DynamoDB({
@@ -44,34 +41,32 @@ test.beforeEach(async t => {
   const tableName = uuid();
   t.context.tableName = tableName;
 
-  const table = await fromCallback(cb =>
-    dynamodb.createTable(
-      {
-        TableName: tableName,
-        AttributeDefinitions: [
-          {
-            AttributeName: 'Id',
-            AttributeType: 'S'
-          }
-        ],
-        KeySchema: [
-          {
-            AttributeName: 'Id',
-            KeyType: 'HASH'
-          }
-        ],
-        StreamSpecification: {
-          StreamEnabled: true,
-          StreamViewType: 'NEW_AND_OLD_IMAGES'
-        },
-        ProvisionedThroughput: {
-          ReadCapacityUnits: 1,
-          WriteCapacityUnits: 1
+  const table = await dynamodb
+    .createTable({
+      TableName: tableName,
+      AttributeDefinitions: [
+        {
+          AttributeName: 'Id',
+          AttributeType: 'S'
         }
+      ],
+      KeySchema: [
+        {
+          AttributeName: 'Id',
+          KeyType: 'HASH'
+        }
+      ],
+      StreamSpecification: {
+        StreamEnabled: true,
+        StreamViewType: 'NEW_AND_OLD_IMAGES'
       },
-      cb
-    )
-  );
+      ProvisionedThroughput: {
+        ReadCapacityUnits: 1,
+        WriteCapacityUnits: 1
+      }
+    })
+    .promise();
+
   t.context.table = table;
 });
 
@@ -96,15 +91,12 @@ test.serial('reads records that already exist', async t => {
   await batchWriteItem(dynamodb, tableName, documents);
 
   t.deepEqual(
-    await fromCallback(cb =>
-      dynamodb.scan(
-        {
-          TableName: tableName,
-          Select: 'COUNT'
-        },
-        cb
-      )
-    ),
+    await dynamodb
+      .scan({
+        TableName: tableName,
+        Select: 'COUNT'
+      })
+      .promise(),
     {Count: documents.length, ScannedCount: documents.length}
   );
 
@@ -173,7 +165,7 @@ test.serial('reads ongoing records', t => {
           reject(err);
         });
     }),
-    wait(100).then(() => batchWriteItem(dynamodb, tableName, documents))
+    delay(100).then(() => batchWriteItem(dynamodb, tableName, documents))
   ]);
 });
 
@@ -234,7 +226,7 @@ test.serial('reads latest records', async t => {
           reject(err);
         });
     }),
-    wait(100).then(() => batchWriteItem(dynamodb, tableName, subsequentDocuments))
+    delay(100).then(() => batchWriteItem(dynamodb, tableName, subsequentDocuments))
   ]);
 });
 
