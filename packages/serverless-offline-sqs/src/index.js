@@ -211,7 +211,7 @@ class ServerlessOfflineSQS {
                   const queueName = get([resourceName, 'Properties', 'QueueName'], Resources);
                   return [
                     key,
-                    `arn:aws:kinesis:${this.options.region}:${this.options.accountId}:${queueName}`
+                    `arn:aws:sqs:${this.options.region}:${this.options.accountId}:${queueName}`
                   ];
                 }
                 default: {
