@@ -1,8 +1,9 @@
-/* eslint-disable unicorn/no-process-exit */
 const {Writable} = require('stream');
 const {spawn} = require('child_process');
 const onExit = require('signal-exit');
 const {Kinesis} = require('aws-sdk');
+const pump = require('pump');
+const {delay, getSplitLinesTransform} = require('./utils');
 
 const client = new Kinesis({
   region: 'eu-west-1',
@@ -12,7 +13,7 @@ const client = new Kinesis({
 });
 
 const putRecords = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await delay(1000);
 
   await Promise.all([
     client
@@ -51,19 +52,20 @@ const serverless = spawn('serverless', ['--config', 'serverless.kinesis.yml', 'o
   cwd: __dirname
 });
 
-serverless.stdout.pipe(
+pump(
+  serverless.stdout,
+  getSplitLinesTransform(),
   new Writable({
-    write(chunk, enc, cb) {
-      const output = chunk.toString();
-
-      if (/Starting Offline Kinesis/.test(output)) {
+    objectMode: true,
+    write(line, enc, cb) {
+      if (/Starting Offline Kinesis/.test(line)) {
         putRecords();
       }
 
       this.count =
         (this.count || 0) +
         (
-          output.match(
+          line.match(
             /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
           ) || []
         ).length;

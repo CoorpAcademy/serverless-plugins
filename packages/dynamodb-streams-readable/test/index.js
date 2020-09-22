@@ -4,35 +4,34 @@ const DynamoDB = require('aws-sdk/clients/dynamodb');
 const DynamoDBStreams = require('aws-sdk/clients/dynamodbstreams');
 const DynamoDBStreamReadable = require('..');
 
-const fromCallback = fun =>
-  new Promise((resolve, reject) => fun((err, data) => (err ? reject(err) : resolve(data))));
-const wait = duration => fromCallback(cb => setTimeout(cb, duration));
+const delay = timeout =>
+  new Promise(resolve => {
+    setTimeout(resolve, timeout);
+  });
+
 const batchWriteItem = (dynamodb, tableName, items) =>
-  fromCallback(cb =>
-    dynamodb.batchWriteItem(
-      {
-        RequestItems: {
-          [tableName]: items.map(document => ({
-            PutRequest: document
-          }))
-        }
-      },
-      cb
-    )
-  );
+  dynamodb
+    .batchWriteItem({
+      RequestItems: {
+        [tableName]: items.map(document => ({
+          PutRequest: document
+        }))
+      }
+    })
+    .promise();
 
 test.before(t => {
   t.context.dynamodb = new DynamoDB({
     accessKeyId: '-',
     secretAccessKey: '-',
     endpoint: 'http://localhost:8000',
-    region: '-'
+    region: 'eu-west-1'
   });
   t.context.dynamodbstreams = new DynamoDBStreams({
     accessKeyId: '-',
     secretAccessKey: '-',
     endpoint: 'http://localhost:8000',
-    region: '-'
+    region: 'eu-west-1'
   });
 });
 
@@ -42,34 +41,32 @@ test.beforeEach(async t => {
   const tableName = uuid();
   t.context.tableName = tableName;
 
-  const table = await fromCallback(cb =>
-    dynamodb.createTable(
-      {
-        TableName: tableName,
-        AttributeDefinitions: [
-          {
-            AttributeName: 'Id',
-            AttributeType: 'S'
-          }
-        ],
-        KeySchema: [
-          {
-            AttributeName: 'Id',
-            KeyType: 'HASH'
-          }
-        ],
-        StreamSpecification: {
-          StreamEnabled: true,
-          StreamViewType: 'NEW_AND_OLD_IMAGES'
-        },
-        ProvisionedThroughput: {
-          ReadCapacityUnits: 1,
-          WriteCapacityUnits: 1
+  const table = await dynamodb
+    .createTable({
+      TableName: tableName,
+      AttributeDefinitions: [
+        {
+          AttributeName: 'Id',
+          AttributeType: 'S'
         }
+      ],
+      KeySchema: [
+        {
+          AttributeName: 'Id',
+          KeyType: 'HASH'
+        }
+      ],
+      StreamSpecification: {
+        StreamEnabled: true,
+        StreamViewType: 'NEW_AND_OLD_IMAGES'
       },
-      cb
-    )
-  );
+      ProvisionedThroughput: {
+        ReadCapacityUnits: 1,
+        WriteCapacityUnits: 1
+      }
+    })
+    .promise();
+
   t.context.table = table;
 });
 
@@ -94,15 +91,12 @@ test.serial('reads records that already exist', async t => {
   await batchWriteItem(dynamodb, tableName, documents);
 
   t.deepEqual(
-    await fromCallback(cb =>
-      dynamodb.scan(
-        {
-          TableName: tableName,
-          Select: 'COUNT'
-        },
-        cb
-      )
-    ),
+    await dynamodb
+      .scan({
+        TableName: tableName,
+        Select: 'COUNT'
+      })
+      .promise(),
     {Count: documents.length, ScannedCount: documents.length}
   );
 
@@ -152,9 +146,9 @@ test.serial('reads ongoing records', t => {
 
   let count = 0;
   return Promise.all([
-    new Promise((resolve, reject) =>
+    new Promise((resolve, reject) => {
       readable
-        .on('data', function(recordSet) {
+        .on('data', function (recordSet) {
           recordSet.forEach(record => {
             t.deepEqual(record.dynamodb.Keys.Id, documents[count].Item.Id);
             count = count + 1;
@@ -162,16 +156,16 @@ test.serial('reads ongoing records', t => {
           if (count > documents.length) t.fail('should not read extra records');
           if (count === documents.length) readable.close();
         })
-        .on('end', function() {
+        .on('end', function () {
           t.deepEqual(count, documents.length, `read ${documents.length} records`);
           resolve();
         })
-        .on('error', function(err) {
+        .on('error', function (err) {
           t.fail('should not error');
           reject(err);
-        })
-    ),
-    wait(100).then(() => batchWriteItem(dynamodb, tableName, documents))
+        });
+    }),
+    delay(100).then(() => batchWriteItem(dynamodb, tableName, documents))
   ]);
 });
 
@@ -209,9 +203,9 @@ test.serial('reads latest records', async t => {
 
   let count = 0;
   return Promise.all([
-    new Promise((resolve, reject) =>
+    new Promise((resolve, reject) => {
       readable
-        .on('data', function(recordSet) {
+        .on('data', function (recordSet) {
           recordSet.forEach(record => {
             t.deepEqual(record.dynamodb.Keys.Id, subsequentDocuments[count].Item.Id);
             count = count + 1;
@@ -219,7 +213,7 @@ test.serial('reads latest records', async t => {
           if (count > subsequentDocuments.length) t.fail('should not read extra records');
           if (count === subsequentDocuments.length) readable.close();
         })
-        .on('end', function() {
+        .on('end', function () {
           t.deepEqual(
             count,
             subsequentDocuments.length,
@@ -227,12 +221,12 @@ test.serial('reads latest records', async t => {
           );
           resolve();
         })
-        .on('error', function(err) {
+        .on('error', function (err) {
           t.fail('should not error');
           reject(err);
-        })
-    ),
-    wait(100).then(() => batchWriteItem(dynamodb, tableName, subsequentDocuments))
+        });
+    }),
+    delay(100).then(() => batchWriteItem(dynamodb, tableName, subsequentDocuments))
   ]);
 });
 
@@ -261,9 +255,9 @@ test.serial('emits checkpoints, obeys limits', t => {
   let count = 0;
   let checkpoints = 0;
   return Promise.all([
-    new Promise((resolve, reject) =>
+    new Promise((resolve, reject) => {
       readable
-        .on('data', function(recordSet) {
+        .on('data', function (recordSet) {
           t.is(recordSet.length, 1, 'obeys requested limit');
           recordSet.forEach(record => {
             t.deepEqual(record.dynamodb.Keys.Id, documents[count].Item.Id);
@@ -272,19 +266,19 @@ test.serial('emits checkpoints, obeys limits', t => {
           if (count > documents.length) t.fail('should not read extra records');
           if (count === documents.length) readable.close();
         })
-        .on('checkpoint', function(sequenceNum) {
+        .on('checkpoint', function (sequenceNum) {
           if (typeof sequenceNum !== 'string') t.fail('invalid sequenceNum emitted');
           checkpoints = checkpoints + 1;
         })
-        .on('end', function() {
+        .on('end', function () {
           t.deepEqual(count, documents.length, `read ${documents.length} records`);
           resolve();
         })
-        .on('error', function(err) {
+        .on('error', function (err) {
           t.fail('should not error');
           reject(err);
-        })
-    ),
+        });
+    }),
     batchWriteItem(dynamodb, tableName, documents)
   ]);
 });

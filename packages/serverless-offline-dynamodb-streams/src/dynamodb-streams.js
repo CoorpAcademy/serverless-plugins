@@ -6,7 +6,10 @@ const {assign} = require('lodash/fp');
 const DynamodbStreamsEventDefinition = require('./dynamodb-streams-event-definition');
 const DynamodbStreamsEvent = require('./dynamodb-streams-event');
 
-const delay = timeout => new Promise(resolve => setTimeout(resolve, timeout));
+const delay = timeout =>
+  new Promise(resolve => {
+    setTimeout(resolve, timeout);
+  });
 
 class DynamodbStreams {
   constructor(lambda, options) {
@@ -55,7 +58,7 @@ class DynamodbStreams {
         })
         .promise();
     } catch (err) {
-      return this._waitFor(tableName);
+      return this._describeTable(tableName);
     }
   }
 

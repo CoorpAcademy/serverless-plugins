@@ -1,6 +1,9 @@
 {
   "name": "serverless-plugins",
   "private": true,
+  "engines": {
+    "node": ">=10"
+  },
   "scripts": {
     "postinstall": "lerna bootstrap",
     "eslint": "eslint .",
@@ -16,12 +19,12 @@
   },
   "dependencies": {
     "lerna": "^3.22.1",
-    "serverless": "^1.73.1"
+    "serverless": "^1.83.0"
   },
   "devDependencies": {
-    "@coorpacademy/eslint-plugin-coorpacademy": "^9.3.1",
-    "ava": "^2.4.0",
-    "eslint": "^6.8.0",
+    "@coorpacademy/eslint-plugin-coorpacademy": "^10.2.0",
+    "ava": "^3.12.1",
+    "eslint": "^7.9.0",
     "nyc": "^15.1.0"
   }
 }

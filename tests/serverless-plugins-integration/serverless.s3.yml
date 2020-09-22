@@ -22,13 +22,14 @@ functions:
       - s3:
           bucket: pictures
           event: s3:ObjectCreated:Put
-          
+
   myCallbackHandler:
     handler: lambda/handler.callback
     events:
       - s3:
           bucket: files
           event: s3:ObjectCreated:Put
+
   myPythonHandler:
     runtime: python3.7
     handler: lambda/handler.handler

@@ -23,16 +23,19 @@
     "Adrien Becchis @AdrieanKhisbe"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=10"
+  },
   "peerDependencies": {
-    "serverless-offline": "^6.4.0"
+    "serverless-offline": "^6.7.0"
   },
   "dependencies": {
-    "aws-sdk": "^2.698.0",
-    "lodash": "^4.17.15",
-    "p-queue": "^6.4.0"
+    "aws-sdk": "^2.757.0",
+    "lodash": "^4.17.20",
+    "p-queue": "^6.6.1"
   },
   "devDependencies": {
-    "serverless-offline": "^6.4.0"
+    "serverless-offline": "^6.7.0"
   },
   "keywords": [
     "sqs",

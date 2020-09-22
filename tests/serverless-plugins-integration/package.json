@@ -21,11 +21,12 @@
     "pretest:kinesis": "npm run -s setup-service kinesis"
   },
   "dependencies": {
-    "aws-sdk": "^2.698.0",
-    "lodash": "^4.17.15",
+    "aws-sdk": "^2.757.0",
+    "lodash": "^4.17.20",
     "minio": "^7.0.16",
-    "serverless": "^1.73.1",
-    "serverless-offline": "^6.4.0",
+    "pump": "^3.0.0",
+    "serverless": "^1.83.0",
+    "serverless-offline": "^6.7.0",
     "serverless-offline-dynamodb-streams": "^4.1.0",
     "serverless-offline-kinesis": "^4.1.0",
     "serverless-offline-sqs": "^4.1.0",

@@ -115,7 +115,6 @@ class ServerlessOfflineSQS {
     await Promise.all(eventModules);
 
     if (!skipExit) {
-      // eslint-disable-next-line unicorn/no-process-exit
       process.exit(0);
     }
   }
@@ -212,7 +211,7 @@ class ServerlessOfflineSQS {
                   const queueName = get([resourceName, 'Properties', 'QueueName'], Resources);
                   return [
                     key,
-                    `arn:aws:kinesis:${this.options.region}:${this.options.accountId}:${queueName}`
+                    `arn:aws:sqs:${this.options.region}:${this.options.accountId}:${queueName}`
                   ];
                 }
                 default: {

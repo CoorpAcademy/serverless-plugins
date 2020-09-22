@@ -64,7 +64,7 @@ function DynamoDBStreamReadable(client, arn, options) {
     }
 
     pending++;
-    client.getShardIterator(params, function(err, data) {
+    client.getShardIterator(params, function (err, data) {
       pending--;
       if (err) return callback(err);
       iterator = data.ShardIterator;
@@ -74,14 +74,14 @@ function DynamoDBStreamReadable(client, arn, options) {
 
   function describeStream(callback) {
     pending++;
-    client.describeStream({StreamArn: arn}, function(err, data) {
+    client.describeStream({StreamArn: arn}, function (err, data) {
       pending--;
       if (err) return callback(err);
 
       const shardId = options.shardId
-        ? data.StreamDescription.Shards.filter(function(shard) {
+        ? data.StreamDescription.Shards.filter(function (shard) {
             return shard.ShardId === options.shardId;
-          }).map(function(shard) {
+          }).map(function (shard) {
             return shard.ShardId;
           })[0]
         : data.StreamDescription.Shards[0].ShardId;
@@ -101,12 +101,12 @@ function DynamoDBStreamReadable(client, arn, options) {
         ShardIterator: iterator,
         Limit: options.limit
       },
-      function(err, data) {
+      function (err, data) {
         pending--;
 
         if (err) {
           if (err.name === 'TrimmedDataAccessException') {
-            return describeStream(function(e) {
+            return describeStream(function (e) {
               if (e) return checkpoint.emit('error', e);
               read(callback);
             });
@@ -130,7 +130,7 @@ function DynamoDBStreamReadable(client, arn, options) {
     );
   }
 
-  readable._read = function() {
+  readable._read = function () {
     function gotRecords(err, data) {
       if (err) return checkpoint.emit('error', err);
       setTimeout(readable.push.bind(readable), options.readInterval || 500, data.Records);
@@ -138,18 +138,18 @@ function DynamoDBStreamReadable(client, arn, options) {
 
     if (iterator) return read(gotRecords);
 
-    describeStream(function(err) {
+    describeStream(function (err) {
       if (err) return checkpoint.emit('error', err);
       read(gotRecords);
     });
   };
 
-  checkpoint._transform = function(data, enc, callback) {
+  checkpoint._transform = function (data, enc, callback) {
     checkpoint.emit('checkpoint', data.slice(-1)[0].dynamodb.SequenceNumber);
     callback(null, data);
   };
 
-  checkpoint._flush = function(callback) {
+  checkpoint._flush = function (callback) {
     ended = true;
     callback();
   };
@@ -164,7 +164,7 @@ function DynamoDBStreamReadable(client, arn, options) {
    * @memberof DynamoDBStreamClient
    * @returns {DynamoDBStreamClient}
    */
-  checkpoint.close = function() {
+  checkpoint.close = function () {
     drain = true;
     if (!ended) readable._read();
     return checkpoint;

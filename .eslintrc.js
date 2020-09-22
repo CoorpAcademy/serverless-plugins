@@ -16,6 +16,12 @@ module.exports = {
     'promise/no-native': 'off',
     'no-param-reassign': 'off',
     'import/no-extraneous-dependencies': 'off',
+    'node/no-extraneous-require': [
+      'error',
+      {
+        allowModules: ['ava', 'aws-sdk']
+      }
+    ],
     'unicorn/no-unreadable-array-destructuring': 'off',
     'unicorn/consistent-function-scoping': 'off'
   },
@@ -24,6 +30,12 @@ module.exports = {
       files: ['packages/**/.*/**/*.test.js', 'packages/**/*.test.js'],
       rules: {
         'import/no-extraneous-dependencies': 'off'
+      }
+    },
+    {
+      files: ['ava.config.js'],
+      rules: {
+        'node/no-unsupported-features/es-syntax': 'off'
       }
     }
   ]

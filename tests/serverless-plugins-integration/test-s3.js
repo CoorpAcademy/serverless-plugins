@@ -1,8 +1,9 @@
-/* eslint-disable unicorn/no-process-exit */
 const {Writable} = require('stream');
 const {spawn} = require('child_process');
 const onExit = require('signal-exit');
 const Minio = require('minio');
+const pump = require('pump');
+const {delay, getSplitLinesTransform} = require('./utils');
 
 const client = new Minio.Client({
   region: 'eu-west-1',
@@ -15,7 +16,7 @@ const client = new Minio.Client({
 
 const path = './files/test.txt';
 const uploadFiles = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await delay(1000);
 
   await Promise.all([
     client.fPutObject('documents', 'first.txt', path),
@@ -26,29 +27,31 @@ const uploadFiles = async () => {
     client.fPutObject('files', 'second.txt', path)
   ]);
 };
+const EXPECED_LAMBDA_CALL = 8; // pictures files are consumed twice, by myPromiseHandler and myPythonHandler
 
 const serverless = spawn('serverless', ['--config', 'serverless.s3.yml', 'offline', 'start'], {
   stdio: ['pipe', 'pipe', 'pipe'],
   cwd: __dirname
 });
 
-serverless.stdout.pipe(
+pump(
+  serverless.stdout,
+  getSplitLinesTransform(),
   new Writable({
-    write(chunk, enc, cb) {
-      const output = chunk.toString();
-
-      if (/Starting Offline S3/.test(output)) {
+    objectMode: true,
+    write(line, enc, cb) {
+      if (/Starting Offline S3/.test(line)) {
         uploadFiles();
       }
 
       this.count =
         (this.count || 0) +
         (
-          output.match(
+          line.match(
             /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
           ) || []
         ).length;
-      if (this.count === 6) serverless.kill();
+      if (this.count === EXPECED_LAMBDA_CALL) serverless.kill();
       cb();
     }
   })

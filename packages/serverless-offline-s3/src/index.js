@@ -100,7 +100,6 @@ class ServerlessOfflineS3 {
     await Promise.all(eventModules);
 
     if (!skipExit) {
-      // eslint-disable-next-line unicorn/no-process-exit
       process.exit(0);
     }
   }
