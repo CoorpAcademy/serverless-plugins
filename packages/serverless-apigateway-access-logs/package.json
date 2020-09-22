@@ -1,6 +1,6 @@
 {
   "name": "serverless-apigateway-access-logs",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Serverless plugin to configure Api Gateway access logs",
   "main": "src",
   "repository": {
