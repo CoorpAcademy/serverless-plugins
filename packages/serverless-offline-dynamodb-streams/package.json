@@ -23,15 +23,15 @@
     "node": ">=10"
   },
   "peerDependencies": {
-    "serverless-offline": "^6.4.0"
+    "serverless-offline": "^6.7.0"
   },
   "dependencies": {
-    "aws-sdk": "^2.698.0",
+    "aws-sdk": "^2.757.0",
     "dynamodb-streams-readable": "^1.0.7",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.20"
   },
   "devDependencies": {
-    "serverless-offline": "^6.4.0"
+    "serverless-offline": "^6.7.0"
   },
   "keywords": [
     "kinesis",

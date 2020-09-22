@@ -24,7 +24,7 @@
     "node": ">=10"
   },
   "dependencies": {
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.20"
   },
   "keywords": [
     "ssm",
