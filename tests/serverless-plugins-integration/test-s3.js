@@ -27,6 +27,7 @@ const uploadFiles = async () => {
     client.fPutObject('files', 'second.txt', path)
   ]);
 };
+const EXPECED_LAMBDA_CALL = 8; // pictures files are consumed twice, by myPromiseHandler and myPythonHandler
 
 const serverless = spawn('serverless', ['--config', 'serverless.s3.yml', 'offline', 'start'], {
   stdio: ['pipe', 'pipe', 'pipe'],
@@ -49,7 +50,7 @@ serverless.stdout.pipe(
             /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
           ) || []
         ).length;
-      if (this.count === 6) serverless.kill();
+      if (this.count === EXPECED_LAMBDA_CALL) serverless.kill();
       cb();
     }
   })
