@@ -26,13 +26,13 @@ test.before(t => {
     accessKeyId: '-',
     secretAccessKey: '-',
     endpoint: 'http://localhost:8000',
-    region: '-'
+    region: 'eu-west-1'
   });
   t.context.dynamodbstreams = new DynamoDBStreams({
     accessKeyId: '-',
     secretAccessKey: '-',
     endpoint: 'http://localhost:8000',
-    region: '-'
+    region: 'eu-west-1'
   });
 });
 
