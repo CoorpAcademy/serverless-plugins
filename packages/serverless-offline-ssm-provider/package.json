@@ -20,6 +20,9 @@
     "Adrien Becchis @AdrieanKhisbe"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=10"
+  },
   "dependencies": {
     "lodash": "^4.17.15"
   },

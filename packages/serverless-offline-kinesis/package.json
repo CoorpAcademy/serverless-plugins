@@ -23,6 +23,9 @@
     "Adrien Becchis @AdrieanKhisbe"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=10"
+  },
   "peerDependencies": {
     "serverless-offline": "^6.4.0"
   },

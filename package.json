@@ -1,6 +1,9 @@
 {
   "name": "serverless-plugins",
   "private": true,
+  "engines": {
+    "node":  ">=10"
+  },
   "scripts": {
     "postinstall": "lerna bootstrap",
     "eslint": "eslint .",

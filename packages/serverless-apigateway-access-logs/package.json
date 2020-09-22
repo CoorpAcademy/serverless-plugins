@@ -16,6 +16,9 @@
   ],
   "author": "Adrien Becchis @Coorpacademy (https://github.com/AdrieanKhisbe)",
   "license": "MIT",
+  "engines": {
+    "node": ">=10"
+  },
   "dependencies": {
     "aws-sdk": "^2.698.0",
     "lodash": "^4.17.15"
