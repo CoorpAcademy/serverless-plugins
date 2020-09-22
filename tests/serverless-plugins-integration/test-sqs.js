@@ -1,4 +1,3 @@
-/* eslint-disable unicorn/no-process-exit */
 const {Writable} = require('stream');
 const {spawn} = require('child_process');
 const onExit = require('signal-exit');
