@@ -6,7 +6,10 @@ const {logWarning} = require('serverless-offline/dist/serverlessLog');
 const SQSEventDefinition = require('./sqs-event-definition');
 const SQSEvent = require('./sqs-event');
 
-const delay = timeout => new Promise(resolve => setTimeout(resolve, timeout));
+const delay = timeout =>
+  new Promise(resolve => {
+    setTimeout(resolve, timeout);
+  });
 
 class SQS {
   constructor(lambda, resources, options) {

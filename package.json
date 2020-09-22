@@ -22,9 +22,9 @@
     "serverless": "^1.73.1"
   },
   "devDependencies": {
-    "@coorpacademy/eslint-plugin-coorpacademy": "^9.3.1",
+    "@coorpacademy/eslint-plugin-coorpacademy": "^10.2.0",
     "ava": "^3.12.1",
-    "eslint": "^6.8.0",
+    "eslint": "^7.9.0",
     "nyc": "^15.1.0"
   }
 }

@@ -40,7 +40,9 @@ const putItems = async () => {
       .promise()
   ]);
   // wait stream get a new iterator
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise(resolve => {
+    setTimeout(resolve, 1000);
+  });
 
   await Promise.all([
     client

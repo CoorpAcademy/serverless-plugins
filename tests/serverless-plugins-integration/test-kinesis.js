@@ -12,7 +12,9 @@ const client = new Kinesis({
 });
 
 const putRecords = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise(resolve => {
+    setTimeout(resolve, 1000);
+  });
 
   await Promise.all([
     client

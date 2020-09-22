@@ -4,7 +4,10 @@ const {assign, toNumber} = require('lodash/fp');
 const S3EventDefinition = require('./s3-event-definition');
 const S3Event = require('./s3-event');
 
-const delay = timeout => new Promise(resolve => setTimeout(resolve, timeout));
+const delay = timeout =>
+  new Promise(resolve => {
+    setTimeout(resolve, timeout);
+  });
 
 class S3 {
   constructor(lambda, resources, options) {

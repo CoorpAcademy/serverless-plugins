@@ -15,7 +15,9 @@ const client = new Minio.Client({
 
 const path = './files/test.txt';
 const uploadFiles = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise(resolve => {
+    setTimeout(resolve, 1000);
+  });
 
   await Promise.all([
     client.fPutObject('documents', 'first.txt', path),

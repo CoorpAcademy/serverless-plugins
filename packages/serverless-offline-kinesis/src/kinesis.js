@@ -5,7 +5,10 @@ const {assign} = require('lodash/fp');
 const KinesisEventDefinition = require('./kinesis-event-definition');
 const KinesisEvent = require('./kinesis-event');
 
-const delay = timeout => new Promise(resolve => setTimeout(resolve, timeout));
+const delay = timeout =>
+  new Promise(resolve => {
+    setTimeout(resolve, timeout);
+  });
 
 class Kinesis {
   constructor(lambda, options) {

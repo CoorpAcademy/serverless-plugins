@@ -2,9 +2,9 @@ const fs = require('fs');
 const {fromPairs, get, map, pipe, split, trim} = require('lodash/fp');
 
 const fromCallback = fun => (...args) =>
-  new Promise((resolve, reject) =>
-    fun(...args, (err, data) => (err ? reject(err) : resolve(data)))
-  );
+  new Promise((resolve, reject) => {
+    fun(...args, (err, data) => (err ? reject(err) : resolve(data)));
+  });
 const readFile = fromCallback(fs.readFile);
 
 const getValues = (path = '.ssm') => {
