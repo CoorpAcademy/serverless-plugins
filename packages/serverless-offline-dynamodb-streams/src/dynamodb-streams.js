@@ -58,7 +58,7 @@ class DynamodbStreams {
         })
         .promise();
     } catch (err) {
-      return this._waitFor(tableName);
+      return this._describeTable(tableName);
     }
   }
 

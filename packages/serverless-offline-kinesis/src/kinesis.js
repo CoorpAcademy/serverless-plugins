@@ -53,7 +53,7 @@ class Kinesis {
         })
         .promise();
     } catch (err) {
-      return this._waitFor(streamName);
+      return this._describeStream(streamName);
     }
   }
 
