@@ -2,6 +2,8 @@ const {Writable} = require('stream');
 const {spawn} = require('child_process');
 const onExit = require('signal-exit');
 const {DynamoDB} = require('aws-sdk');
+const pump = require('pump');
+const {delay, getSplitLinesTransform} = require('./utils');
 
 const client = new DynamoDB({
   region: 'eu-west-1',
@@ -38,9 +40,7 @@ const putItems = () =>
 let setupInProgress = true;
 const populateTables = async () => {
   await unemptyTables();
-  await new Promise(resolve => {
-    setTimeout(resolve, 1200);
-  });
+  await delay(1200);
   setupInProgress = false;
   await putItems();
 };
@@ -56,19 +56,20 @@ const serverless = spawn(
 
 const set = new Set();
 let invocationCount = 0;
-serverless.stdout.pipe(
+pump(
+  serverless.stdout,
+  getSplitLinesTransform(),
   new Writable({
-    write(chunk, enc, cb) {
-      const output = chunk.toString();
-
-      if (/Starting Offline Dynamodb Streams/.test(output)) {
+    objectMode: true,
+    write(line, enc, cb) {
+      if (/Starting Offline Dynamodb Streams/.test(line)) {
         populateTables(); // will run in the background
       }
 
       if (setupInProgress) return cb(); // do not consider lambda executions before we post the real items
 
       const matches = /offline: \(λ: (.*)\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g.exec(
-        output
+        line
       );
 
       if (matches) {

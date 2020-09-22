@@ -2,6 +2,8 @@ const {Writable} = require('stream');
 const {spawn} = require('child_process');
 const onExit = require('signal-exit');
 const {SQS} = require('aws-sdk');
+const pump = require('pump');
+const {getSplitLinesTransform} = require('./utils');
 
 const client = new SQS({
   region: 'eu-west-1',
@@ -47,19 +49,20 @@ const serverless = spawn('serverless', ['--config', 'serverless.sqs.yml', 'offli
   cwd: __dirname
 });
 
-serverless.stdout.pipe(
+pump(
+  serverless.stdout,
+  getSplitLinesTransform(),
   new Writable({
-    write(chunk, enc, cb) {
-      const output = chunk.toString();
-
-      if (/Starting Offline SQS/.test(output)) {
+    objectMode: true,
+    write(line, enc, cb) {
+      if (/Starting Offline SQS/.test(line)) {
         sendMessages();
       }
 
       this.count =
         (this.count || 0) +
         (
-          output.match(
+          line.match(
             /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
           ) || []
         ).length;

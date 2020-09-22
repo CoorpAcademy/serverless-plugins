@@ -24,6 +24,7 @@
     "aws-sdk": "^2.757.0",
     "lodash": "^4.17.20",
     "minio": "^7.0.16",
+    "pump": "^3.0.0",
     "serverless": "^1.83.0",
     "serverless-offline": "^6.7.0",
     "serverless-offline-dynamodb-streams": "^4.1.0",
