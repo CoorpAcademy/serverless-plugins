@@ -64,7 +64,8 @@ class SQS {
 
     if (this.options.autoCreate) await this._createQueue(sqsEvent);
 
-    const {QueueUrl} = await this.client.getQueueUrl({QueueName: queueName}).promise();
+    let {QueueUrl} = await this.client.getQueueUrl({QueueName: queueName}).promise();
+    QueueUrl = QueueUrl.replace(/^.*:\d+/, this.options.endpoint);
 
     const job = async () => {
       const {Messages} = await this.client
