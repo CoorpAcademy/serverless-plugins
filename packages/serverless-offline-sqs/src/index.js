@@ -49,7 +49,7 @@ class ServerlessOfflineSQS {
     this.hooks = {
       'offline:start:init': this.start.bind(this),
       'offline:start:ready': this.ready.bind(this),
-      'offline:start': this._startWithExplicitEnd.bind(this),
+      'offline:start': this._start.bind(this),
       'offline:start:end': this.end.bind(this)
     };
   }
@@ -80,19 +80,23 @@ class ServerlessOfflineSQS {
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this
+  // eslint-disable-next-line require-await
   async _listenForTermination() {
-    const command = await new Promise(resolve => {
-      process.on('SIGINT', () => resolve('SIGINT')).on('SIGTERM', () => resolve('SIGTERM'));
-    });
-
-    serverlessLog(`Got ${command} signal. Offline Halting...`);
+    const log = comm => serverlessLog(`Got ${comm} signal. Offline Halting...`);
+    process
+      .on('SIGINT', () => {
+        log('SIGINT');
+        return this.end();
+      })
+      .on('SIGTERM', () => {
+        log('SIGTERM');
+        return this.end();
+      });
   }
 
-  async _startWithExplicitEnd() {
+  async _start() {
     await this.start();
     await this.ready();
-    this.end();
   }
 
   async end(skipExit) {
