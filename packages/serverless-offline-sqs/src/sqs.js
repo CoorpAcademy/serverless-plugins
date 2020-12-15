@@ -86,9 +86,9 @@ class SQS {
 
           await lambdaFunction.runHandler();
 
-          await this.client
+          Messages.length > 0 && await this.client
             .deleteMessageBatch({
-              Entries: (Messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
+              Entries: (Messages).map(({MessageId: Id, ReceiptHandle}) => ({
                 Id,
                 ReceiptHandle
               })),
