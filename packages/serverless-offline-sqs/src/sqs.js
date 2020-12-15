@@ -86,15 +86,16 @@ class SQS {
 
           await lambdaFunction.runHandler();
 
-          Messages.length > 0 && await this.client
-            .deleteMessageBatch({
-              Entries: Messages.map(({MessageId: Id, ReceiptHandle}) => ({
-                Id,
-                ReceiptHandle
-              })),
-              QueueUrl
-            })
-            .promise();
+          Messages.length > 0 &&
+            (await this.client
+              .deleteMessageBatch({
+                Entries: Messages.map(({MessageId: Id, ReceiptHandle}) => ({
+                  Id,
+                  ReceiptHandle
+                })),
+                QueueUrl
+              })
+              .promise());
         } catch (err) {
           logWarning(err.stack);
         }
