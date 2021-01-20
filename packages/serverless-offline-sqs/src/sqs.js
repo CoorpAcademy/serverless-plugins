@@ -81,7 +81,7 @@ class SQS {
         try {
           const lambdaFunction = this.lambda.get(functionKey);
 
-          const event = new SQSEvent(Messages, this.region, arn);
+          const event = new SQSEvent(Messages, this.options.region, arn);
           lambdaFunction.setEvent(event);
 
           await lambdaFunction.runHandler();
