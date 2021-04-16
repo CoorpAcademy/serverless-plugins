@@ -49,7 +49,7 @@ class ServerlessOfflineSQS {
     this.hooks = {
       'offline:start:init': this.start.bind(this),
       'offline:start:ready': this.ready.bind(this),
-      'offline:start': this._startWithExplicitEnd.bind(this),
+      'offline:start': this._startWithReady.bind(this),
       'offline:start:end': this.end.bind(this)
     };
   }
@@ -74,25 +74,27 @@ class ServerlessOfflineSQS {
     serverlessLog(`Starting Offline SQS: ${this.options.stage}/${this.options.region}.`);
   }
 
-  async ready() {
+  ready() {
     if (process.env.NODE_ENV !== 'test') {
-      await this._listenForTermination();
+      this._listenForTermination();
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this
-  async _listenForTermination() {
-    const command = await new Promise(resolve => {
-      process.on('SIGINT', () => resolve('SIGINT')).on('SIGTERM', () => resolve('SIGTERM'));
-    });
+  _listenForTermination() {
+    const signals = ['SIGINT', 'SIGTERM'];
 
-    serverlessLog(`Got ${command} signal. Offline Halting...`);
+    signals.map(signal =>
+      process.on(signal, async () => {
+        serverlessLog(`Got ${signal} signal. Offline Halting...`);
+
+        await this.end();
+      })
+    );
   }
 
-  async _startWithExplicitEnd() {
+  async _startWithReady() {
     await this.start();
-    await this.ready();
-    this.end();
+    this.ready();
   }
 
   async end(skipExit) {
