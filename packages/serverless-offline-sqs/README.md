@@ -74,6 +74,12 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: MyFourthQueue
+      RedrivePolicy:
+        deadLetterTargetArn: # Support only this format for autoCreate
+          Fn::GetAtt:
+          - MyFourthQueueDlq
+          - Arn
+        maxReceiveCount: 6
 
     MyFifthQueue: # Support for Fifo queue creation starts from 3.1 only
       Type: AWS::SQS::Queue
@@ -81,6 +87,11 @@ resources:
         QueueName: MyFifthQueue.fifo
         FifoQueue: true
         ContentBasedDeduplication: true
+
+    MyFourthQueueDlq:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: MyFourthQueueDlq
 ```
 
 ### SQS
