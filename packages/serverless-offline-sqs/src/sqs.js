@@ -1,7 +1,18 @@
 const {default: PQueue} = require('p-queue');
 const SQSClient = require('aws-sdk/clients/sqs');
-// eslint-disable-next-line no-shadow
-const {pipe, get, values, matches, find, mapValues, isPlainObject, toString, map, compact} = require('lodash/fp');
+const {
+  pipe,
+  get,
+  values,
+  matches,
+  find,
+  mapValues,
+  isPlainObject,
+  // eslint-disable-next-line no-shadow
+  toString,
+  map,
+  compact
+} = require('lodash/fp');
 const {logWarning} = require('serverless-offline/dist/serverlessLog');
 const SQSEventDefinition = require('./sqs-event-definition');
 const SQSEvent = require('./sqs-event');
@@ -53,26 +64,29 @@ class SQS {
   }
 
   _createDlq(resources) {
-    if (!this.options.autoCreate) return
+    if (!this.options.autoCreate) return;
     const dlqNames = this._getDlqNames(resources);
-    return Promise.all(dlqNames.map((queueName) => {
-      return this._createQueue({ queueName });
-    }))
+    return Promise.all(
+      dlqNames.map(queueName => {
+        return this._createQueue({queueName});
+      })
+    );
   }
 
+  // eslint-disable-next-line class-methods-use-this
   _getDlqNames(resources) {
     return pipe(
       values,
-      map((value) => {
-        const dlq = get(['Properties', 'RedrivePolicy', 'deadLetterTargetArn'], value)
-        if (!dlq) return
-        const [resourceName, attribute] = dlq["Fn::GetAtt"];
-        const type = get(["Type"], resources[resourceName]);
-        if (attribute !== "Arn") return;
-        if (type !== "AWS::SQS::Queue") return;
-        return get(["Properties", "QueueName"], resources[resourceName])
+      map(value => {
+        const dlq = get(['Properties', 'RedrivePolicy', 'deadLetterTargetArn'], value);
+        if (!dlq) return;
+        const [resourceName, attribute] = dlq['Fn::GetAtt'];
+        const type = get(['Type'], resources[resourceName]);
+        if (attribute !== 'Arn') return;
+        if (type !== 'AWS::SQS::Queue') return;
+        return get(['Properties', 'QueueName'], resources[resourceName]);
       }),
-      compact,
+      compact
     )(resources);
   }
 
