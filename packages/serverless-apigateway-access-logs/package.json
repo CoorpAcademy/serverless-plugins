@@ -17,11 +17,11 @@
   "author": "Adrien Becchis @Coorpacademy (https://github.com/AdrieanKhisbe)",
   "license": "MIT",
   "engines": {
-    "node": ">=10"
+    "node": ">=12"
   },
   "dependencies": {
-    "aws-sdk": "^2.757.0",
-    "lodash": "^4.17.20"
+    "aws-sdk": "^2.970.0",
+    "lodash": "^4.17.21"
   },
   "keywords": [
     "kinesis",

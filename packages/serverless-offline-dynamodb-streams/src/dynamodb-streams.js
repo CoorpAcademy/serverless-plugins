@@ -63,14 +63,8 @@ class DynamodbStreams {
   }
 
   async _dynamodbStreamsEvent(functionKey, dynamodbStreamsEvent) {
-    const {
-      enabled,
-      tableName,
-      arn,
-      batchSize,
-      startingPosition,
-      maximumRetryAttempts
-    } = dynamodbStreamsEvent;
+    const {enabled, tableName, arn, batchSize, startingPosition, maximumRetryAttempts} =
+      dynamodbStreamsEvent;
 
     if (!enabled) return;
 
