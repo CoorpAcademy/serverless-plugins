@@ -5,7 +5,7 @@ Node.js stream interface for reading records from [AWS DynamoDB Streams](https:/
 ## Usage
 
 ```js
-var AWS = new AWS.DynamoDBStreams({
+var client = new AWS.DynamoDBStreams({
   region: 'us-east-1'
 });
 
