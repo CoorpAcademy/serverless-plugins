@@ -68,9 +68,8 @@ pump(
 
       if (setupInProgress) return cb(); // do not consider lambda executions before we post the real items
 
-      const matches = /offline: \(λ: (.*)\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g.exec(
-        line
-      );
+      const matches =
+        /offline: \(λ: (.*)\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g.exec(line);
 
       if (matches) {
         invocationCount++;

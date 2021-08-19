@@ -17,10 +17,10 @@
   "author": "Arthur Weber @godu",
   "license": "MIT",
   "engines": {
-    "node": ">=10"
+    "node": ">=12"
   },
   "devDependencies": {
-    "uuid": "^8.3.0"
+    "uuid": "^8.3.2"
   },
   "keywords": [
     "dynamodb",

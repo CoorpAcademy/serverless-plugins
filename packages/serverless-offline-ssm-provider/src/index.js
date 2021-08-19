@@ -1,10 +1,12 @@
 const fs = require('fs');
-const {fromPairs, get, map, pipe, split, trim} = require('lodash/fp');
+const {fromPairs, get, map, pipe, split, trim, bind} = require('lodash/fp');
 
-const fromCallback = fun => (...args) =>
-  new Promise((resolve, reject) => {
-    fun(...args, (err, data) => (err ? reject(err) : resolve(data)));
-  });
+const fromCallback =
+  fun =>
+  (...args) =>
+    new Promise((resolve, reject) => {
+      fun(...args, (err, data) => (err ? reject(err) : resolve(data)));
+    });
 const readFile = fromCallback(fs.readFile);
 
 const getValues = (path = '.ssm') => {
@@ -23,34 +25,26 @@ const getValues = (path = '.ssm') => {
   return key => values.then(get(key));
 };
 
+const SSM_PREFIX = 'ssm:';
+
 class ServerlessOfflineSSMProvider {
   constructor(serverless) {
     this.serverless = serverless;
     this.config = this.serverless.service.custom['serverless-offline-ssm-provider'];
     this.values = this.config ? getValues(this.config.file) : getValues();
 
-    const aws = this.serverless.getProvider('aws');
-    const request = aws.request.bind(aws);
+    const delegate = bind(serverless.variables.getValueFromSource, serverless.variables);
 
-    aws.request = (service, method, params, options) => {
-      if (service !== 'SSM' || method !== 'getParameter')
-        return request(service, method, params, options);
+    serverless.variables.getValueFromSource = async variableString => {
+      if (!variableString.startsWith(SSM_PREFIX)) return delegate(variableString);
 
-      return request(service, method, params, options).catch(async error => {
-        const {Name} = params;
-        const Value = await this.values(Name);
+      const ssmPath = variableString.replace(SSM_PREFIX, '');
+      const ssmValue = await this.values(ssmPath);
 
-        if (!Value) throw error;
+      if (!ssmValue) return delegate(variableString);
 
-        return {
-          Parameter: {
-            Value
-          }
-        };
-      });
+      return ssmValue;
     };
-
-    this.serverless.setProvider('aws', aws);
   }
 }
 

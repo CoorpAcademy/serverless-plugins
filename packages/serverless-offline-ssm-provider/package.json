@@ -21,10 +21,13 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=10"
+    "node": ">=12"
   },
   "dependencies": {
-    "lodash": "^4.17.20"
+    "lodash": "^4.17.21"
+  },
+  "peerDependencies": {
+    "serverless": "^1.26.0 || 2"
   },
   "keywords": [
     "ssm",

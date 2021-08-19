@@ -1,7 +1,7 @@
 # :zap: Collection of Serverless Plugins :battery:
 
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
-[![Build Status](https://travis-ci.org/CoorpAcademy/serverless-plugins.svg?branch=master)](https://travis-ci.org/CoorpAcademy/serverless-plugins)
+[![Build Status](https://travis-ci.com/CoorpAcademy/serverless-plugins.svg?branch=master)](https://travis-ci.com/CoorpAcademy/serverless-plugins)
 [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
 
 

@@ -3,7 +3,7 @@ service: serverless-offline-sqs
 provider:
   name: aws
   region: eu-west-1
-  runtime: nodejs10.x
+  runtime: nodejs12.x
 
 plugins:
   localPath: '../../packages'
