@@ -26,6 +26,9 @@
   "dependencies": {
     "lodash": "^4.17.21"
   },
+  "peerDependencies": {
+    "serverless": "^1.26.0 || 2"
+  },
   "keywords": [
     "ssm",
     "serverless",
