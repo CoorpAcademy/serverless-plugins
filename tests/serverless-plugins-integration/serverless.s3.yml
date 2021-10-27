@@ -22,6 +22,12 @@ functions:
       - s3:
           bucket: pictures
           event: s3:ObjectCreated:Put
+      - s3:
+          bucket: others
+          event: s3:ObjectCreated:Put
+          rules:
+            - prefix: correct/
+            - suffix: .csv
 
   myCallbackHandler:
     handler: lambda/handler.callback
