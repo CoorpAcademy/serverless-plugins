@@ -1,7 +1,7 @@
 {
   "name": "serverless-offline-plugins-integration",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.0.1",
   "scripts": {
     "start:kinesis": "sls --config serverless.kinesis.yml offline",
     "start:sqs": "sls --config serverless.sqs.yml offline",
