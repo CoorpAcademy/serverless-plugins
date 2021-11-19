@@ -1,6 +1,17 @@
 const SQSClient = require('aws-sdk/clients/sqs');
-// eslint-disable-next-line no-shadow
-const {pipe, get, values, matches, find, mapValues, isPlainObject, toString} = require('lodash/fp');
+const {
+  pipe,
+  get,
+  values,
+  matches,
+  find,
+  mapValues,
+  isPlainObject,
+  // eslint-disable-next-line no-shadow
+  toString,
+  map,
+  compact
+} = require('lodash/fp');
 const {logWarning} = require('serverless-offline/dist/serverlessLog');
 const {default: PQueue} = require('p-queue');
 const SQSEventDefinition = require('./sqs-event-definition');
@@ -30,6 +41,10 @@ class SQS {
     return Promise.all(events.map(({functionKey, sqs}) => this._create(functionKey, sqs)));
   }
 
+  createDlq(resources) {
+    return this._createDlq(resources);
+  }
+
   start() {
     this.queue.start();
   }
@@ -46,6 +61,33 @@ class SQS {
     );
 
     return this._sqsEvent(functionKey, sqsEvent);
+  }
+
+  _createDlq(resources) {
+    if (!this.options.autoCreate) return;
+    const dlqNames = this._getDlqNames(resources);
+    return Promise.all(
+      dlqNames.map(queueName => {
+        return this._createQueue({queueName});
+      })
+    );
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  _getDlqNames(resources) {
+    return pipe(
+      values,
+      map(value => {
+        const dlq = get(['Properties', 'RedrivePolicy', 'deadLetterTargetArn'], value);
+        if (!dlq) return;
+        const [resourceName, attribute] = dlq['Fn::GetAtt'];
+        const type = get(['Type'], resources[resourceName]);
+        if (attribute !== 'Arn') return;
+        if (type !== 'AWS::SQS::Queue') return;
+        return get(['Properties', 'QueueName'], resources[resourceName]);
+      }),
+      compact
+    )(resources);
   }
 
   async _getQueueUrl(queueName) {

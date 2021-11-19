@@ -130,6 +130,8 @@ class ServerlessOfflineSQS {
 
     this.sqs = new SQS(this.lambda, resources, this.options);
 
+    await this.sqs.createDlq(get(['service', 'resources', 'Resources'], this.serverless));
+
     await this.sqs.create(events);
 
     if (!skipStart) {
