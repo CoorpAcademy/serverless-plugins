@@ -48,6 +48,20 @@ class SQS {
     return this._sqsEvent(functionKey, sqsEvent);
   }
 
+  _rewriteQueueUrl(queueUrl) {
+    if (!this.options.endpoint) return queueUrl;
+
+    const {hostname, protocol, username, password, port} = new URL(this.options.endpoint);
+    const rewritedQueueUrl = new URL(queueUrl);
+    rewritedQueueUrl.hostname = hostname;
+    rewritedQueueUrl.protocol = protocol;
+    rewritedQueueUrl.username = username;
+    rewritedQueueUrl.password = password;
+    rewritedQueueUrl.port = port;
+
+    return rewritedQueueUrl.href;
+  }
+
   async _getQueueUrl(queueName) {
     try {
       return await this.client.getQueueUrl({QueueName: queueName}).promise();
@@ -64,7 +78,9 @@ class SQS {
 
     if (this.options.autoCreate) await this._createQueue(sqsEvent);
 
-    const {QueueUrl} = await this.client.getQueueUrl({QueueName: queueName}).promise();
+    const QueueUrl = this._rewriteQueueUrl(
+      (await this.client.getQueueUrl({QueueName: queueName}).promise()).QueueUrl
+    );
 
     const job = async () => {
       const {Messages} = await this.client
