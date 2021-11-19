@@ -60,9 +60,9 @@ class SQS {
   async _sqsEvent(functionKey, sqsEvent) {
     const {enabled, arn, queueName, batchSize} = sqsEvent;
 
-    if (!enabled) return;
-
     if (this.options.autoCreate) await this._createQueue(sqsEvent);
+
+    if (!enabled) return;
 
     const {QueueUrl} = await this.client.getQueueUrl({QueueName: queueName}).promise();
 
