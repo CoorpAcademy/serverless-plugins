@@ -6,11 +6,9 @@ provider:
   runtime: nodejs12.x
 
 plugins:
-  localPath: '../../packages'
-  modules:
-    - serverless-offline-ssm-provider
-    - serverless-offline-dynamodb-streams
-    - serverless-offline
+  - ../../packages/serverless-offline-ssm-provider
+  - ../../packages/serverless-offline-dynamodb-streams
+  - serverless-offline
 
 functions:
   myPromiseHandler:

@@ -6,11 +6,9 @@ provider:
   runtime: nodejs12.x
 
 plugins:
-  localPath: '../../packages'
-  modules:
-    - serverless-offline-ssm-provider
-    - serverless-offline-sqs
-    - serverless-offline
+  - ../../packages/serverless-offline-ssm-provider
+  - ../../packages/serverless-offline-sqs
+  - serverless-offline
 
 functions:
   myPromiseHandler:
