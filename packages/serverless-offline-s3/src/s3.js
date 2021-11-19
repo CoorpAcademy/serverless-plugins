@@ -57,10 +57,14 @@ class S3 {
   }
 
   async _s3Event(functionKey, s3Event) {
-    const {event, bucket} = s3Event;
+    const {event, bucket, rules} = s3Event;
     await this._waitFor(bucket);
 
-    const listener = this.client.listenBucketNotification(bucket, '*', '*', [event]);
+    const eventRules = rules || [];
+    const prefix = (eventRules.find(rule => rule.prefix) || {prefix: '*'}).prefix;
+    const suffix = (eventRules.find(rule => rule.suffix) || {suffix: '*'}).suffix;
+
+    const listener = this.client.listenBucketNotification(bucket, prefix, suffix, [event]);
 
     listener.on('notification', async record => {
       if (record) {

@@ -3,7 +3,7 @@ trap "exit 1" INT
 
 AWS_ENDPOINT_URL=${AWS_ENDPOINT_URL:-http://localhost:9000}
 
-BUCKETS="documents pictures files"
+BUCKETS="documents pictures files others"
 for BUCKET in $BUCKETS
 do 
     until aws --endpoint-url ${AWS_ENDPOINT_URL} s3 ls s3://${BUCKET} > /dev/null 2> /dev/null
