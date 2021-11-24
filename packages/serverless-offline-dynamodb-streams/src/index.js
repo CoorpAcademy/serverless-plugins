@@ -36,6 +36,14 @@ class ServerlessOfflineDynamodbStreams {
       'offline:start': this._startWithExplicitEnd.bind(this),
       'offline:start:end': this.end.bind(this)
     };
+
+    if (serverless.configSchemaHandler.defineFunctionEventProperties) {
+      serverless.configSchemaHandler.defineFunctionEventProperties('aws', 'stream', {
+        properties: {
+          tableName: {type: 'string'}
+        }
+      });
+    }
   }
 
   async start() {
