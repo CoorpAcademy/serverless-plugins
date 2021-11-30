@@ -61,9 +61,11 @@ class ServerlessOfflineSQS {
 
     const {sqsEvents, lambdas} = this._getEvents();
 
-    this._createLambda(lambdas);
-
     const eventModules = [];
+
+    if(lambdas.length > 0){
+      eventModules.push(this._createLambda(lambdas));
+    }
 
     if (sqsEvents.length > 0) {
       eventModules.push(this._createSqs(sqsEvents));
@@ -119,10 +121,17 @@ class ServerlessOfflineSQS {
     }
   }
 
-  _createLambda(lambdas) {
+  async _createLambda(events, skipStart) {
+    if(!this.options.host){
+      this.options.host = 'localhost';
+    }
     this.lambda = new Lambda(this.serverless, this.options);
 
-    this.lambda.create(lambdas);
+    await this.lambda.create(events);
+
+    if (!skipStart) {
+      await this.lambda.start();
+    }
   }
 
   async _createSqs(events, skipStart) {
