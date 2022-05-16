@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "aws-sdk": "^2.757.0",
-    "lodash": "^4.17.20",
+    "lodash": "^4.17.21",
     "minio": "^7.0.16",
     "pump": "^3.0.0",
     "serverless": "^1.83.0",
