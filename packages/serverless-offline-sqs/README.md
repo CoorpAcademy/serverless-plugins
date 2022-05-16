@@ -99,4 +99,5 @@ custom:
     accessKeyId: root
     secretAccessKey: root
     skipCacheInvalidation: false
+    queueName: MyQueueNameOverride   # overrides queueName from event definition
 ```

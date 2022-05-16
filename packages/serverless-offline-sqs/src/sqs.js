@@ -39,6 +39,12 @@ class SQS {
   }
 
   _create(functionKey, rawSqsEventDefinition) {
+    const {queueName} = this.options;
+
+    if (queueName) {
+      rawSqsEventDefinition.queueName = queueName;
+    }
+
     const sqsEvent = new SQSEventDefinition(
       rawSqsEventDefinition,
       this.options.region,
