@@ -1,6 +1,16 @@
 const SQSClient = require('aws-sdk/clients/sqs');
-// eslint-disable-next-line no-shadow
-const {pipe, get, values, matches, find, mapValues, isPlainObject, toString} = require('lodash/fp');
+
+const {
+  chunk,
+  find,
+  get,
+  isPlainObject,
+  mapValues,
+  matches,
+  pipe,
+  toString,
+  values
+} = require('lodash/fp');
 const log = require('@serverless/utils/log').log;
 const {default: PQueue} = require('p-queue');
 const SQSEventDefinition = require('./sqs-event-definition');
@@ -72,7 +82,7 @@ class SQS {
   }
 
   async _sqsEvent(functionKey, sqsEvent) {
-    const {enabled, arn, queueName, batchSize} = sqsEvent;
+    const {enabled, arn, queueName, batchSize = 10} = sqsEvent;
 
     if (!enabled) return;
 
@@ -82,35 +92,51 @@ class SQS {
       (await this.client.getQueueUrl({QueueName: queueName}).promise()).QueueUrl
     );
 
-    const job = async () => {
+    const getMessages = async (size, messages = []) => {
+      if (size <= 0) return messages;
+
       const {Messages} = await this.client
         .receiveMessage({
           QueueUrl,
-          MaxNumberOfMessages: batchSize,
+          MaxNumberOfMessages: size > 10 ? 10 : size,
           AttributeNames: ['All'],
           MessageAttributeNames: ['All'],
           WaitTimeSeconds: 5
         })
         .promise();
 
-      if (Messages) {
+      if (!Messages || Messages.length === 0) return messages;
+      return getMessages(size - Messages.length, [...messages, ...Messages]);
+    };
+
+    const job = async () => {
+      const messages = await getMessages(batchSize);
+
+      if (messages.length > 0) {
         try {
           const lambdaFunction = this.lambda.get(functionKey);
 
-          const event = new SQSEvent(Messages, this.region, arn);
+          const event = new SQSEvent(messages, this.region, arn);
           lambdaFunction.setEvent(event);
 
           await lambdaFunction.runHandler();
 
-          await this.client
-            .deleteMessageBatch({
-              Entries: (Messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
+          await Promise.all(
+            chunk(
+              10,
+              (messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
                 Id,
                 ReceiptHandle
-              })),
-              QueueUrl
-            })
-            .promise();
+              }))
+            ).map(Entries =>
+              this.client
+                .deleteMessageBatch({
+                  Entries,
+                  QueueUrl
+                })
+                .promise()
+            )
+          );
         } catch (err) {
           log.warning(err.stack);
         }

@@ -23,6 +23,7 @@ module.exports = {
     'import/no-unresolved': 'off',
     'no-console': 'off',
     'no-param-reassign': 'off',
+    'no-shadow': ['error', {allow: ['toString']}],
     'node/no-extraneous-require': [
       'error',
       {allowModules: ['ava', 'aws-sdk', '@serverless/utils']}

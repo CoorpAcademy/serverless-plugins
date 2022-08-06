@@ -2,6 +2,7 @@ const {Writable} = require('stream');
 const {spawn} = require('child_process');
 const onExit = require('signal-exit');
 const {SQS} = require('aws-sdk');
+const {chunk} = require('lodash/fp');
 const pump = require('pump');
 const {getSplitLinesTransform} = require('./utils');
 
@@ -40,7 +41,21 @@ const sendMessages = () => {
         QueueUrl: 'http://localhost:9324/queue/MyFourthQueue',
         MessageBody: 'MyFourthMessage'
       })
-      .promise()
+      .promise(),
+    ...chunk(
+      10,
+      Array.from({length: 70}).map((_, Id) => ({
+        Id: `${Id}`,
+        MessageBody: 'MyLargestBatchSizeQueue'
+      }))
+    ).map(Entries =>
+      client
+        .sendMessageBatch({
+          QueueUrl: 'http://localhost:9324/queue/MyLargestBatchSizeQueue',
+          Entries
+        })
+        .promise()
+    )
   ]);
 };
 
@@ -64,7 +79,7 @@ pump(
         (line.match(/\(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g) || [])
           .length;
 
-      if (this.count === 4) serverless.kill();
+      if (this.count === 5) serverless.kill();
       cb();
     }
   })
