@@ -40,6 +40,12 @@ const sendMessages = () => {
         QueueUrl: 'http://localhost:9324/queue/MyFourthQueue',
         MessageBody: 'MyFourthMessage'
       })
+      .promise(),
+    client
+      .sendMessage({
+        QueueUrl: 'http://localhost:9324/queue/MyLargestBatchSizeQueue',
+        MessageBody: 'MyLargestBatchSizeQueue'
+      })
       .promise()
   ]);
 };

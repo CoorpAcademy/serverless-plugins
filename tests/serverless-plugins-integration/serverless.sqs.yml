@@ -25,6 +25,16 @@ functions:
             Fn::GetAtt:
               - MyThirdQueue
               - Arn
+  myLargestBatchSizeHandler:
+    handler: lambda/handler.callback
+    events:
+      - sqs:
+          queueName: MyLargestBatchSizeQueue
+          batchSize: 70
+          arn:
+            Fn::GetAtt:
+              - MyLargestBatchSizeQueue
+              - Arn
   myPythonHandler:
     runtime: python3.7
     handler: lambda/handler.handler
@@ -41,6 +51,10 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: MyFourthQueue
+    MyLargestBatchSizeQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: MyLargestBatchSizeQueue
 
 custom:
   serverless-offline:
