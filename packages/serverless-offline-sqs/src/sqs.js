@@ -82,29 +82,39 @@ class SQS {
       (await this.client.getQueueUrl({QueueName: queueName}).promise()).QueueUrl
     );
 
-    const job = async () => {
+    const getMessages = async (messages = []) => {
       const {Messages} = await this.client
         .receiveMessage({
           QueueUrl,
-          MaxNumberOfMessages: batchSize,
+          MaxNumberOfMessages: batchSize > 10 ? 10 : batchSize,
           AttributeNames: ['All'],
           MessageAttributeNames: ['All'],
           WaitTimeSeconds: 5
         })
         .promise();
+      if (!Messages || Messages.length === 0) return messages;
 
-      if (Messages) {
+      if (Messages.length > 0) {
+        messages.push(...Messages);
+        return getMessages(messages);
+      }
+    };
+
+    const job = async () => {
+      const messages = await getMessages([]);
+
+      if (messages.length > 0) {
         try {
           const lambdaFunction = this.lambda.get(functionKey);
 
-          const event = new SQSEvent(Messages, this.region, arn);
+          const event = new SQSEvent(messages, this.region, arn);
           lambdaFunction.setEvent(event);
 
           await lambdaFunction.runHandler();
 
           await this.client
             .deleteMessageBatch({
-              Entries: (Messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
+              Entries: (messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
                 Id,
                 ReceiptHandle
               })),
