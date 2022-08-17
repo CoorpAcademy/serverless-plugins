@@ -12,9 +12,7 @@ const {
   toPairs
 } = require('lodash/fp');
 
-const debugLog = require('serverless-offline/dist/debugLog').default;
-const {default: serverlessLog, setLog} = require('serverless-offline/dist/serverlessLog');
-const Lambda = require('serverless-offline/dist/lambda').default;
+const log = require('@serverless/utils/log.js').log;
 
 const SQS = require('./sqs');
 
@@ -44,8 +42,6 @@ class ServerlessOfflineSQS {
     this.cliOptions = cliOptions;
     this.serverless = serverless;
 
-    setLog((...args) => serverless.cli.log(...args));
-
     this.hooks = {
       'offline:start:init': this.start.bind(this),
       'offline:start:ready': this.ready.bind(this),
@@ -71,7 +67,7 @@ class ServerlessOfflineSQS {
 
     await Promise.all(eventModules);
 
-    serverlessLog(`Starting Offline SQS: ${this.options.stage}/${this.options.region}.`);
+    this.serverless.cli.log(`Starting Offline SQS: ${this.options.stage}/${this.options.region}.`);
   }
 
   async ready() {
@@ -86,7 +82,7 @@ class ServerlessOfflineSQS {
       process.on('SIGINT', () => resolve('SIGINT')).on('SIGTERM', () => resolve('SIGTERM'));
     });
 
-    serverlessLog(`Got ${command} signal. Offline Halting...`);
+    this.serverless.cli.log(`Got ${command} signal. Offline Halting...`);
   }
 
   async _startWithExplicitEnd() {
@@ -100,7 +96,7 @@ class ServerlessOfflineSQS {
       return;
     }
 
-    serverlessLog('Halting offline server');
+    this.serverless.cli.log('Halting offline server');
 
     const eventModules = [];
 
@@ -119,7 +115,9 @@ class ServerlessOfflineSQS {
     }
   }
 
-  _createLambda(lambdas) {
+  async _createLambda(lambdas) {
+    const { default: Lambda } = await import('serverless-offline/src/lambda/index.js');
+
     this.lambda = new Lambda(this.serverless, this.options);
 
     this.lambda.create(lambdas);
@@ -154,7 +152,7 @@ class ServerlessOfflineSQS {
       omitUndefined(this.cliOptions)
     );
 
-    debugLog('options:', this.options);
+    log.debug('options:', this.options);
   }
 
   _getEvents() {

@@ -1,7 +1,7 @@
 const SQSClient = require('aws-sdk/clients/sqs');
 // eslint-disable-next-line no-shadow
 const {pipe, get, values, matches, find, mapValues, isPlainObject, toString} = require('lodash/fp');
-const {logWarning} = require('serverless-offline/dist/serverlessLog');
+const log = require('@serverless/utils/log.js').log;
 const {default: PQueue} = require('p-queue');
 const SQSEventDefinition = require('./sqs-event-definition');
 const SQSEvent = require('./sqs-event');
@@ -112,7 +112,7 @@ class SQS {
             })
             .promise();
         } catch (err) {
-          logWarning(err.stack);
+          log.warning(err.stack);
         }
       }
 
@@ -144,7 +144,7 @@ class SQS {
     } catch (err) {
       if (remainingTry > 0 && err.name === 'AWS.SimpleQueueService.NonExistentQueue')
         return this._createQueue({queueName}, remainingTry - 1);
-      logWarning(err.stack);
+      log.warning(err.stack);
     }
   }
 }
