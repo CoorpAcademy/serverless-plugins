@@ -1,7 +1,7 @@
 const SQSClient = require('aws-sdk/clients/sqs');
 // eslint-disable-next-line no-shadow
 const {pipe, get, values, matches, find, mapValues, isPlainObject, toString} = require('lodash/fp');
-const log = require('@serverless/utils/log.js').log;
+const log = require('@serverless/utils/log').log;
 const {default: PQueue} = require('p-queue');
 const SQSEventDefinition = require('./sqs-event-definition');
 const SQSEvent = require('./sqs-event');
