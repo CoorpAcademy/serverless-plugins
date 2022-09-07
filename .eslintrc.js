@@ -22,7 +22,7 @@ module.exports = {
     'node/no-extraneous-require': [
       'error',
       {
-        allowModules: ['ava', 'aws-sdk']
+        allowModules: ['ava', 'aws-sdk', '@serverless']
       }
     ],
     'unicorn/no-unreadable-array-destructuring': 'off',
