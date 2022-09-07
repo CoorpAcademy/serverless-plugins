@@ -12,7 +12,7 @@ const {
   toPairs
 } = require('lodash/fp');
 
-const log = require('@serverless/utils/log.js').log;
+const log = require('@serverless/utils/log').log;
 
 const SQS = require('./sqs');
 
