@@ -9,6 +9,9 @@ module.exports = {
     'plugin:@coorpacademy/coorpacademy/prettier',
     'plugin:@coorpacademy/coorpacademy/lodash-fp'
   ],
+  parserOptions: {
+    allowImportExportEverywhere: true
+  },
   plugins: ['@coorpacademy/coorpacademy'],
   rules: {
     'fp/no-class': 'off',
