@@ -116,7 +116,9 @@ class ServerlessOfflineSQS {
   }
 
   async _createLambda(lambdas) {
-    const { default: Lambda } = await import('serverless-offline/src/lambda/index.js');
+    // https://github.com/import-js/eslint-plugin-import/issues/2495
+    // eslint-disable-next-line import/no-unresolved
+    const { default: Lambda } = await import("serverless-offline/lambda");
 
     this.lambda = new Lambda(this.serverless, this.options);
 
