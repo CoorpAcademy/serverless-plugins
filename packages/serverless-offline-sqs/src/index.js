@@ -76,7 +76,6 @@ class ServerlessOfflineSQS {
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this
   async _listenForTermination() {
     const command = await new Promise(resolve => {
       process.on('SIGINT', () => resolve('SIGINT')).on('SIGTERM', () => resolve('SIGTERM'));
@@ -116,9 +115,8 @@ class ServerlessOfflineSQS {
   }
 
   async _createLambda(lambdas) {
-    // https://github.com/import-js/eslint-plugin-import/issues/2495
-    // eslint-disable-next-line import/no-unresolved
-    const { default: Lambda } = await import("serverless-offline/lambda");
+    // eslint-disable-next-line import/dynamic-import-chunkname
+    const {default: Lambda} = await import('serverless-offline/lambda');
 
     this.lambda = new Lambda(this.serverless, this.options);
 
