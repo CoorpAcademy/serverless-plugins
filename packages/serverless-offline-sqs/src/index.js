@@ -115,7 +115,7 @@ class ServerlessOfflineSQS {
   }
 
   async _createLambda(lambdas) {
-    // eslint-disable-next-line import/dynamic-import-chunkname
+    // eslint-disable-next-line import/dynamic-import-chunkname, import/no-unresolved, node/no-missing-import
     const {default: Lambda} = await import('serverless-offline/lambda');
 
     this.lambda = new Lambda(this.serverless, this.options);

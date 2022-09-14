@@ -26,7 +26,7 @@
     "minio": "^7.0.16",
     "pump": "^3.0.0",
     "serverless": "^1.83.0",
-    "serverless-offline": "^10.0.0",
+    "serverless-offline": "^10.0.2",
     "serverless-offline-dynamodb-streams": "^5.0.0",
     "serverless-offline-kinesis": "^5.0.0",
     "serverless-offline-sqs": "^6.0.0",

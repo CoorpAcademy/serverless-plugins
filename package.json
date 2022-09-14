@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "lerna": "^4.0.0",
-    "serverless": "^2.55.0"
+    "serverless": "^3.22.0"
   },
   "devDependencies": {
     "@coorpacademy/eslint-plugin-coorpacademy": "^10.3.1",
