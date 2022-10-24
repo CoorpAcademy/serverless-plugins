@@ -47,6 +47,7 @@ pump(
   new Writable({
     objectMode: true,
     write(line, enc, cb) {
+      console.log(line.toString());
       if (/Starting Offline SQS/.test(line)) {
         sendMessages()
           .then(() => console.log('sucessfully send messages'))

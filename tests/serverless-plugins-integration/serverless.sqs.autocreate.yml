@@ -52,7 +52,7 @@ custom:
   serverless-offline:
     httpPort: 3223
   serverless-offline-sqs:
-    endpoint: http://127.0.0.1:${ssm:/sqs/port}
-    accessKeyId: root
-    secretAccessKey: root
+    endpoint: http://localhost:9324
+    accessKeyId: local
+    secretAccessKey: local
     autoCreate: true
