@@ -15,12 +15,23 @@ class DynamodbStreamsEventDefinition {
     let enabled;
     let tableName;
 
-    if (typeof rawSqsEventDefinition === 'string') {
-      tableName = extractTableNameFromARN(rawSqsEventDefinition);
-    } else if (typeof rawSqsEventDefinition.arn === 'string') {
-      tableName = extractTableNameFromARN(rawSqsEventDefinition.arn);
-    } else if (typeof rawSqsEventDefinition.tableName === 'string') {
-      tableName = rawSqsEventDefinition.tableName;
+    switch ('string') {
+      case typeof rawSqsEventDefinition: {
+        tableName = extractTableNameFromARN(rawSqsEventDefinition);
+
+        break;
+      }
+      case typeof rawSqsEventDefinition.arn: {
+        tableName = extractTableNameFromARN(rawSqsEventDefinition.arn);
+
+        break;
+      }
+      case typeof rawSqsEventDefinition.tableName: {
+        tableName = rawSqsEventDefinition.tableName;
+
+        break;
+      }
+      // No default
     }
 
     this.enabled = isNil(enabled) ? true : enabled;

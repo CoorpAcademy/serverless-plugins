@@ -46,8 +46,8 @@ const populateTables = async () => {
 };
 
 const serverless = spawn(
-  'serverless',
-  ['--config', 'serverless.dynamodb-streams.yml', 'offline', 'start'],
+  'sls',
+  ['offline', 'start', '--config', 'serverless.dynamodb-streams.yml'],
   {
     stdio: ['pipe', 'pipe', 'pipe'],
     cwd: __dirname
@@ -57,7 +57,7 @@ const serverless = spawn(
 const set = new Set();
 let invocationCount = 0;
 pump(
-  serverless.stdout,
+  serverless.stderr,
   getSplitLinesTransform(),
   new Writable({
     objectMode: true,
@@ -68,8 +68,9 @@ pump(
 
       if (setupInProgress) return cb(); // do not consider lambda executions before we post the real items
 
-      const matches =
-        /offline: \(λ: (.*)\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g.exec(line);
+      const matches = /\(λ: (.*)\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g.exec(
+        line
+      );
 
       if (matches) {
         invocationCount++;
@@ -81,19 +82,6 @@ pump(
     }
   })
 );
-
-serverless.stdout.on('data', data => {
-  console.log(data.toString());
-});
-
-serverless.stderr.on('data', data => {
-  console.error(data.toString());
-  process.exit(1);
-});
-
-serverless.on('close', code => {
-  process.exit(code);
-});
 
 onExit((code, signal) => {
   if (signal) serverless.kill(signal);

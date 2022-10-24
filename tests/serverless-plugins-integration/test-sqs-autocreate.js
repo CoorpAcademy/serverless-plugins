@@ -36,17 +36,13 @@ const sendMessages = () => {
   ]);
 };
 
-const serverless = spawn(
-  'npx',
-  ['serverless', '--config', 'serverless.sqs.autocreate.yml', 'offline', 'start'],
-  {
-    stdio: ['pipe', 'pipe', 'pipe'],
-    cwd: __dirname
-  }
-);
+const serverless = spawn('sls', ['offline', 'start', '--config', 'serverless.sqs.autocreate.yml'], {
+  stdio: ['pipe', 'pipe', 'pipe'],
+  cwd: __dirname
+});
 
 pump(
-  serverless.stdout,
+  serverless.stderr,
   getSplitLinesTransform(),
   new Writable({
     objectMode: true,
@@ -61,25 +57,13 @@ pump(
 
       this.count =
         (this.count || 0) +
-        (
-          line.match(
-            /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
-          ) || []
-        ).length;
+        (line.match(/\(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g) || [])
+          .length;
       if (this.count === 3) serverless.kill();
       cb();
     }
   })
 );
-
-serverless.stdout.on('data', data => {
-  console.log(data.toString());
-});
-
-serverless.stderr.on('data', data => {
-  console.error(data.toString());
-  process.exit(1);
-});
 
 async function pruneQueue(QueueName) {
   const {QueueUrl} = await client

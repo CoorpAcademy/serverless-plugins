@@ -24,18 +24,18 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=12"
+    "node": ">=16"
   },
   "peerDependencies": {
-    "serverless-offline": "^8.0.0"
+    "serverless-offline": "^10.0.2"
   },
   "dependencies": {
-    "aws-sdk": "^2.970.0",
+    "aws-sdk": "^2.1234.0",
     "kinesis-readable": "^1.2.0",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
-    "serverless-offline": "^8.0.0"
+    "serverless-offline": "^10.0.2"
   },
   "keywords": [
     "kinesis",

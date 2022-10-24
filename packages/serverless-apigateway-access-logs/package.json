@@ -17,10 +17,10 @@
   "author": "Adrien Becchis @Coorpacademy (https://github.com/AdrieanKhisbe)",
   "license": "MIT",
   "engines": {
-    "node": ">=12"
+    "node": ">=16"
   },
   "dependencies": {
-    "aws-sdk": "^2.970.0",
+    "aws-sdk": "^2.1234.0",
     "lodash": "^4.17.21"
   },
   "keywords": [

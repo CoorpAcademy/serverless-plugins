@@ -80,7 +80,7 @@ test.serial('reads records that already exist', async t => {
     dynamodbstreams
   } = t.context;
 
-  const documents = [...new Array(10)].map(() => ({
+  const documents = Array.from({length: 10}).map(() => ({
     Item: {
       Id: {
         S: uuid()
@@ -134,7 +134,7 @@ test.serial('reads ongoing records', t => {
     dynamodbstreams
   } = t.context;
 
-  const documents = [...new Array(10)].map(() => ({
+  const documents = Array.from({length: 10}).map(() => ({
     Item: {
       Id: {
         S: uuid()
@@ -179,14 +179,14 @@ test.serial('reads latest records', async t => {
     dynamodbstreams
   } = t.context;
 
-  const initialDocuments = [...new Array(10)].map(() => ({
+  const initialDocuments = Array.from({length: 10}).map(() => ({
     Item: {
       Id: {
         S: uuid()
       }
     }
   }));
-  const subsequentDocuments = [...new Array(10)].map(() => ({
+  const subsequentDocuments = Array.from({length: 10}).map(() => ({
     Item: {
       Id: {
         S: uuid()
@@ -240,7 +240,7 @@ test.serial('emits checkpoints, obeys limits', t => {
     dynamodbstreams
   } = t.context;
 
-  const documents = [...new Array(10)].map(() => ({
+  const documents = Array.from({length: 10}).map(() => ({
     Item: {
       Id: {
         S: uuid()
@@ -293,7 +293,7 @@ test.serial('reads after checkpoint', async t => {
     dynamodbstreams
   } = t.context;
 
-  const documents = [...new Array(10)].map(() => ({
+  const documents = Array.from({length: 10}).map(() => ({
     Item: {
       Id: {
         S: uuid()
@@ -374,7 +374,7 @@ test.serial('reads from checkpoint', async t => {
     dynamodbstreams
   } = t.context;
 
-  const documents = [...new Array(10)].map(() => ({
+  const documents = Array.from({length: 10}).map(() => ({
     Item: {
       Id: {
         S: uuid()

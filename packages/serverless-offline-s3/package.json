@@ -24,19 +24,19 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=12"
+    "node": ">=16"
   },
   "peerDependencies": {
-    "serverless-offline": "^8.0.0"
+    "serverless-offline": "^10.0.2"
   },
   "dependencies": {
-    "aws-sdk": "^2.970.0",
-    "figures": "^4.0.0",
+    "aws-sdk": "^2.1234.0",
+    "figures": "^5.0.0",
     "lodash": "^4.17.21",
-    "minio": "^7.0.18"
+    "minio": "^7.0.32"
   },
   "devDependencies": {
-    "serverless-offline": "^8.0.0"
+    "serverless-offline": "^10.0.2"
   },
   "keywords": [
     "s3",

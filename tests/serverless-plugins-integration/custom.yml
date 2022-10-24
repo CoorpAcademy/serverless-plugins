@@ -1,16 +1,16 @@
 serverless-offline-sqs:
-  endpoint: http://localhost:${ssm:/sqs/port}
+  endpoint: http://localhost:9324
   accessKeyId: local
   secretAccessKey: local
 serverless-offline-s3:
-  endpoint: http://localhost:${ssm:/s3/port}
+  endpoint: http://localhost:9000
   accessKey: local
   secretKey: locallocal
 serverless-offline-dynamodb-streams:
-  endpoint: http://localhost:${ssm:/dynamodb/port}
+  endpoint: http://localhost:8000
   accessKeyId: local
   secretAccessKey: local
 serverless-offline-kinesis:
-  endpoint: http://localhost:${ssm:/kinesis/port}
+  endpoint: http://localhost:4567
   accessKeyId: local
   secretAccessKey: local

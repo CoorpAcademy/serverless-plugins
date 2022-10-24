@@ -3,7 +3,7 @@ module.exports = {
     node: true,
     es6: true
   },
-  parser: 'babel-eslint',
+  root: true,
   extends: [
     'plugin:@coorpacademy/coorpacademy/core',
     'plugin:@coorpacademy/coorpacademy/es20XX',
@@ -15,6 +15,11 @@ module.exports = {
     sourceType: 'module'
   },
   plugins: ['@coorpacademy/coorpacademy'],
+  settings: {
+    node: {
+      allowModules: ['minio']
+    }
+  },
   rules: {
     'fp/no-class': 'off',
     'no-console': 'off',
@@ -30,8 +35,8 @@ module.exports = {
     'node/no-unsupported-features/es-syntax': [
       'error',
       {
-        version: '>=12.0.0',
-        ignores: ['dynamicImport']
+        version: '>=16.0.0',
+        ignores: ['modules']
       }
     ],
     'unicorn/no-unreadable-array-destructuring': 'off',

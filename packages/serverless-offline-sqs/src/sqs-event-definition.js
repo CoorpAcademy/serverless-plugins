@@ -10,12 +10,23 @@ class SQSEventDefinition {
     let enabled;
     let queueName;
 
-    if (typeof rawSqsEventDefinition === 'string') {
-      queueName = extractQueueNameFromARN(rawSqsEventDefinition);
-    } else if (typeof rawSqsEventDefinition.arn === 'string') {
-      queueName = extractQueueNameFromARN(rawSqsEventDefinition.arn);
-    } else if (typeof rawSqsEventDefinition.queueName === 'string') {
-      queueName = rawSqsEventDefinition.queueName;
+    switch ('string') {
+      case typeof rawSqsEventDefinition: {
+        queueName = extractQueueNameFromARN(rawSqsEventDefinition);
+
+        break;
+      }
+      case typeof rawSqsEventDefinition.arn: {
+        queueName = extractQueueNameFromARN(rawSqsEventDefinition.arn);
+
+        break;
+      }
+      case typeof rawSqsEventDefinition.queueName: {
+        queueName = rawSqsEventDefinition.queueName;
+
+        break;
+      }
+      // No default
     }
 
     this.enabled = isNil(enabled) ? true : enabled;

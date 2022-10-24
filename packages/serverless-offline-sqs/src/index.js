@@ -57,7 +57,7 @@ class ServerlessOfflineSQS {
 
     const {sqsEvents, lambdas} = this._getEvents();
 
-    this._createLambda(lambdas);
+    await this._createLambda(lambdas);
 
     const eventModules = [];
 
@@ -67,7 +67,9 @@ class ServerlessOfflineSQS {
 
     await Promise.all(eventModules);
 
-    this.serverless.cli.log(`Starting Offline SQS: ${this.options.stage}/${this.options.region}.`);
+    this.serverless.cli.log(
+      `Starting Offline SQS at stage ${this.options.stage} (${this.options.region})`
+    );
   }
 
   async ready() {
@@ -115,9 +117,7 @@ class ServerlessOfflineSQS {
   }
 
   async _createLambda(lambdas) {
-    // eslint-disable-next-line import/dynamic-import-chunkname, import/no-unresolved, node/no-missing-import
     const {default: Lambda} = await import('serverless-offline/lambda');
-
     this.lambda = new Lambda(this.serverless, this.options);
 
     this.lambda.create(lambdas);

@@ -6,7 +6,6 @@ provider:
   runtime: nodejs12.x
 
 plugins:
-  - ../../packages/serverless-offline-ssm-provider
   - ../../packages/serverless-offline-s3
   - serverless-offline
 

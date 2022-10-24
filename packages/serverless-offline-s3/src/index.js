@@ -1,8 +1,6 @@
 const {get, isUndefined, omitBy, pick} = require('lodash/fp');
 
-const debugLog = require('serverless-offline/dist/debugLog').default;
-const {default: serverlessLog, setLog} = require('serverless-offline/dist/serverlessLog');
-const Lambda = require('serverless-offline/dist/lambda').default;
+const log = require('@serverless/utils/log').log;
 
 const S3 = require('./s3');
 
@@ -29,8 +27,6 @@ class ServerlessOfflineS3 {
     this.cliOptions = cliOptions;
     this.serverless = serverless;
 
-    setLog((...args) => serverless.cli.log(...args));
-
     this.hooks = {
       'offline:start:init': this.start.bind(this),
       'offline:start:ready': this.ready.bind(this),
@@ -46,7 +42,7 @@ class ServerlessOfflineS3 {
 
     const {s3Events, lambdas} = this._getEvents();
 
-    this._createLambda(lambdas);
+    await this._createLambda(lambdas);
 
     const eventModules = [];
 
@@ -56,7 +52,9 @@ class ServerlessOfflineS3 {
 
     await Promise.all(eventModules);
 
-    serverlessLog(`Starting Offline S3: ${this.options.endPoint}/${this.options.region}.`);
+    this.serverless.cli.log(
+      `Starting Offline S3 at stage ${this.options.stage} (${this.options.endPoint}/${this.options.region})`
+    );
   }
 
   async ready() {
@@ -65,13 +63,12 @@ class ServerlessOfflineS3 {
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this
   async _listenForTermination() {
     const command = await new Promise(resolve => {
       process.on('SIGINT', () => resolve('SIGINT')).on('SIGTERM', () => resolve('SIGTERM'));
     });
 
-    serverlessLog(`Got ${command} signal. Offline Halting...`);
+    this.serverless.cli.log(`Got ${command} signal. Offline Halting...`);
   }
 
   async _startWithExplicitEnd() {
@@ -85,7 +82,7 @@ class ServerlessOfflineS3 {
       return;
     }
 
-    serverlessLog('Halting offline server');
+    this.serverless.cli.log('Halting offline server');
 
     const eventModules = [];
 
@@ -104,7 +101,8 @@ class ServerlessOfflineS3 {
     }
   }
 
-  _createLambda(lambdas) {
+  async _createLambda(lambdas) {
+    const {default: Lambda} = await import('serverless-offline/lambda');
     this.lambda = new Lambda(this.serverless, this.options);
 
     this.lambda.create(lambdas);
@@ -139,7 +137,7 @@ class ServerlessOfflineS3 {
       omitUndefined(this.cliOptions)
     );
 
-    debugLog('options:', this.options);
+    log.debug('options:', this.options);
   }
 
   _getEvents() {

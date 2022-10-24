@@ -1,0 +1,73 @@
+service: cloudfront
+
+provider:
+  name: aws
+  cloudFront:
+    cachePolicies:
+      myCachePolicy:
+--        MinTTL: 0
+--        MaxTTL: 0
+--        DefaultTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: all
+          EnableAcceptEncodingBrotli: false
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers:
+              - Authorization
+          QueryStringsConfig:
+            QueryStringBehavior: all
+
+functions:
+  passThrough:
+    handler: src/cloudfront.passThrough
+    events:
+      - cloudFront:
+          eventType: origin-request
+          isDefaultOrigin: true
+          origin:
+            # Id: explorer
+            DomainName: 'my.service.com'
+            OriginPath: ""
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
+          cachePolicy:
+            name: myCachePolicy
+          behavior:
+            OriginRequestPolicyId:
+              Fn::GetAtt:
+                - MyOriginRequestPolicy
+                - Id
+            ViewerProtocolPolicy: https-only
+            AllowedMethods:
+              - "GET"
+              - "HEAD"
+              - "OPTIONS"
+              - "PUT"
+              - "PATCH"
+              - "POST"
+              - "DELETE"
+            CachedMethods:
+              - "GET"
+              - "HEAD"
+              - "OPTIONS"
+
+resources:
+  Resources:
+    MyOriginRequestPolicy:
+      Type: AWS::CloudFront::OriginRequestPolicy
+      Properties:
+        OriginRequestPolicyConfig:
+          Name: AllViewer
+          CookiesConfig: 
+            CookieBehavior: all
+          HeadersConfig: 
+            HeaderBehavior: whitelist
+            Headers:
+--              - Authorization
+          QueryStringsConfig: 
+            QueryStringBehavior: all
