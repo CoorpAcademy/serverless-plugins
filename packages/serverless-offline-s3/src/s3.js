@@ -1,5 +1,5 @@
-const {assign, toNumber} = require('lodash/fp');
 const Minio = require('minio');
+const {assign, toNumber} = require('lodash/fp');
 
 const log = require('@serverless/utils/log').log;
 

@@ -11,36 +11,32 @@ module.exports = {
     'plugin:@coorpacademy/coorpacademy/lodash-fp'
   ],
   parserOptions: {
-    allowImportExportEverywhere: true,
-    sourceType: 'module'
+    ecmaVersion: 2020,
+    allowImportExportEverywhere: true
   },
   plugins: ['@coorpacademy/coorpacademy'],
-  settings: {
-    node: {
-      allowModules: ['minio']
-    }
-  },
+  settings: {},
   rules: {
     'fp/no-class': 'off',
-    'no-console': 'off',
-    'promise/no-native': 'off',
-    'no-param-reassign': 'off',
+    'import/dynamic-import-chunkname': 'off',
     'import/no-extraneous-dependencies': 'off',
+    'import/no-unresolved': 'off',
+    'no-console': 'off',
+    'no-param-reassign': 'off',
     'node/no-extraneous-require': [
       'error',
-      {
-        allowModules: ['ava', 'aws-sdk', '@serverless/utils']
-      }
+      {allowModules: ['ava', 'aws-sdk', '@serverless/utils']}
     ],
+    'node/no-missing-import': 'off',
+    'node/no-missing-require': 'off',
     'node/no-unsupported-features/es-syntax': [
       'error',
-      {
-        version: '>=16.0.0',
-        ignores: ['modules']
-      }
+      {version: '>=16.0.0', ignores: ['dynamicImport']}
     ],
-    'unicorn/no-unreadable-array-destructuring': 'off',
-    'unicorn/consistent-function-scoping': 'off'
+    'promise/no-native': 'off',
+    'unicorn/consistent-function-scoping': 'off',
+    'unicorn/no-await-expression-member': 'off',
+    'unicorn/no-unreadable-array-destructuring': 'off'
   },
   overrides: [
     {

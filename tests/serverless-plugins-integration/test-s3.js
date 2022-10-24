@@ -1,7 +1,7 @@
 const {Writable} = require('stream');
 const {spawn} = require('child_process');
-const onExit = require('signal-exit');
 const Minio = require('minio');
+const onExit = require('signal-exit');
 const pump = require('pump');
 const {delay, getSplitLinesTransform} = require('./utils');
 

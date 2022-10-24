@@ -11,4 +11,4 @@ class KinesisEvent {
   }
 }
 
-module.exports = KinesisEvent
+module.exports = KinesisEvent;

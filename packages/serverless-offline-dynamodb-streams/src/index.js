@@ -41,7 +41,7 @@ class ServerlessOfflineDynamodbStreams {
 
     const {dynamodbStreamsEvents, lambdas} = this._getEvents();
 
-   await this._createLambda(lambdas);
+    await this._createLambda(lambdas);
 
     const eventModules = [];
 
