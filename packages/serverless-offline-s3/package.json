@@ -27,7 +27,7 @@
     "node": ">=16"
   },
   "peerDependencies": {
-    "serverless-offline": "^10.0.2"
+    "serverless-offline": "^10.0.2 || ^11"
   },
   "dependencies": {
     "aws-sdk": "^2.1234.0",
@@ -36,7 +36,7 @@
     "minio": "^7.0.32"
   },
   "devDependencies": {
-    "serverless-offline": "^10.0.2"
+    "serverless-offline": "^11"
   },
   "keywords": [
     "s3",

@@ -27,7 +27,7 @@
     "node": ">=16"
   },
   "peerDependencies": {
-    "serverless-offline": "^10.0.2"
+    "serverless-offline": "^10.0.2 || ^11"
   },
   "dependencies": {
     "aws-sdk": "^2.1234.0",
@@ -35,7 +35,7 @@
     "lodash": "^4.17.21"
   },
   "devDependencies": {
-    "serverless-offline": "^10.0.2"
+    "serverless-offline": "^11"
   },
   "keywords": [
     "kinesis",
