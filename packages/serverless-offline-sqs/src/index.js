@@ -147,7 +147,7 @@ class ServerlessOfflineSQS {
       {},
       omitUndefined(defaultOptions),
       omitUndefined(provider),
-      omitUndefined(pick('location', offlineOptions)), // serverless-webpack support
+      omitUndefined(pick(['location', 'localEnvironment'], offlineOptions)), // serverless-webpack support
       omitUndefined(customOptions),
       omitUndefined(this.cliOptions)
     );
