@@ -14,12 +14,23 @@ class KinesisEventDefinition {
     let enabled;
     let streamName;
 
-    if (typeof rawKinesisEventDefinition === 'string') {
-      streamName = extractStreamNameFromARN(rawKinesisEventDefinition);
-    } else if (typeof rawKinesisEventDefinition.arn === 'string') {
-      streamName = extractStreamNameFromARN(rawKinesisEventDefinition.arn);
-    } else if (typeof rawKinesisEventDefinition.streamName === 'string') {
-      streamName = rawKinesisEventDefinition.streamName;
+    switch ('string') {
+      case typeof rawKinesisEventDefinition: {
+        streamName = extractStreamNameFromARN(rawKinesisEventDefinition);
+
+        break;
+      }
+      case typeof rawKinesisEventDefinition.arn: {
+        streamName = extractStreamNameFromARN(rawKinesisEventDefinition.arn);
+
+        break;
+      }
+      case typeof rawKinesisEventDefinition.streamName: {
+        streamName = rawKinesisEventDefinition.streamName;
+
+        break;
+      }
+      // No default
     }
 
     this.enabled = isNil(enabled) ? true : enabled;

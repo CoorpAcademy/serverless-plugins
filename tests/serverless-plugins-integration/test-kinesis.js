@@ -47,13 +47,13 @@ const putRecords = async () => {
   ]);
 };
 
-const serverless = spawn('serverless', ['--config', 'serverless.kinesis.yml', 'offline', 'start'], {
+const serverless = spawn('sls', ['offline', 'start', '--config', 'serverless.kinesis.yml'], {
   stdio: ['pipe', 'pipe', 'pipe'],
   cwd: __dirname
 });
 
 pump(
-  serverless.stdout,
+  serverless.stderr,
   getSplitLinesTransform(),
   new Writable({
     objectMode: true,
@@ -64,29 +64,13 @@ pump(
 
       this.count =
         (this.count || 0) +
-        (
-          line.match(
-            /offline: \(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g
-          ) || []
-        ).length;
+        (line.match(/\(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g) || [])
+          .length;
       if (this.count === 4) serverless.kill();
       cb();
     }
   })
 );
-
-serverless.stdout.on('data', data => {
-  console.log(data.toString());
-});
-
-serverless.stderr.on('data', data => {
-  console.error(data.toString());
-  process.exit(1);
-});
-
-serverless.on('close', code => {
-  process.exit(code);
-});
 
 onExit((code, signal) => {
   if (signal) serverless.kill(signal);
