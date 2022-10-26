@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-kinesis",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "description": "Emulate AWS λ and Kinesis locally when developing your Serverless project",
   "main": "src",
   "repository": {
