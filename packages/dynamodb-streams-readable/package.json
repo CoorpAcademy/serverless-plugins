@@ -1,6 +1,6 @@
 {
   "name": "dynamodb-streams-readable",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Simple readable stream client for AWS DynamoDB Streams",
   "main": "src",
   "repository": {
