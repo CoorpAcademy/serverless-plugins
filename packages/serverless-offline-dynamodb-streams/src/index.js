@@ -74,7 +74,7 @@ class ServerlessOfflineDynamodbStreams {
     );
   }
 
-  async _startWithExplicitEnd() {
+  async _startWithReady() {
     await this.start();
     this.ready();
   }
