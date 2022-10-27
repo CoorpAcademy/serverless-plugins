@@ -15,7 +15,7 @@ First, add `serverless-offline-sqs` to your project:
 npm install serverless-offline-sqs
 ```
 
-Then inside your project's `serverless.yml` file, add following entry to the plugins section before `serverless-offline` (and after `serverless-webpack` if presents): `serverless-offline-sqs`.
+Then inside your project's `serverless.yml` file, add following entry to the plugins section before `serverless-offline` (and after `serverless-webpack` if present): `serverless-offline-sqs`.
 
 ```yml
 plugins:

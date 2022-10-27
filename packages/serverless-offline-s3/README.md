@@ -15,7 +15,7 @@ First, add `serverless-offline-s3` to your project:
 npm install serverless-offline-s3
 ```
 
-Then inside your project's `serverless.yml` file, add following entry to the plugins section before `serverless-offline` (and after `serverless-webpack` if presents): `serverless-offline-s3`.
+Then inside your project's `serverless.yml` file, add following entry to the plugins section before `serverless-offline` (and after `serverless-webpack` if present): `serverless-offline-s3`.
 
 ```yml
 plugins:

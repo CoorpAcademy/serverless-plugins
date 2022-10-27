@@ -14,7 +14,7 @@ First, add `serverless-offline-kinesis` to your project:
 npm install serverless-offline-kinesis
 ```
 
-Then inside your project's `serverless.yml` file, add following entry to the plugins section before `serverless-offline` (and after `serverless-webpack` if presents): `serverless-offline-kinesis`.
+Then inside your project's `serverless.yml` file, add following entry to the plugins section before `serverless-offline` (and after `serverless-webpack` if present): `serverless-offline-kinesis`.
 
 ```yml
 plugins:

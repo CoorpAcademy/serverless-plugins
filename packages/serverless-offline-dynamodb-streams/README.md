@@ -14,7 +14,7 @@ First, add `serverless-offline-dynamodb-streams` to your project:
 npm install serverless-offline-dynamodb-streams
 ```
 
-Then inside your project's `serverless.yml` file, add following entry to the plugins section before `serverless-offline` (and after `serverless-webpack` if presents): `serverless-offline-dynamodb-streams`.
+Then inside your project's `serverless.yml` file, add following entry to the plugins section before `serverless-offline` (and after `serverless-webpack` if present): `serverless-offline-dynamodb-streams`.
 
 ```yml
 plugins:
