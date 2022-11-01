@@ -62,9 +62,9 @@ The configuration of [`aws.S3`'s client](https://docs.aws.amazon.com/AWSJavaScri
 
 ```yml
 custom:
-serverless-offline-s3:
-  endpoint: http://0.0.0.0:9000
-    region: eu-west-1
-  accessKey: minioadmin
-  secretKey: minioadmin
+  serverless-offline-s3:
+    endpoint: http://0.0.0.0:9000
+      region: eu-west-1
+    accessKey: minioadmin
+    secretKey: minioadmin
 ```
