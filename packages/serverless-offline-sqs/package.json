@@ -27,7 +27,7 @@
     "node": ">=16"
   },
   "peerDependencies": {
-    "serverless-offline": "^10.0.2 || ^11"
+    "serverless-offline": "^10.0.2 || ^11 || ^12"
   },
   "dependencies": {
     "aws-sdk": "^2.1234.0",
