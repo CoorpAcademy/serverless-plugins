@@ -30,19 +30,55 @@ class S3 {
       })
     );
 
+    this.events = [];
     this.listeners = [];
   }
 
   create(events) {
-    return Promise.all(events.map(({functionKey, s3}) => this._create(functionKey, s3)));
+    this.events = events;
+    return Promise.all(
+      this.events.map(async ({s3}) => {
+        const {bucket} = s3;
+        await this._waitFor(bucket);
+      })
+    );
   }
 
   start() {
-    this.listeners.forEach(listener => listener.start());
+    return Promise.all(
+      this.events.map(async ({functionKey, s3}) => {
+        const {event, bucket, rules} = s3;
+        await this._waitFor(bucket);
+
+        const eventRules = rules || [];
+        const prefix = (eventRules.find(rule => rule.prefix) || {prefix: '*'}).prefix;
+        const suffix = (eventRules.find(rule => rule.suffix) || {suffix: '*'}).suffix;
+
+        const listener = this.client.listenBucketNotification(bucket, prefix, suffix, [event]);
+
+        listener.on('notification', async record => {
+          if (record) {
+            try {
+              const lambdaFunction = this.lambda.get(functionKey);
+
+              const s3Notification = new S3Event(record);
+              lambdaFunction.setEvent(s3Notification);
+
+              await lambdaFunction.runHandler();
+            } catch (err) {
+              log.warn(err.stack);
+            }
+          }
+        });
+
+        this.listeners = [...this.listeners, listener];
+      })
+    );
   }
 
   stop(timeout) {
     this.listeners.forEach(listener => listener.stop());
+    this.listeners = [];
   }
 
   _create(functionKey, rawS3EventDefinition) {
