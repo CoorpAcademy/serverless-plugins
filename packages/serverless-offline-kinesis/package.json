@@ -35,7 +35,7 @@
     "lodash": "^4.17.21"
   },
   "devDependencies": {
-    "serverless-offline": "^11"
+    "serverless-offline": "^12"
   },
   "keywords": [
     "kinesis",

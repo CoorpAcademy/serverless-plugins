@@ -35,7 +35,7 @@
     "p-queue": "^6.6.2"
   },
   "devDependencies": {
-    "serverless-offline": "^11"
+    "serverless-offline": "^12"
   },
   "keywords": [
     "sqs",

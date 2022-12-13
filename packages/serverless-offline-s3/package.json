@@ -36,7 +36,7 @@
     "minio": "^7.0.32"
   },
   "devDependencies": {
-    "serverless-offline": "^11"
+    "serverless-offline": "^12"
   },
   "keywords": [
     "s3",
