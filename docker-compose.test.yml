@@ -2,17 +2,17 @@ version: "3"
 services:
 
   dynamodb:
-    image: cnadiminti/dynamodb-local:latest
+    image: amazon/dynamodb-local:latest
     ports:
       - "8000:8000"
   dynamodb-create:
-    image: infrastructureascode/aws-cli:latest
+    image: amazon/aws-cli:latest
     links:
       - dynamodb
     entrypoint: sh
-    command: ./create-tables.sh
+    command: create-tables.sh
     volumes:
-      - ./scripts/create-tables.sh:/project/create-tables.sh:ro
+      - ./scripts/create-tables.sh:/aws/create-tables.sh:ro
     environment:
       - AWS_ACCESS_KEY_ID=local
       - AWS_SECRET_ACCESS_KEY=local
@@ -20,17 +20,18 @@ services:
       - AWS_ENDPOINT_URL=http://dynamodb:8000
 
   sqs:
-    image: softwaremill/elasticmq:latest
+    image: softwaremill/elasticmq-native:latest
     ports:
       - "9324:9324"
+    command: "-Dnode-address.host=\"*\""
   sqs-create:
-    image: infrastructureascode/aws-cli:latest
+    image: amazon/aws-cli:latest
     links:
       - sqs
     entrypoint: sh
-    command: ./create-queues.sh
+    command: create-queues.sh
     volumes:
-      - ./scripts/create-queues.sh:/project/create-queues.sh:ro
+      - ./scripts/create-queues.sh:/aws/create-queues.sh:ro
     environment:
       - AWS_ACCESS_KEY_ID=local
       - AWS_SECRET_ACCESS_KEY=local
@@ -38,24 +39,24 @@ services:
       - AWS_ENDPOINT_URL=http://sqs:9324
 
   kinesis:
-    image: dlsniper/kinesalite:latest
+    image: instructure/kinesalite:latest
     ports:
       - "4567:4567"
   kinesis-create:
-    image: infrastructureascode/aws-cli:latest
+    image: amazon/aws-cli:latest
     links:
       - kinesis
     entrypoint: sh
-    command: ./create-streams.sh
+    command: create-streams.sh
     volumes:
-      - ./scripts/create-streams.sh:/project/create-streams.sh:ro
+      - ./scripts/create-streams.sh:/aws/create-streams.sh:ro
     environment:
       - AWS_ACCESS_KEY_ID=local
       - AWS_SECRET_ACCESS_KEY=local
       - AWS_DEFAULT_REGION=eu-west-1
       - AWS_ENDPOINT_URL=http://kinesis:4567
   s3:
-    image: minio/minio:RELEASE.2020-06-14T18-32-17Z
+    image: minio/minio:latest
     command: server /data
     ports:
       - "9000:9000"
@@ -68,13 +69,13 @@ services:
       - AWS_ENDPOINT_URL=http://s3:9000
 
   s3-create:
-    image: infrastructureascode/aws-cli:latest
+    image: amazon/aws-cli:latest
     links:
       - s3
     entrypoint: sh
-    command: ./create-buckets.sh
+    command: create-buckets.sh
     volumes:
-      - ./scripts/create-buckets.sh:/project/create-buckets.sh:ro
+      - ./scripts/create-buckets.sh:/aws/create-buckets.sh:ro
     environment:
       - AWS_ACCESS_KEY_ID=local
       - AWS_SECRET_ACCESS_KEY=locallocal
