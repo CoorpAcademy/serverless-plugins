@@ -14,6 +14,7 @@ services:
     image: softwaremill/elasticmq-native:latest
     ports:
       - "9324:9324"
+    command: "-Dnode-address.host=\"*\""
 
   s3:
     image: minio/minio:latest
