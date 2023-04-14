@@ -2,6 +2,7 @@ const {assign, omitBy, isUndefined, get, startsWith, pick} = require('lodash/fp'
 
 const log = require('@serverless/utils/log').log;
 
+const {default: Lambda} = require('serverless-offline/src/lambda');
 const Kinesis = require('./kinesis');
 
 const OFFLINE_OPTION = 'serverless-offline';
@@ -104,10 +105,9 @@ class ServerlessOfflineKinesis {
   }
 
   async _createLambda(lambdas) {
-    const {default: Lambda} = await import('serverless-offline/lambda');
     this.lambda = new Lambda(this.serverless, this.options);
 
-    this.lambda.create(lambdas);
+    await this.lambda.create(lambdas);
   }
 
   async _createKinesis(events, skipStart) {
