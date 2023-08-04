@@ -114,11 +114,11 @@ class SQS {
         return messages;
       }
 
-      const failedMessages = new Set(
+      const failedMessageIds = new Set(
         result?.batchItemFailures?.map(message => message?.itemIdentifier) ?? []
       );
 
-      return messages.filter(({MessageId}) => !failedMessages.has(MessageId));
+      return messages.filter(({MessageId}) => !failedMessageIds.has(MessageId));
     };
 
     const job = async () => {
