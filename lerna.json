@@ -1,8 +1,5 @@
 {
-  "packages": [
-    "packages/*",
-    "tests/*"
-  ],
+  "packages": ["packages/*", "tests/*"],
   "version": "independent",
   "command": {
     "bootstrap": {
@@ -12,5 +9,6 @@
     "publish": {
       "message": "New release :zap:"
     }
-  }
+  },
+  "$schema": "node_modules/lerna/schemas/lerna-schema.json"
 }
