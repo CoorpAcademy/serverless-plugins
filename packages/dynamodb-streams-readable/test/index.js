@@ -22,14 +22,14 @@ const batchWriteItem = (dynamodb, tableName, items) =>
 
 test.before(t => {
   t.context.dynamodb = new DynamoDB({
-    accessKeyId: '-',
-    secretAccessKey: '-',
+    accessKeyId: 'local',
+    secretAccessKey: 'local',
     endpoint: 'http://localhost:8000',
     region: 'eu-west-1'
   });
   t.context.dynamodbstreams = new DynamoDBStreams({
-    accessKeyId: '-',
-    secretAccessKey: '-',
+    accessKeyId: 'local',
+    secretAccessKey: 'local',
     endpoint: 'http://localhost:8000',
     region: 'eu-west-1'
   });

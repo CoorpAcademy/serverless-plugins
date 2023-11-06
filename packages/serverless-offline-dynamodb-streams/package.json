@@ -20,7 +20,7 @@
   "author": "Arthur Weber @godu",
   "license": "MIT",
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "peerDependencies": {
     "serverless-offline": "^10.0.2 || >=11"
@@ -31,7 +31,7 @@
     "lodash": "^4.17.21"
   },
   "devDependencies": {
-    "serverless-offline": "^12"
+    "serverless-offline": "^13"
   },
   "keywords": [
     "kinesis",

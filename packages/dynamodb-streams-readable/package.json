@@ -17,7 +17,7 @@
   "author": "Arthur Weber @godu",
   "license": "MIT",
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "devDependencies": {
     "uuid": "^9.0.0"

@@ -3,7 +3,7 @@ service: serverless-offline-s3
 provider:
   name: aws
   region: eu-west-1
-  runtime: nodejs12.x
+  runtime: nodejs18.x
 
 plugins:
   - ../../packages/serverless-offline-s3

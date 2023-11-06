@@ -24,7 +24,7 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "peerDependencies": {
     "serverless-offline": "^10.0.2 || >=11"
@@ -35,7 +35,7 @@
     "p-queue": "^6.6.2"
   },
   "devDependencies": {
-    "serverless-offline": "^12"
+    "serverless-offline": "^13"
   },
   "keywords": [
     "sqs",
