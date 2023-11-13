@@ -13,6 +13,7 @@ const {
 } = require('lodash/fp');
 const log = require('@serverless/utils/log').log;
 const {default: PQueue} = require('p-queue');
+const {v4: uuid} = require('uuid');
 const SQSEventDefinition = require('./sqs-event-definition');
 const SQSEvent = require('./sqs-event');
 
@@ -124,8 +125,8 @@ class SQS {
           await Promise.all(
             chunk(
               10,
-              (messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
-                Id,
+              (messages || []).map(({ReceiptHandle}) => ({
+                Id: uuid(),
                 ReceiptHandle
               }))
             ).map(Entries =>

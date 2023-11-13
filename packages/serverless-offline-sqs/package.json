@@ -32,7 +32,8 @@
   "dependencies": {
     "aws-sdk": "^2.1234.0",
     "lodash": "^4.17.21",
-    "p-queue": "^6.6.2"
+    "p-queue": "^6.6.2",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "serverless-offline": "^13"
