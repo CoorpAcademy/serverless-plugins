@@ -75,3 +75,20 @@ functions:
           type: dynamodb
           tableName: myTable
 ```
+
+### Localstack
+
+You could use [localstack](https://github.com/localstack/localstack) with the following configuration:
+
+```yml
+custom:
+  serverless-offline-dynamodb-streams:
+    apiVersion: '2013-12-02'
+    endpoint: http://0.0.0.0:4569
+    endpointStreams: http://0.0.0.0:4570
+    region: eu-west-1
+    accessKeyId: root
+    secretAccessKey: root
+    skipCacheInvalidation: false
+    readInterval: 500
+```

@@ -18,8 +18,10 @@ class DynamodbStreams {
 
     this.lambda = lambda;
     this.options = options;
-
     this.client = new DynamodbClient(this.options);
+    if (this.options.endpointStreams) {
+      this.options.endpoint = this.options.endpointStreams;
+    }
     this.streamsClient = new DynamodbStreamsClient(this.options);
 
     this.readables = [];
