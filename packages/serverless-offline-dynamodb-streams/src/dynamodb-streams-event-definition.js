@@ -34,7 +34,7 @@ class DynamodbStreamsEventDefinition {
       // No default
     }
 
-    this.enabled = isNil(enabled) ? true : enabled;
+    this.enabled = isNil(rawSqsEventDefinition.enabled) ? true : rawSqsEventDefinition.enabled;
 
     this.arn = `arn:aws:dynamodb:${region}:${accountId}:${tableName}`;
     this.tableName = tableName;
