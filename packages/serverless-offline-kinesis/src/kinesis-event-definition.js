@@ -32,8 +32,9 @@ class KinesisEventDefinition {
       // No default
     }
 
-    this.enabled = isNil(rawKinesisEventDefinition.enabled) 
-      ? true : rawKinesisEventDefinition.enabled;
+    this.enabled = isNil(rawKinesisEventDefinition.enabled)
+      ? true
+      : rawKinesisEventDefinition.enabled;
 
     this.arn = `arn:aws:kinesis:${region}:${accountId}:${streamName}`;
     this.streamName = streamName;
