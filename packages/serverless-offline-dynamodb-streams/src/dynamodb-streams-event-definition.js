@@ -12,7 +12,6 @@ class DynamodbStreamsEventDefinition {
     this.maximumRetryAttempts = 10;
     this.startingPosition = 'LATEST';
 
-    let enabled;
     let tableName;
 
     switch ('string') {

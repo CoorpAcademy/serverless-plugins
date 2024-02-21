@@ -7,7 +7,6 @@ const extractQueueNameFromARN = arn => {
 
 class SQSEventDefinition {
   constructor(rawSqsEventDefinition, region, accountId) {
-    let enabled;
     let queueName;
 
     switch ('string') {
