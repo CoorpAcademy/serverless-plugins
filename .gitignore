@@ -1,5 +1,10 @@
 node_modules
 
+# Claude Code tooling & generated docs (local-only, not committed)
+.claude/
+docs/
+logs/
+
 # Serverless directories
 .serverless
 *.log
