@@ -7,6 +7,13 @@ _Features_:
 - [Serverless Webpack](https://github.com/serverless-heaven/serverless-webpack/) support.
 - S3 configurations: batchsize.
 
+## Serverless Framework v4
+
+This plugin works on both Serverless Framework **v3 and v4**. Logging now uses the
+framework-injected logger (the `{log}` passed as the constructor's third argument), with a
+`console`-based fallback when it is absent — so it no longer depends on the removed
+`@serverless/utils/log` / `serverless.cli.log` APIs.
+
 ## Installation
 
 First, add `serverless-offline-s3` to your project:
