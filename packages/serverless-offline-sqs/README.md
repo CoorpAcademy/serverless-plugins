@@ -7,6 +7,13 @@ _Features_:
 - [Serverless Webpack](https://github.com/serverless-heaven/serverless-webpack/) support.
 - SQS configurations: batchsize.
 
+## Serverless Framework v4
+
+This plugin supports **both Serverless Framework v3 and v4**. Serverless v4 removed the
+`@serverless/utils/log` module and `serverless.cli.log`; the plugin now takes the logger from the
+plugin constructor's 3rd argument (`{log}`) and falls back to `console` when it is absent, so it keeps
+working under v3 as well. No configuration change is required when upgrading.
+
 ## Installation
 
 First, add `serverless-offline-sqs` to your project:
@@ -99,4 +106,11 @@ custom:
     accessKeyId: root
     secretAccessKey: root
     skipCacheInvalidation: false
+    queueName: my-local-queue        # optional: override every sqs event's queue name locally
 ```
+
+#### `queueName` override
+
+Setting `custom.serverless-offline-sqs.queueName` overrides the queue name resolved from each `sqs`
+event definition. This is handy when your local ElasticMQ queue is named differently from the one
+declared in your `serverless.yml` events, without having to edit the function event configuration.
