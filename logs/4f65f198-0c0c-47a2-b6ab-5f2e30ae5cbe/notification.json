@@ -1,0 +1,50 @@
+[
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "Notification",
+    "message": "Claude is waiting for your input",
+    "notification_type": "idle_prompt"
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "Notification",
+    "message": "Claude is waiting for your input",
+    "notification_type": "idle_prompt"
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "Notification",
+    "message": "Claude is waiting for your input",
+    "notification_type": "idle_prompt"
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "Notification",
+    "message": "Claude is waiting for your input",
+    "notification_type": "idle_prompt"
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "Notification",
+    "message": "Claude is waiting for your input",
+    "notification_type": "idle_prompt"
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "Notification",
+    "message": "Claude is waiting for your input",
+    "notification_type": "idle_prompt"
+  }
+]

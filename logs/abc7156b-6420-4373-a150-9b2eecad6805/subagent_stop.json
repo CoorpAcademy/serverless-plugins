@@ -1,0 +1,19 @@
+[
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "ad597e734e874e0b9",
+    "agent_type": "",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805/subagents/agent-ad597e734e874e0b9.jsonl",
+    "last_assistant_message": "start the quick-bug PR with #225 and #159",
+    "background_tasks": [],
+    "session_crons": []
+  }
+]

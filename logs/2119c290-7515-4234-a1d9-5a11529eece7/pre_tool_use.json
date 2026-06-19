@@ -1,0 +1,576 @@
+[
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git ls-files | head -200",
+      "description": "List tracked files in repo"
+    },
+    "tool_use_id": "toolu_01HuVrMqMH8o77zS2vr7dsoS"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "ls -la docs 2>/dev/null; echo \"---AI_DOCS---\"; ls -la ai_docs 2>/dev/null; echo \"---PACKAGES---\"; ls -la packages 2>/dev/null; echo \"---TODO---\"; cat TODO.md 2>/dev/null",
+      "description": "List docs, ai_docs, packages, TODO"
+    },
+    "tool_use_id": "toolu_01FQzWSEZ8okP6MNvumx9i1g"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/var/folders/yl/b9rjyzbn5kg5y0_b61qdb_wm0000gq/T/TemporaryItems/NSIRD_screencaptureui_fuKR12/Screenshot 2026-06-20 at 01.17.08.png"
+    },
+    "tool_use_id": "toolu_011W4T2bYbi9wnq4gSMUZfKg"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/docs/README.md"
+    },
+    "tool_use_id": "toolu_01Hh7m5AtuTdzx4ToRErNBWB"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/docs/open-issue-triage.md"
+    },
+    "tool_use_id": "toolu_01Pe1TpReKouvcMYZEo4RtqX"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "ls -la /Users/silouane/coorp/serverless-plugins/docs/plans; echo \"---\"; git -C /Users/silouane/coorp/serverless-plugins log --oneline -15",
+      "description": "List plans and recent git log"
+    },
+    "tool_use_id": "toolu_01LhHGh6WHS8Ubrffs4QEuLH"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/docs/plans/00-goal.md"
+    },
+    "tool_use_id": "toolu_011c7gZW6VAmifwHgS69BYop"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Agent",
+    "tool_input": {
+      "description": "Map AWS services used by TLS",
+      "prompt": "Explore the project at /Users/silouane/coorp/translated-language-service (TLS = translated-language-service). I need a COMPLETE inventory of every AWS managed service it depends on, with emphasis on what would need to run for a fully LOCAL/OFFLINE dev stack (serverless-offline).\n\nDo this very thoroughly:\n\n1. Find all serverless.yml / serverless.ts / *.yml serverless config files. List every:\n   - `functions:` event source type (sqs, sns, kinesis, dynamodb streams, s3, http/httpApi, schedule, eventBridge, cognito, etc.)\n   - `resources:` CloudFormation resource types (AWS::SQS::Queue, AWS::SNS::Topic, AWS::DynamoDB::Table, AWS::S3::Bucket, AWS::Kinesis::Stream, AWS::Events::Rule, AWS::StepFunctions::StateMachine, AWS::Cognito::*, AWS::SecretsManager::*, AWS::SSM::*, etc.)\n   - serverless plugins listed in the `plugins:` section\n   - the `provider.environment` keys that point to AWS resource endpoints/names\n\n2. Grep the source code (src/**) for AWS SDK client usage: which @aws-sdk/client-* packages or aws-sdk/clients/* are imported. List each distinct AWS service client (SNS, SQS, S3, DynamoDB, Kinesis, StepFunctions/SFN, SecretsManager, SSM, EventBridge, Cognito, Lambda, Translate, Comprehend, Polly, Transcribe, Bedrock, etc.).\n\n3. Note any use of: Step Functions / state machines, EventBridge rules/buses, SNS topics, Secrets Manager, Cognito, API Gateway, Translate/Comprehend/other AI services.\n\n4. Check package.json dependencies for @aws-sdk/* and serverless-* plugins.\n\nReturn a structured report:\n- Section A: \"AWS services USED\" \u2014 one bullet per distinct service, with how it's used (event source? resource? SDK client?) and rough count of usages / which serverless files.\n- Section B: \"Event source types in functions:\" \u2014 list each with count.\n- Section C: \"serverless plugins already in use\" \u2014 especially any serverless-offline-* ones.\n- Section D: a flat deduplicated list of AWS service names sorted by how central they appear to be.\n\nBe precise and base everything on actual file contents. Give file paths.",
+      "subagent_type": "Explore"
+    },
+    "tool_use_id": "toolu_01NDqeUkSGfr4FBDUbvPDf4y"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "find /Users/silouane/coorp/translated-language-service -type f \\( -name \"serverless.yml\" -o -name \"serverless.ts\" -o -name \"serverless.js\" -o -name \"*.yml\" -o -name \"*.yaml\" \\) | head -20"
+    },
+    "tool_use_id": "toolu_01NGWdszhLsjKdTGNkjgYGrq"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/translated-language-service"
+    },
+    "tool_use_id": "toolu_01MMDEFxA1QouK5YZjZBx41S"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/translated-language-service/serverless.yml"
+    },
+    "tool_use_id": "toolu_01Q1hPJfkLuQfwY5QtxYt1bp"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/translated-language-service/serverless-dynamodb.yml"
+    },
+    "tool_use_id": "toolu_019xPq5RnYEt2VPdhhPs1Mh6"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/translated-language-service/package.json"
+    },
+    "tool_use_id": "toolu_01PT1QqFtEK2UnYWRsatHmnD"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "find /Users/silouane/coorp/translated-language-service/src -type f \\( -name \"*.ts\" -o -name \"*.js\" \\) | head -30"
+    },
+    "tool_use_id": "toolu_01P3dVMEpBAY5kpevnXRBNBw"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -r \"@aws-sdk/client-\\|@aws-sdk/lib-\\|aws-sdk\" /Users/silouane/coorp/translated-language-service/src --include=\"*.ts\" --include=\"*.js\" | cut -d: -f2 | sort -u"
+    },
+    "tool_use_id": "toolu_013m5yC723LEnNPoVxMxPhVC"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -r \"BedrockRuntimeClient\\|SQSClient\\|DynamoDBClient\\|S3Client\\|SSMClient\\|TranscribeClient\\|PollyClient\" /Users/silouane/coorp/translated-language-service/src --include=\"*.ts\" -l | head -20"
+    },
+    "tool_use_id": "toolu_01LDhAe26XtruuRtTkAYK6x6"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -r \"StartTranscriptionJobCommand\\|transcribe:StartTranscriptionJob\\|bedrock:InvokeModel\\|DynamoDB\\|S3\\|SQS\\|SSM\" /Users/silouane/coorp/translated-language-service/src --include=\"*.ts\" | grep -E \"Command|invoke|execute\" | cut -d: -f2-3 | sort -u | head -30"
+    },
+    "tool_use_id": "toolu_01HkajpZM1DNcCMj4ncxhPLw"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -r \"EventBridge\\|events\\|transcribe-complete\\|TranscribeJobStateChangeRule\\|invoke\\|bedrock\\|Bedrock\\|Transcribe\\|EventPattern\" /Users/silouane/coorp/translated-language-service/src --include=\"*.ts\" | cut -d: -f2 | sort -u | head -20"
+    },
+    "tool_use_id": "toolu_016BbL5Ff49dub1dmpGhnbyd"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -A5 \"events:\" /Users/silouane/coorp/translated-language-service/serverless.yml | head -80"
+    },
+    "tool_use_id": "toolu_01JEsBvFdJbsJ97fXVgoczPp"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -B3 \"events:\" /Users/silouane/coorp/translated-language-service/serverless.yml | grep -E \"name:|handler:\" | sed 's/.*name: //' | sed 's/.*handler: //' | sort -u"
+    },
+    "tool_use_id": "toolu_01FArTcaG8u8Uvh6Z3LZpbyb"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep \"^  [a-z].*:\" /Users/silouane/coorp/translated-language-service/serverless.yml | grep -E \"^  [a-zA-Z]\" | head -30"
+    },
+    "tool_use_id": "toolu_0124tNnZ4CZ8aqHv1uergC5U"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "awk '/^functions:/,/^resources:/ {print}' /Users/silouane/coorp/translated-language-service/serverless.yml | grep \"^  [a-z]\" | grep -v \"^    \" | sed 's/:$//' | head -30"
+    },
+    "tool_use_id": "toolu_01EmFVU7PkM4mepsU9ryqG69"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "awk '/^functions:/,/^resources:/ {print}' /Users/silouane/coorp/translated-language-service/serverless.yml | grep -E \"^\\s+- (http|sqs|dynamodb|schedule|stream)\" | sort | uniq -c"
+    },
+    "tool_use_id": "toolu_01Tyf2Kk8AGk6P2MVDXk4QuQ"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -r \"endpoint\\|ENDPOINT\" /Users/silouane/coorp/translated-language-service/serverless.yml | head -20"
+    },
+    "tool_use_id": "toolu_01D67nG5mzLogPS28dc82zZL"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -r \"mongodb\\|Transcribe\\|Bedrock\\|Polly\\|Translate\\|Comprehend\\|Rekognition\\|Lambda\\|StepFunctions\\|Cognito\" /Users/silouane/coorp/translated-language-service/src --include=\"*.ts\" | grep \"import\\|from\\|mongodb\" | cut -d: -f2 | sort -u | head -30"
+    },
+    "tool_use_id": "toolu_01SVNKDWH8epVnoxrzz8EGdw"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -r \"mongodb\\|go1\\|GO1\\|Mooc\\|Vimeo\\|JW\\|ElevenLabs\\|elevenlabs\\|Google\" /Users/silouane/coorp/translated-language-service/src --include=\"*.ts\" | grep \"import\\|from\\|mongo\" | cut -d: -f2 | sort -u | head -20"
+    },
+    "tool_use_id": "toolu_01YAGNGYZaNkLNE6nFnQrnd9"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -E \"@google-cloud|mongodb|elevenlabs|vimeo|jw-\" /Users/silouane/coorp/translated-language-service/package.json"
+    },
+    "tool_use_id": "toolu_016hX3wUTtgTDdoXcDU4sBBv"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/translated-language-service/src/common/ports"
+    },
+    "tool_use_id": "toolu_01AGz7VcJPKCa5HtZRH6sfZ2"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "ls /Users/silouane/coorp/translated-language-service/src/common/ports/"
+    },
+    "tool_use_id": "toolu_015KT7ahpp1uhabDngAWZRqD"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/translated-language-service/src/common/ports/invoke-bedrock.ts",
+      "limit": 50
+    },
+    "tool_use_id": "toolu_013fbA58jc6pGvDEmC8wgcjA"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -r \"SNS\\|sns\\|EventBridge\\|eventbridge\\|Lambda\\|lambda:Invoke\\|StepFunctions\" /Users/silouane/coorp/translated-language-service/src --include=\"*.ts\" | cut -d: -f2 | sort -u | head -10"
+    },
+    "tool_use_id": "toolu_01B1hHemv9hP4JwADMoQv8H9"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/translated-language-service/docker-compose.yml"
+    },
+    "tool_use_id": "toolu_01TUtZyZn5AQc1DETGfrFAWM"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "ls -la /Users/silouane/coorp/translated-language-service/test/helpers/"
+    },
+    "tool_use_id": "toolu_01H3ov7NTV7oQWQhxJE12F6s"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "ls /Users/silouane/coorp/translated-language-service/test/helpers/servers/"
+    },
+    "tool_use_id": "toolu_01HykvNYi3BcTz5vkk4GsYQd"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep \"^  - serverless\\|^  - plugin\" /Users/silouane/coorp/translated-language-service/serverless.yml"
+    },
+    "tool_use_id": "toolu_01Y9MAFVcU26jp8ckJtgS1H1"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep \"Type: AWS::\" /Users/silouane/coorp/translated-language-service/serverless.yml /Users/silouane/coorp/translated-language-service/serverless-dynamodb.yml 2>/dev/null | cut -d: -f3 | sort -u"
+    },
+    "tool_use_id": "toolu_01B1C8SfJmJUA4NoioB3Ki5c"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep \"Type: AWS::\" /Users/silouane/coorp/translated-language-service/serverless.yml /Users/silouane/coorp/translated-language-service/serverless-dynamodb.yml 2>/dev/null"
+    },
+    "tool_use_id": "toolu_011U7MvKkGZNRKiAPMp1Zc3p"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep \"QueueName:\" /Users/silouane/coorp/translated-language-service/serverless.yml | sed 's/.*--sqs-//' | sed 's/-\\${.*//' | sort"
+    },
+    "tool_use_id": "toolu_012tU89NSWF4gxTw63Frx7yd"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -E \"layers:|Layer|layer:\" /Users/silouane/coorp/translated-language-service/serverless.yml | head -10"
+    },
+    "tool_use_id": "toolu_01TQFYGQ5zonGa6pFWxG29Lj"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "agent_id": "a0d07727fe8c1e889",
+    "agent_type": "Explore",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -A10 \"jobLifecycle:\" /Users/silouane/coorp/translated-language-service/serverless.yml | grep -E \"stream|type|arn\""
+    },
+    "tool_use_id": "toolu_01HfaNcZpymBu2nLFhasf9xb"
+  }
+]

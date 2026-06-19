@@ -1,0 +1,6 @@
+{
+  "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+  "prompts": [
+    "this sls offiline package would nee a bump to node 22 or even 24, checl out the recent work /Users/silouane/coorp/serverless-plugins/docs and current plan in motion from other session and let's make a PR ( we would need to rebase later but thats fine I guess) to bump to node 22 then 24 if possible"
+  ]
+}

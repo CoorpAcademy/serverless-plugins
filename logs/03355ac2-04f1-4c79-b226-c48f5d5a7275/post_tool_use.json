@@ -1,0 +1,630 @@
+[
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "ls docs/ 2>/dev/null && echo \"---TODO---\" && cat TODO.md 2>/dev/null | head -100",
+      "description": "List docs and read TODO.md"
+    },
+    "tool_response": {
+      "stdout": "architecture.md\nconventions.md\nopen-issue-triage.md\nopen-pr-triage.md\nplans\npublishing-and-versioning.md\nREADME.md\nserverless-v4-migration-review.md\ntesting-and-ci.md\n---TODO---\n# \ud83d\ude80 Serverless-Plugins Development Roadmap\n\n## \ud83d\udd25 **IMMEDIATE PRIORITIES (Next 2 Weeks)**\n\n### \ud83d\udea8 Critical Security Fixes\n- [ ] **Fix 32 security vulnerabilities** (`npm audit fix --force`)\n  - 4 critical: form-data, jsonpath-plus, @babel/traverse\n  - 11 high priority: braces, semver, ws, ip, json5\n  - **Target**: Complete by Jan 15, 2025\n  - **PR**: Security vulnerability fixes\n\n### \ud83c\udfd7\ufe0f Infrastructure Foundation\n- [ ] **Upgrade Lerna to v8+** (fixes multiple vulnerabilities)\n  - Resolve Octokit/tar/axios vulnerabilities\n  - **Target**: Jan 20, 2025\n  - **PR**: Lerna modernization\n\n- [ ] **Migrate CI/CD from Travis to GitHub Actions**\n  - Create `.github/workflows/ci.yml`\n  - Matrix testing (Node 18, 20, 22)\n  - **Target**: Jan 25, 2025\n  - **PR**: GitHub Actions migration\n\n## \ud83c\udfaf **SHORT-TERM GOALS (Q1 2025)**\n\n### \ud83d\udcc5 January 2025: Foundation Stabilization\n\n#### Week 1-2: Security & Dependencies\n- [ ] Security vulnerability fixes (above)\n- [ ] Update all package.json peer dependencies to `serverless-offline: \"^14.0.0\"`\n- [ ] Test compatibility with latest serverless-offline v14.4.0\n\n#### Week 3-4: Testing Infrastructure\n- [ ] **Standardize test patterns across all packages**\n  - Update AVA to latest version\n  - Create shared test utilities in `/tests/utils/`\n  - Add test coverage reporting (nyc \u2192 c8)\n  - **Deliverable**: Consistent testing framework\n\n### \ud83d\udcc5 February 2025: EventBridge Implementation\n\n#### Week 1-2: EventBridge Core\n- [ ] **Create `serverless-offline-eventbridge` package**\n  - Default event bus support\n  - Custom event bus creation\n  - Event pattern matching engine\n  - **Deliverable**: Basic EventBridge functionality\n\n#### Week 3-4: EventBridge Advanced Features\n- [ ] Event schema registry simulation\n- [ ] Dead letter queue support\n- [ ] Integration with existing plugins (S3 \u2192 EventBridge)\n- [ ] **Deliverable**: Production-ready EventBridge plugin\n\n### \ud83d\udcc5 March 2025: AWS SDK v3 Migration Planning\n\n#### Week 1-2: Migration Strategy\n- [ ] **Research AWS SDK v3 breaking changes**\n- [ ] Create migration guide for each package\n- [ ] Plan backward compatibility strategy\n- [ ] **Deliverable**: SDK v3 migration plan\n\n#### Week 3-4: Begin SDK Migration\n- [ ] **Start with `serverless-offline-s3`** (least complex)\n- [ ] Update Minio client integration\n- [ ] Maintain backward compatibility\n- [ ] **Deliverable**: First SDK v3 package\n\n## \ud83d\ude80 **MEDIUM-TERM GOALS (Q2-Q3 2025)**\n\n### \ud83d\udcc5 April-May 2025: Service Expansion\n\n#### SNS Support (High Priority)\n- [ ] **Create `serverless-offline-sns` package**\n  - Topic subscription management\n  - Message filtering support\n  - FIFO topic emulation\n  - Integration with SQS (SNS \u2192 SQS chains)\n  - **Target**: End of April\n\n#### AWS SDK v3 Complete Migration\n- [ ] **Migrate all packages to AWS SDK v3**\n  - serverless-offline-sqs\n  - serverless-offline-kinesis  \n  - serverless-offline-dynamodb-streams\n  - serverless-apigateway-access-logs\n  - **Target**: End of May\n\n### \ud83d\udcc5 June-July 2025: Advanced Features\n\n#### Step Functions Support\n- [ ] **Create `serverless-offline-stepfunctions` package**\n  - State machine execution engine\n  - Visual debugging interface\n  - Integration with Lambda functions\n  - **Target**: End of June\n\n#### Cross-Service Integration\n- [ ] **Plugin communication bus**\n  - S3 \u2192 SNS \u2192 SQS event chains",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01NbnrKmPURwh7E3ZYvidY77",
+    "duration_ms": 2832
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "echo \"===ROOT package.json engines/node refs===\" && grep -rn \"node\" package.json .nvmrc .github 2>/dev/null | head -40",
+      "description": "Find node version references"
+    },
+    "tool_response": {
+      "stdout": "===ROOT package.json engines/node refs===\npackage.json:5:    \"node\": \">=18\"\npackage.json:15:    \"ava:profile\": \"node node_modules/ava/profile.js\",",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01QRmF8XJARXhifiZBiWw6oX",
+    "duration_ms": 1811
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "echo \"===.nvmrc===\" && cat .nvmrc; echo \"===.travis.yml===\" && cat .travis.yml; echo \"===serverless-offline-s3 pkg engines/peer===\" && cat packages/serverless-offline-s3/package.json | grep -A3 -E \"engines|peerDependencies|serverless\"",
+      "description": "Read nvmrc travis and a package"
+    },
+    "tool_response": {
+      "stdout": "===.nvmrc===\nv18.18.2\n===.travis.yml===\ndist: jammy\nsudo: required\nlanguage: node_js\n\nnode_js:\n  - \"20\"\n  - \"18\"\n\nservices:\n  - docker\n\ncache: npm\n\nenv:\n  - DOCKER_COMPOSE_VERSION=v2.10.2\n\nbefore_install:\n  - sudo rm /usr/local/bin/docker-compose\n  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-${TRAVIS_OS_NAME}-`uname -m` > docker-compose\n  - chmod +x docker-compose\n  - sudo mv docker-compose /usr/local/bin\n===serverless-offline-s3 pkg engines/peer===\n  \"name\": \"serverless-offline-s3\",\n  \"version\": \"7.1.0\",\n  \"description\": \"Emulate AWS \u03bb and s3 locally when developing your Serverless project\",\n  \"main\": \"src\",\n--\n    \"url\": \"git@github.com:CoorpAcademy/serverless-plugins.git\"\n  },\n  \"bugs\": {\n    \"url\": \"https://github.com/CoorpAcademy/serverless-plugins/issues\"\n  },\n  \"homepage\": \"https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-s3#readme\",\n  \"files\": [\n    \"src/index.js\",\n    \"src/log.js\",\n--\n  \"engines\": {\n    \"node\": \">=18\"\n  },\n  \"peerDependencies\": {\n    \"serverless-offline\": \"^10.0.2 || >=11\"\n  },\n  \"dependencies\": {\n    \"aws-sdk\": \"^2.1234.0\",\n--\n    \"serverless-offline\": \"^13\"\n  },\n  \"keywords\": [\n    \"s3\",\n    \"serverless\",\n    \"serverless-offline\",\n    \"lambda\"\n  ]\n}",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01NDRSKznmYsvfY2i7W6gW4h",
+    "duration_ms": 75
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/docs/plans/05-cross-cutting-peers-ci-docs.md"
+    },
+    "tool_response": {
+      "type": "text",
+      "file": {
+        "filePath": "/Users/silouane/coorp/serverless-plugins/docs/plans/05-cross-cutting-peers-ci-docs.md",
+        "content": "# TODO \u2014 cross-cutting (peers, CI, root, docs)\n\n> **Owner:** main agent (after the 4 package agents finish) \u00b7 **Goal:** `[[00-goal]]`\n> **Scope:** repo-root files that the per-package agents must NOT touch (avoids parallel-write conflicts).\n\n## Peers & versioning (verify, don't widen by mistake)\n- Each package keeps peer `\"serverless-offline\": \"^10.0.2 || >=11\"` (already wide \u2192 covers v3 *and* v4). \u2705 no change.\n- Version bumps are **minor** per package (s3 7.1.0, sqs 8.1.0, kinesis 7.1.0, ddb 7.1.0) \u2014 done in package docs.\n- Confirm each touched `package.json` added `\"src/log.js\"` to `files`.\n\n## Root `package.json`\n- No change required. Root keeps `serverless: ^3.36.0` so the existing Docker integration suite still runs on v3.\n- Do **not** bump root serverless to 4 here \u2014 that would break the v3 integration lane. v4 is validated per-consumer.\n\n## CI (`.travis.yml`) \u2014 **documented follow-up, not in this PR**\n- A true v4 lane needs a build matrix that installs `serverless@4` + `serverless-offline@14` in the integration\n  workspace alongside the existing v3 lane. That is unverifiable from this environment and risks red CI.\n- **Decision:** leave `.travis.yml` as-is (Node 18/20). Record the recommended matrix in `[[testing-and-ci]]`\n  and call it out in the PR as a follow-up. Honesty over a green-looking-but-unproven check.\n\n## Root `README.md`\n- Optional: add a one-line note that the offline plugins now support Serverless Framework v4 (and remain v3-compatible).\n- Keep the badge/table intact.\n\n## Docs / tooling to commit (already authored)\n- `docs/architecture.md`, `docs/conventions.md`, `docs/testing-and-ci.md`, `docs/publishing-and-versioning.md`\n- `docs/serverless-v4-migration-review.md`, `docs/open-pr-triage.md`, `docs/README.md`, `docs/plans/*`\n- `.claude/skills/serverless-plugin-dev/SKILL.md`, `.claude/agents/serverless-plugin-author.md`\n- `.gitignore` (ignore `.claude/data/`, `logs/`)\n\n## Gating (whole repo)\n- `npm run eslint` green across the repo.\n- `npx ava` green (new per-package unit tests + the existing `dynamodb-streams-readable` suite).\n- Document what was NOT run (Docker integration, v4 e2e) and why.\n</content>\n",
+        "numLines": 36,
+        "startLine": 1,
+        "totalLines": 36
+      }
+    },
+    "tool_use_id": "toolu_01VdXBoSaAduH1iLUo51ikec",
+    "duration_ms": 10
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/docs/plans/00-goal.md"
+    },
+    "tool_response": {
+      "type": "text",
+      "file": {
+        "filePath": "/Users/silouane/coorp/serverless-plugins/docs/plans/00-goal.md",
+        "content": "# GOAL \u2014 own the v4 migration & re-implement worthwhile community PRs\n\n> **Owner:** CoorpAcademy (CLXP-103) \u00b7 **Branch:** `feat/serverless-v4-support` \u00b7 **Status doc.**\n> This is the north star. Every plan doc in `docs/plans/` serves this goal. See `[[serverless-v4-migration-review]]`\n> and `[[open-pr-triage]]` for the analysis this builds on.\n\n## The one-sentence goal\n\nShip **our own** correct, tested, v3-compatible Serverless Framework **v4 support** across all four\n`serverless-offline-*` plugins, folding in the worthwhile ideas from the open community PRs as code we\nown \u2014 then push a clean PR (crediting original authors) and close the dead/stale/dependabot PRs with rationale.\n\n## Done-state (measurable acceptance criteria)\n\n**A \u2014 v4 migration (the must-do):**\n- [ ] Zero `require('@serverless/utils/log')` anywhere in `packages/`.\n- [ ] Zero `serverless.cli.log(...)` calls; all logging via the injected `{log}` 3rd arg (console-fallback).\n- [ ] All 4 plugins load and run under **serverless v4 AND v3** (back-compatible by construction).\n- [ ] Peers stay **wide** (`serverless-offline: \">=11\"`); version bumps are **minor** (back-compatible).\n\n**B \u2014 re-implemented community PRs (owned by us):**\n- [ ] #166 \u2014 `this.region` \u2192 `this.options.region` in **all three** affected packages (sqs, kinesis, ddb).\n- [ ] #253 \u2014 SQS delete-batch entry `Id`s are unique within a batch (index-based).\n- [ ] #211 \u2014 SQS `queueName` override from `custom` config.\n- [ ] #98 \u2014 DynamoDB \"table does not have streams\" explicit error.\n- [ ] #100 \u2014 Kinesis bounded retry + error logging (mirror DynamoDB's bounded retry).\n- [ ] #249 \u2014 Kinesis awaits `lambda.create(...)`.\n\n**Quality / ownership:**\n- [ ] Docker-free **AVA unit tests** added for the pure logic touched (offline plugins start with none).\n- [ ] `npm run eslint` is **green** (lint + Prettier).\n- [ ] Each changed package: README updated, `package.json` `files` updated if a file was added, version bumped.\n- [ ] Foundation docs (`architecture`, `conventions`, `testing-and-ci`, `publishing-and-versioning`) + skill + agent committed.\n\n**Close-out:**\n- [ ] PR pushed to `CoorpAcademy/serverless-plugins` with a meticulous description + author credits.\n- [ ] Close-list rationale recorded for #99, #117, #137 and the 5 dependabot PRs.\n- [ ] Deferred (with reasons + follow-up plan): #183 (DLQ autocreate), #168 (start-without-events/host).\n\n## Explicitly OUT of scope (and why)\n\n- **#183 DLQ autocreate & #168 host/start changes** \u2014 high value but require Docker + serverless-v4\n  integration to verify safely; shipping unverified SQS-autocreate changes risks regressions. Deferred to\n  a Tier-2 PR once the integration lane is validated (`[[07-deferred-and-closed-prs]]`).\n- **#117 enabled flag, #137 termination, #99 error logging** \u2014 low value / superseded / dead architecture.\n- **Publishing to npm** \u2014 done by a human via `lerna publish` after review (canary first). Out of this PR.\n- **Consumer-service bumps & deploys** (api-scorm/push) \u2014 separate CLXP-103 follow-up, not this repo.\n\n## Canonical artifacts every package agent must use verbatim\n\n**The log shim \u2014 create `packages/<pkg>/src/log.js` identically in each touched package:**\n\n```js\nconst noop = () => {};\n\nconst defaultLog = {\n  debug: noop,\n  info: console.log.bind(console),\n  notice: console.log.bind(console),\n  warning: console.warn.bind(console),\n  error: console.error.bind(console),\n  success: console.log.bind(console)\n};\n\nconst normalizeLog = log => ({...defaultLog, ...log}); // spread of null/undefined is a no-op\n\nmodule.exports = {defaultLog, normalizeLog};\n```\n\n**Constructor contract (each `src/index.js`):**\n\n```js\nconst {normalizeLog} = require('./log');\n// ...\nconstructor(serverless, cliOptions, {log} = {}) {\n  this.cliOptions = cliOptions;\n  this.serverless = serverless;\n  this.log = normalizeLog(log);\n  this.hooks = { /* unchanged */ };\n}\n```\n\n- Replace `this.serverless.cli.log(x)` \u2192 `this.log.notice(x)`.\n- Replace `log.debug(...)` \u2192 `this.log.debug(...)`; `log.warn/warning(...)` \u2192 `this.log.warning(...)`.\n- Thread the logger into the emulator sub-module: `new S3(this.lambda, resources, this.options, this.log)`,\n  and in the sub-module `constructor(lambda, resources, options, log) { this.log = normalizeLog(log); }`.\n- Add `src/log.js` to the package's `package.json` `files` array.\n\n## Workflow shape (Step 4)\n\nParallel agents **partitioned by package** (no shared files \u2192 no conflicts):\n`s3`, `sqs`, `kinesis`, `dynamodb-streams` \u2014 each follows its plan doc. Then a **cross-cutting** agent\n(root `package.json`, `.travis.yml`, root README), then **adversarial review**, then gate + PR.\n\n## Plan index\n\n- `[[01-package-s3]]` \u00b7 `[[02-package-sqs]]` \u00b7 `[[03-package-kinesis]]` \u00b7 `[[04-package-dynamodb-streams]]`\n- `[[05-cross-cutting-peers-ci-docs]]` \u00b7 `[[06-pr-and-closeout]]` \u00b7 `[[07-deferred-and-closed-prs]]`\n</content>\n",
+        "numLines": 100,
+        "startLine": 1,
+        "totalLines": 100
+      }
+    },
+    "tool_use_id": "toolu_01DvfNphTuGj6DgvFrKJDX83",
+    "duration_ms": 1
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/docs/testing-and-ci.md"
+    },
+    "tool_response": {
+      "type": "text",
+      "file": {
+        "filePath": "/Users/silouane/coorp/serverless-plugins/docs/testing-and-ci.md",
+        "content": "# Testing & CI Guide\n\nHow tests and continuous integration work in the `serverless-plugins` monorepo: what each gate is, what it actually covers, what infrastructure it needs to run, and where the coverage holes are.\n\n> TL;DR\n> - **ESLint** is the only fully self-contained gate (no Docker, no AWS, no network).\n> - The \"**unit**\" suite (AVA) is a single file that talks to a live `dynamodb-local` container \u2014 it is *not* Docker-free, and it is the *only* AVA test in the whole repo.\n> - The four `serverless-offline-*` plugins have **zero unit tests**. Their behavior is exercised only by the Docker-based **integration harness**.\n> - The integration harness has **no assertion framework**: pass/fail is the spawned `sls` exit code plus a hard-coded expected invocation count, detected by regex-matching `serverless-offline`'s stderr.\n> - Travis runs the **full chain** (`eslint` -> unit -> integration) on Node 18 and 20.\n\n---\n\n## 1. The three test gates at a glance\n\nThe canonical entrypoint is `npm test` (`package.json:20`):\n\n```jsonc\n\"test\": \"npm run eslint && npm run test:unit && npm run test:integration\"\n```\n\n| Gate | Script | What it runs | Needs Docker? | Needs AWS / network? |\n|---|---|---|---|---|\n| Lint | `npm run eslint` (`package.json:12`) | `eslint .` | No | No |\n| Unit | `npm run test:unit` (`package.json:17`) | `pretest:unit` = `docker-compose up -d`, then `nyc ava`, then `posttest:unit` = `docker-compose stop` | **Yes** | Local docker endpoints only |\n| Integration | `npm run test:integration` (`package.json:19`) | `lerna run test --stream --scope serverless-offline-plugins-integration` | **Yes** | Local docker endpoints only |\n\nThere is no separate \"e2e\" script in the repo today; \"v4 e2e\" in the runnability matrix (section 8) means *running the integration harness against Serverless Framework v4*, which adds a licensing requirement on top of Docker.\n\n---\n\n## 2. ESLint \u2014 the only standalone gate\n\n- Root script: `eslint .` (`package.json:12`).\n- Config: `.eslintrc.js` extends the `@coorpacademy/coorpacademy` shareable config (core + es20xx + **prettier** + lodash-fp). There is **no standalone `.prettierrc`** \u2014 formatting is enforced *through* ESLint by the preset.\n- `.eslintignore` excludes `node_modules`, `coverage`, `.nyc_output`, `.webpack`, and re-includes `.serverless_plugins` and `.eslintrc.js`.\n- Needs no Docker, no AWS, no network. This is the gate you can always run locally.\n\n**Caveat:** the shared plugin `@coorpacademy/eslint-plugin-coorpacademy` (`package.json:28`) must be installed (`npm install`) before `eslint .` will run; without installed deps it fails to resolve the preset.\n\n---\n\n## 3. The unit suite (AVA) \u2014 and the glob that excludes almost everything\n\n### 3.1 AVA config\n\n`ava.config.js`:\n\n```js\nmodule.exports = {\n  files: ['packages/**/test/*.js'],\n  cache: true,\n  failFast: true,\n  timeout: '30s'\n};\n```\n\nThe glob `packages/**/test/*.js` matches **exactly one file in the entire repo**:\n\n```\npackages/dynamodb-streams-readable/test/index.js\n```\n\n(Verified: it is the only `test/` directory and the only matching `.js` under `packages/`.) Tests must live in a `test/` directory to be picked up \u2014 files named `*.test.js`, or placed under `__tests__/` or `tests/`, are **silently ignored**.\n\nAVA options worth knowing:\n- `failFast: true` \u2014 the run aborts on the first failure.\n- `timeout: '30s'` \u2014 per-test inactivity timeout.\n- `cache: true`.\n\nCoverage (`.nycrc`) only sets `exclude: [\"**/test/**/*\"]`, so `nyc` instruments source but not test files. Because only `dynamodb-streams-readable/src` is exercised by any AVA test, reported coverage is effectively meaningless for everything else.\n\n### 3.2 The one \"unit\" test is actually an integration test\n\n`packages/dynamodb-streams-readable/test/index.js` is **not** a pure unit test. Its `test.before` constructs real `aws-sdk` `DynamoDB` / `DynamoDBStreams` clients pointed at `http://localhost:8000` (`test/index.js:23-36`), and `test.beforeEach` creates a real table with a UUID name and `StreamSpecification.StreamEnabled = true` (`test/index.js:38-71`). The suite then exercises the readable stream against `dynamodb-local`: reads pre-existing records, ongoing records, the `LATEST` iterator, checkpoint emission, `limit` obeyance, `startAfter`, and `startAt`.\n\nConsequence: `npm run test:unit` **requires Docker** (the `pretest:unit` hook does `docker-compose up -d`) and will hang/fail without the `dynamodb-local` container. There is no truly Docker-free unit suite in this repo.\n\n### 3.3 The unit-test GAP (this is the important part)\n\nThese packages have **NO unit tests at all**:\n\n| Package | Unit tests? |\n|---|---|\n| `serverless-offline-s3` | None |\n| `serverless-offline-sqs` | None |\n| `serverless-offline-kinesis` | None |\n| `serverless-offline-dynamodb-streams` | None |\n| `serverless-apigateway-access-logs` | None (no `scripts`/`test` in its `package.json`) |\n| `serverless-offline-ssm-provider` | None (no `package.json` \u2014 README stub only) |\n| `dynamodb-streams-readable` | Yes (the lone AVA file, Docker-backed) |\n\nAll four `serverless-offline-*` plugins carry elaborate logic \u2014 option merging, ARN / `Fn::GetAtt` resolution, event-shape mapping, event-definition normalization \u2014 and none of it is unit-tested. The only safety net is the Docker integration harness (section 4), which is coarse-grained and brittle. See section 9 for what to add.\n\n---\n\n## 4. The Docker integration harness\n\nLocation: `tests/serverless-plugins-integration/` (workspace name `serverless-offline-plugins-integration`, **private**, version `4.0.0`). This is the *real* test of the offline plugins.\n\n### 4.1 No test framework \u2014 exit codes and a counter\n\nThere is no AVA/Jest here. Each `test-*.js` is a plain Node script that passes or fails via process exit code. The shared pattern (see `test-kinesis.js`):\n\n1. **Spawn** Serverless offline:\n   ```js\n   const serverless = spawn('sls', ['offline', 'start', '--config', '<yml>'],\n     {stdio: ['pipe', 'pipe', 'pipe'], cwd: __dirname});   // test-kinesis.js:50-53\n   ```\n2. **Split stderr into lines** with `pump(serverless.stderr, getSplitLinesTransform(), Writable)`. `getSplitLinesTransform` (`utils.js:3-11`) is a `Transform` that splits each chunk on `\\n` and pushes one line at a time.\n3. **Trigger the producer on the startup banner.** When a line matches the plugin's banner regex, the harness fires AWS writes against the faked local service:\n   - Kinesis: `/Starting Offline Kinesis/` (`test-kinesis.js:61`)\n   - S3: `/Starting Offline S3/`\n   - SQS: `/Starting Offline SQS/`\n   - DynamoDB Streams: `/Starting Offline Dynamodb Streams/` (`test-dynamodb-streams.js:65`)\n4. **Count lambda invocations** by regex-matching `serverless-offline`'s stderr log line for each handler run:\n   ```\n   /\\(\u03bb: (.*)\\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g\n   ```\n   (`test-kinesis.js:67`, `test-dynamodb-streams.js:71`). **Note the `{2}` \u2014 exactly two spaces are required before `Billed Duration`.**\n5. **Stop when the expected count is reached** via `serverless.kill()`.\n6. `onExit((code, signal) => { if (signal) serverless.kill(signal); })` (signal-exit) ensures the spawned `sls` is killed if the harness itself is terminated.\n\n### 4.2 Expected-count assertions per service\n\n| Service | Script | Assertion | Why |\n|---|---|---|---|\n| Kinesis | `test-kinesis.js:69` | `this.count === 4` | 4 streams, one handler each |\n| S3 | `test-s3.js:34,55` | `EXPECTED_LAMBDA_CALL = 9` | picture files consumed twice (by `myPromiseHandler` and `myPythonHandler`) |\n| SQS | `test-sqs.js:82` | `this.count === 5` | also `serverless.on('close', code => process.exit(code))` |\n| SQS autocreate | `test-sqs-autocreate.js:63` | `this.count === 3` | logs every line; on close runs `cleanUp()` to prune the 3 autocreated queues (incl. the `.fifo`) then exits |\n| DynamoDB Streams | `test-dynamodb-streams.js:80` | `set.size === 3 && invocationCount === 4` | `myPromiseHandler` is mapped to two tables |\n\nThe DynamoDB harness is the trickiest. `dynamodb-local` only creates a stream once a table is **non-empty**, so it (`test-dynamodb-streams.js:40-46,69`):\n1. Sets `setupInProgress = true`.\n2. `unemptyTables()` writes a stub item to each table.\n3. `await delay(1200)` to let the streams come up.\n4. Flips `setupInProgress = false`, then `putItems()` writes the real items.\n5. While `setupInProgress`, invocation lines are ignored (`if (setupInProgress) return cb();`) so the priming writes don't pollute the count.\n\n### 4.3 Serverless configs and handlers\n\n- Each `serverless.<svc>.yml` lists the **local package path first**, then `serverless-offline` (e.g. `serverless.s3.yml:8-11`), and points the plugin at local Docker endpoints via `${file(./custom.yml):...}`. `custom.yml:1-16` holds endpoints + local creds for sqs/s3/dynamodb-streams/kinesis.\n- Handlers: `lambda/handler.js` exports `promise`/`callback` styles; `lambda/handler.py` exports a `handler` \u2014 so the harness also exercises the **python3.7** runtime path, not just Node.\n- **Dependency quirk:** `serverless-offline-s3` is **not** listed as a dependency in `tests/serverless-plugins-integration/package.json` (`:30-32` list dynamodb-streams/kinesis/sqs). The S3 config loads the plugin only via the relative path `../../packages/serverless-offline-s3`. The other three are pinned as deps *and* referenced by path.\n\n### 4.4 Test ordering and per-service setup\n\n`tests/serverless-plugins-integration/package.json:10`:\n\n```jsonc\n\"test\": \"npm run test:dynamodb-streams && npm run test:kinesis && npm run test:s3 && npm run test:sqs && npm run test:sqs:autocreate\"\n```\n\nEach test has a `pretest:*` hook -> `setup-service <svc>` -> `../../scripts/clean-start.sh` (`package.json:11-21`).\n\n`clean-start.sh` (the per-service reset, against `docker-compose.test.yml`):\n1. `stop` + `rm -f` of `<service>` and `<service>-create` (`clean-start.sh:9-12`).\n2. `up -d <service>-create` (`clean-start.sh:13`).\n3. `docker wait` on the sidecar container so the script **blocks until seeding completes** (`clean-start.sh:15-16`).\n\nIntegration deps (`tests/serverless-plugins-integration/package.json:23-34`): `aws-sdk ^2`, `lodash`, `minio ^7` (the S3 client used by the harness producer), `pump`, `signal-exit`, `serverless ^3.36.0`, `serverless-offline ^13`, plus the published plugin packages.\n\n---\n\n## 5. Docker services & seed scripts\n\nThere are **two compose files** and they are **not interchangeable**.\n\n### 5.1 `docker-compose.yml` \u2014 used by the unit suite\n\nWired into `pretest:unit` / `posttest:unit` (`package.json:16-18`). Plain services, **no seeding sidecars**:\n\n| Service | Image | Port |\n|---|---|---|\n| kinesis | `instructure/kinesalite` | 4567 |\n| dynamodb | `amazon/dynamodb-local` | 8000 |\n| sqs | `softwaremill/elasticmq-native` (`-Dnode-address.host=\"*\"`) | 9324 |\n| s3 | `minio/minio` (`server /data`) | 9000 |\n\n**Gotcha:** minio here has **no credential env**, while the tests authenticate with `local`/`locallocal`. The unit DynamoDB test seeds its *own* tables via the SDK, so it doesn't need the seed scripts \u2014 but anyone assuming this single file works for integration will mis-provision.\n\n### 5.2 `docker-compose.test.yml` \u2014 used by the integration harness\n\nUsed via `clean-start.sh`. Same four services **plus `*-create` sidecar containers** (`amazon/aws-cli`) that mount and run the seed scripts against the in-network endpoint (e.g. `dynamodb-create` runs `create-tables.sh` with `AWS_ENDPOINT_URL=http://dynamodb:8000`, `docker-compose.test.yml:8-20`). Here minio **does** set `MINIO_ACCESS_KEY=local` / `MINIO_SECRET_KEY=locallocal` (`docker-compose.test.yml:63-69`).\n\n### 5.3 Seed scripts (`scripts/create-*.sh`)\n\nEach idempotently loop-creates until the resource exists:\n\n| Script | Creates |\n|---|---|\n| `create-buckets.sh` | buckets: `documents pictures files others` |\n| `create-queues.sh` | queues: `MyFirstQueue MySecondQueue MyThirdQueue MyFourthQueue MyLargestBatchSizeQueue` |\n| `create-streams.sh` | kinesis streams: `MyFirst..MyFourthStream` (shard-count 1) |\n| `create-tables.sh` | dynamodb tables: `MyFirst..MyFourthTable` (`StreamEnabled=true, StreamViewType=NEW_AND_OLD_IMAGES`) |\n\n---\n\n## 6. Travis CI\n\n`.travis.yml`:\n\n```yaml\ndist: jammy\nlanguage: node_js\nnode_js:\n  - \"20\"\n  - \"18\"\nservices:\n  - docker\ncache: npm\nenv:\n  - DOCKER_COMPOSE_VERSION=v2.10.2\nbefore_install:\n  - sudo rm /usr/local/bin/docker-compose\n  - curl -L .../docker-compose-${TRAVIS_OS_NAME}-`uname -m` > docker-compose\n  - chmod +x docker-compose && sudo mv docker-compose /usr/local/bin\n```\n\nKey points:\n- **Matrix: Node 20 and Node 18.** Both run the full chain.\n- `before_install` pins `docker-compose` to `v2.10.2` (removes the preinstalled binary, downloads the GitHub release).\n- There is **no `script:`, `install:`, or `before_script:`**. Travis's `node_js` default kicks in: `npm install` then `npm test` \u2014 i.e. the full `eslint -> unit -> integration` chain on both Node versions.\n- No publish automation in CI (no `.github/`, no `.npmrc`, no semantic-release). Publishing is a manual laptop operation (`lerna publish`). Travis runs tests only.\n\nThe README still shows a v3 Serverless badge and a travis-ci.com build badge (`README.md:3-4`).\n\n---\n\n## 7. nyc coverage\n\n- `nyc ava` (the `nyc` script, `package.json:14`) wraps the AVA run.\n- `.nycrc` only excludes `**/test/**/*`. Source is instrumented; tests are not.\n- Because the only AVA test exercises `dynamodb-streams-readable/src`, coverage numbers are effectively **only** about that package. Coverage for the four offline plugins is ~0 and reported numbers are not meaningful.\n\n---\n\n## 8. Runnability matrix \u2014 \"what can I run and what does it need?\"\n\n| I want to run... | Command | Docker? | AWS / network? | Serverless v4 + `SERVERLESS_ACCESS_KEY`? |\n|---|---|---|---|---|\n| Lint / format check | `npm run eslint` | No | No | No |\n| Unit suite (AVA) | `npm run test:unit` | **Yes** (`dynamodb-local` :8000) | Local endpoints only | No |\n| Integration harness | `npm run test:integration` | **Yes** (all 4 services + seed sidecars) | Local endpoints only | No (on v3 as pinned) |\n| Full local CI chain | `npm test` | **Yes** | Local endpoints only | No (on v3 as pinned) |\n| Integration on Serverless v4 (v4 e2e) | `npm run test:integration` after upgrading sls/offline | **Yes** | Local endpoints only | **Yes** |\n\n### Why v4 needs `SERVERLESS_ACCESS_KEY`\n\nThe repo as committed pins `serverless ^3.36.0` everywhere (`package.json:25`, `tests/serverless-plugins-integration/package.json:28`) and contains **no** reference to `SERVERLESS_ACCESS_KEY` or v4. Under Serverless Framework v4, the `sls offline start` spawned by every `test-*.js` requires a license/access key in the environment (`SERVERLESS_ACCESS_KEY`) to even boot. Without it:\n- the spawned child exits before printing `Starting Offline ...`,\n- the producer never fires (step 4.1.3),\n- the invocation regex never matches, and\n- since these scripts have **no timeout of their own**, the harness **hangs indefinitely**.\n\nSo any v4 migration must export `SERVERLESS_ACCESS_KEY` in CI/local before integration tests can pass.\n\n---\n\n## 9. The fragility checklist (read before touching CI)\n\n- **AVA glob silently excludes the offline plugins.** `packages/**/test/*.js` (`ava.config.js:2`) only picks up files in a `test/` dir. New tests under `__tests__/`, `tests/`, or named `*.test.js` will not run.\n- **The \"unit\" suite needs Docker.** `packages/dynamodb-streams-readable/test/index.js` hits `dynamodb-local` at :8000. There is no Docker-free suite.\n- **Integration has no assertions** \u2014 only exit codes + hard-coded counts. If `serverless-offline` changes its stderr format, every count silently never completes.\n- **The detection regex requires exactly two spaces** before `Billed Duration` (`{2}`). A single-space or formatting change in `serverless-offline` breaks all five integration tests at once.\n- **No timeout on integration scripts.** A broken banner/regex makes them hang forever in CI (unlike the AVA 30s timeout, which does *not* apply here).\n- **Two compose files, two credential setups.** `docker-compose.yml` (unit) gives minio no creds; `docker-compose.test.yml` (integration) does. Don't swap them.\n- **`serverless-offline-s3` is loaded by path only** in the integration workspace; it is not a declared dep there.\n- **DynamoDB harness depends on a `dynamodb-local` quirk** (streams appear only after a table is non-empty). Removing the `setupInProgress` flag or shrinking `delay(1200)` corrupts the count.\n- **nyc coverage is misleading** \u2014 it reflects almost solely `dynamodb-streams-readable/src`.\n- **Travis runs everything on both Node 18 and 20.** Don't assume a subset runs in CI.\n\n---\n\n## 10. Recommendation: add Docker-free unit tests for the pure logic\n\nThe biggest gap is that the four offline plugins' **pure transforms have no fast, dependency-free tests**. These are the parts that change most often in PRs (region bugs, `enabled` flag, ARN resolution, autocreate property handling) and are exactly where regressions have slipped in. They are pure functions over plain objects and need **no Docker and no AWS**.\n\n### Where new tests should live\n\nPut them in a `test/` directory per package so the existing AVA glob picks them up automatically:\n\n```\npackages/serverless-offline-sqs/test/index.js\npackages/serverless-offline-kinesis/test/index.js\npackages/serverless-offline-dynamodb-streams/test/index.js\npackages/serverless-offline-s3/test/index.js\n```\n\nUse the existing AVA conventions (`const test = require('ava');`, one `index.js` per package). No `t.context` Docker clients \u2014 construct plain objects and assert.\n\n### What to test (high-value, fully Docker-free)\n\n**Event-definition normalizers** (`*-event-definition.js`) \u2014 pure object normalization:\n- SQS / Kinesis / DynamoDB definitions accept all three input shapes: a string ARN, `{arn}`, and `{queueName}` / `{streamName}` / `{tableName}`, and each derives the correct name and synthesizes the right ARN (`arn:aws:<svc>:${region}:${accountId}:<name>`).\n- **`enabled` flag** \u2014 assert that `enabled: false` in the raw def survives (this is the live #117 regression: `let enabled;` is never assigned and `enabled` is stripped by `Object.assign(this, omit([...,'enabled'], raw))`, so it always defaults to `true`). A test here would have caught it.\n- Default option merging per definition (`batchSize`, `startingPosition`, `maximumRetryAttempts`).\n- Kinesis definition's `omit(['arn','tableName','enabled'])` copy-paste bug (it should omit `streamName`).\n\n**Event-shape mappers** (`*-event.js`) \u2014 pure record -> Lambda-event mapping:\n- SQS: a raw SQS message maps to a record with `eventSource: 'aws:sqs'`, lower-first message attributes, correct `eventSourceARN`/`awsRegion`.\n- Kinesis: `data` base64-encoded, `eventID = '${shardId}:${SequenceNumber}'`, fixed `kinesisSchemaVersion`/`eventName`.\n- **`awsRegion` undefined bug** (live #166, generalized): construct the emulator-equivalent inputs and assert `awsRegion` is the configured region, not `undefined`. The drivers pass `this.region` (never assigned) instead of `this.options.region` at `sqs.js:119`, `kinesis.js:87`, `dynamodb-streams.js:101`.\n\n**`_mergeOptions` precedence** (`index.js`) \u2014 pure `Object.assign` over `omitBy(isUndefined)`:\n- Assert the precedence chain: `defaultOptions` < `provider` < `serverless-offline` (location/localEnvironment only) < `custom['serverless-offline-<svc>']` < `cliOptions`.\n- Assert `undefined` values never override a lower-precedence defined value.\n\n**`_resolveFn` / `_getEvents`** (`index.js`) \u2014 pure CloudFormation resolution against a fake `service`:\n- SQS deep walker: `Fn::GetAtt: [name, 'Arn']` on an `AWS::SQS::Queue` resolves to the synthesized ARN; **unrelated GetAtt references are dropped** (document/lock in current behavior, or fix and test).\n- Kinesis/DynamoDB shallow resolver: literal `streamName`/`tableName` passes through; `Fn::GetAtt` reads `Resources[name].Properties.{Name,TableName}`; a missing resource throws `No resource defined with name <name>` (fail-fast \u2014 assert the message).\n\n**SQS autocreate property mapping** (`sqs.js` `_createQueue` / `_getResourceProperties`) \u2014 pure-ish given an injected client stub:\n- Properties are `JSON.stringify`'d for objects, `toString`'d otherwise.\n- **`RedrivePolicy` / CFN-intrinsic handling** (live #183): assert intrinsics like `{Ref: ...}` aren't blindly serialized and that a DLQ referenced by `RedrivePolicy.deadLetterTargetArn` is created first. This needs a small fake SQS client (resolve/record calls), still no Docker.\n\nThese tests run in milliseconds, run in CI with zero infrastructure, and would have caught the majority of the bugs currently only discoverable (if at all) by the brittle integration harness. Keep the Docker integration suite as the end-to-end smoke test; add the unit layer underneath it.\n",
+        "numLines": 319,
+        "startLine": 1,
+        "totalLines": 319
+      }
+    },
+    "tool_use_id": "toolu_01QeoeduULRp9yVwzQWG7hus",
+    "duration_ms": 6
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "echo \"===node/npm===\" && node -v && npm -v; echo \"===nvm node versions===\" && ls ~/.nvm/versions/node 2>/dev/null; echo \"===branches===\" && git branch -a 2>/dev/null | head -30; echo \"===status===\" && git status -s; echo \"===master vs branch===\" && git log --oneline master -1 2>/dev/null",
+      "description": "Check node version and git state"
+    },
+    "tool_response": {
+      "stdout": "===node/npm===\nv22.22.3\n10.9.8\n===nvm node versions===\nv12.18.0\nv16.20.2\nv18.19.0\nv20.18.0\nv20.19.2\nv20.20.2\nv22.12.0\nv22.15.1\nv22.22.3\nv22.9.0\n===branches===\n* feat/serverless-v4-support\n  remotes/origin/feat/serverless-v4-support\n  agnusha-master\n  master\n  remotes/origin/HEAD -> origin/master\n  remotes/origin/master\n  remotes/origin/dependabot/npm_and_yarn/http-cache-semantics-4.1.1\n  remotes/origin/dependabot/npm_and_yarn/simple-git-3.16.0\n  remotes/origin/dependabot/npm_and_yarn/cookiejar-2.1.4\n  remotes/origin/dependabot/npm_and_yarn/json5-1.0.2\n  remotes/origin/dependabot/npm_and_yarn/qs-and-formidable-6.11.0\n  remotes/origin/rewrite-ssm\n  remotes/origin/clean-environment-setup-for-sqs-offline\n  remotes/origin/clean-environment-setup\n  remotes/origin/bookmark/offline-kinesis-with-retry-on-connect-failure\n===status===\n?? TODO.md\n===master vs branch===\n640b2db New release :zap:",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01Chfjy9mAfm3nSBS32vLw6e",
+    "duration_ms": 348
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm install 24 2>&1 | tail -5",
+      "description": "Install Node 24 via nvm",
+      "run_in_background": true
+    },
+    "tool_response": {
+      "stdout": "",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false,
+      "backgroundTaskId": "b27qin6s2"
+    },
+    "tool_use_id": "toolu_01QpYEztVJK12ceEHoa88q7s",
+    "duration_ms": 3
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git stash -u 2>/dev/null; git checkout master -q && git checkout -b chore/bump-node-22-24 -q && git branch --show-current",
+      "description": "Create node bump branch off master"
+    },
+    "tool_response": {
+      "stdout": "Saved working directory and index state WIP on feat/serverless-v4-support: 18852c0 test(integration): make sqs integration test observable & robust\nchore/bump-node-22-24",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_019XbbfxZykhKWw6KtF2Dtaw",
+    "duration_ms": 315
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "echo \"===engines on master===\" && grep -rn \"\\\"node\\\"\" package.json packages/*/package.json; echo \"===nvmrc===\" && cat .nvmrc; echo \"===travis node_js===\" && grep -A4 \"node_js\" .travis.yml; echo \"===tests integration engines?===\" && grep -n \"\\\"node\\\"\\|engines\" tests/serverless-plugins-integration/package.json 2>/dev/null",
+      "description": "Check node refs on master branch"
+    },
+    "tool_response": {
+      "stdout": "===engines on master===\npackages/serverless-offline-dynamodb-streams/package.json:23:    \"node\": \">=18\"\npackage.json:5:    \"node\": \">=18\"\npackages/serverless-apigateway-access-logs/package.json:20:    \"node\": \">=18\"\npackages/serverless-offline-kinesis/package.json:27:    \"node\": \">=18\"\npackages/serverless-offline-sqs/package.json:27:    \"node\": \">=18\"\npackages/dynamodb-streams-readable/package.json:20:    \"node\": \">=18\"\npackages/serverless-offline-s3/package.json:27:    \"node\": \">=18\"\n===nvmrc===\nv18.18.2\n===travis node_js===\nlanguage: node_js\n\nnode_js:\n  - \"20\"\n  - \"18\"\n\nservices:\n===tests integration engines?===",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "returnCodeInterpretation": "No matches found",
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01P2qpx7WCTtEVKMHe1kfx53",
+    "duration_ms": 81
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "perl -0pi -e 's/\"node\": \">=18\"/\"node\": \">=22\"/' package.json packages/*/package.json && echo \"===verify===\" && grep -rn \"\\\"node\\\"\" package.json packages/*/package.json",
+      "description": "Bump engines node >=18 to >=22 across all package.json"
+    },
+    "tool_response": {
+      "stdout": "===verify===\npackage.json:5:    \"node\": \">=22\"\npackages/dynamodb-streams-readable/package.json:20:    \"node\": \">=22\"\npackages/serverless-apigateway-access-logs/package.json:20:    \"node\": \">=22\"\npackages/serverless-offline-dynamodb-streams/package.json:23:    \"node\": \">=22\"\npackages/serverless-offline-kinesis/package.json:27:    \"node\": \">=22\"\npackages/serverless-offline-s3/package.json:27:    \"node\": \">=22\"\npackages/serverless-offline-sqs/package.json:27:    \"node\": \">=22\"",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01Ch6pyejLh13T4FXecFdV23",
+    "duration_ms": 413
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/.travis.yml"
+    },
+    "tool_response": {
+      "type": "text",
+      "file": {
+        "filePath": "/Users/silouane/coorp/serverless-plugins/.travis.yml",
+        "content": "dist: jammy\nsudo: required\nlanguage: node_js\n\nnode_js:\n  - \"20\"\n  - \"18\"\n\nservices:\n  - docker\n\ncache: npm\n\nenv:\n  - DOCKER_COMPOSE_VERSION=v2.10.2\n\nbefore_install:\n  - sudo rm /usr/local/bin/docker-compose\n  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-${TRAVIS_OS_NAME}-`uname -m` > docker-compose\n  - chmod +x docker-compose\n  - sudo mv docker-compose /usr/local/bin\n",
+        "numLines": 22,
+        "startLine": 1,
+        "totalLines": 22
+      }
+    },
+    "tool_use_id": "toolu_0184LnAy1V7FEYr3R4KAC3y3",
+    "duration_ms": 7
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/.travis.yml",
+      "old_string": "node_js:\n  - \"20\"\n  - \"18\"",
+      "new_string": "node_js:\n  - \"24\"\n  - \"22\"",
+      "replace_all": false
+    },
+    "tool_response": {
+      "filePath": "/Users/silouane/coorp/serverless-plugins/.travis.yml",
+      "oldString": "node_js:\n  - \"20\"\n  - \"18\"",
+      "newString": "node_js:\n  - \"24\"\n  - \"22\"",
+      "originalFile": "dist: jammy\nsudo: required\nlanguage: node_js\n\nnode_js:\n  - \"20\"\n  - \"18\"\n\nservices:\n  - docker\n\ncache: npm\n\nenv:\n  - DOCKER_COMPOSE_VERSION=v2.10.2\n\nbefore_install:\n  - sudo rm /usr/local/bin/docker-compose\n  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-${TRAVIS_OS_NAME}-`uname -m` > docker-compose\n  - chmod +x docker-compose\n  - sudo mv docker-compose /usr/local/bin\n",
+      "structuredPatch": [
+        {
+          "oldStart": 3,
+          "oldLines": 8,
+          "newStart": 3,
+          "newLines": 8,
+          "lines": [
+            " language: node_js",
+            " ",
+            " node_js:",
+            "-  - \"20\"",
+            "-  - \"18\"",
+            "+  - \"24\"",
+            "+  - \"22\"",
+            " ",
+            " services:",
+            "   - docker"
+          ]
+        }
+      ],
+      "userModified": false,
+      "replaceAll": false
+    },
+    "tool_use_id": "toolu_01ANdW1ndwjhCVhGmCXsUEc8",
+    "duration_ms": 11
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm which 24 2>/dev/null; ls ~/.nvm/versions/node | grep v24",
+      "description": "Confirm node 24 version installed"
+    },
+    "tool_response": {
+      "stdout": "/Users/silouane/.nvm/versions/node/v24.17.0/bin/node\nv24.17.0",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_017wGDX8At5xKqHY9Ff9nkQ5",
+    "duration_ms": 1321
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "node -v; test -d node_modules && echo \"node_modules present\" || echo \"need install\"; npx eslint . 2>&1 | tail -20 && echo \"ESLINT_EXIT=$?\"",
+      "description": "Run eslint on Node 22"
+    },
+    "tool_response": {
+      "stdout": "v22.22.3\nnode_modules present\n/Users/silouane/coorp/serverless-plugins/logs/abc7156b-6420-4373-a150-9b2eecad6805/subagent_stop.json\n  1:2  error  Filename is not in kebab case. Rename it to `subagent-stop.json`  unicorn/filename-case\n\n/Users/silouane/coorp/serverless-plugins/logs/session_end.json\n  1:2  error  Filename is not in kebab case. Rename it to `session-end.json`  unicorn/filename-case\n\n/Users/silouane/coorp/serverless-plugins/logs/session_start.json\n  1:2  error  Filename is not in kebab case. Rename it to `session-start.json`  unicorn/filename-case\n\n/Users/silouane/coorp/serverless-plugins/logs/user_prompt_submit.json\n  1:2  error  Filename is not in kebab case. Rename it to `user-prompt-submit.json`  unicorn/filename-case\n\n/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration/logs/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe/post_tool_use.json\n  1:2  error  Filename is not in kebab case. Rename it to `post-tool-use.json`  unicorn/filename-case\n\n/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration/logs/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe/pre_tool_use.json\n  1:2  error  Filename is not in kebab case. Rename it to `pre-tool-use.json`  unicorn/filename-case\n\n\u2716 13 problems (13 errors, 0 warnings)\n\nESLINT_EXIT=0",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_014ufEU3AEW6KjzJo52fAFqT",
+    "duration_ms": 2673
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "echo \"=== are logs/ tracked? ===\" && git ls-files logs/ tests/serverless-plugins-integration/logs/ | head; echo \"exit: $?\"; echo \"=== lint source only (node 22) ===\"; npx eslint packages/ tests/serverless-plugins-integration/*.js 2>&1 | tail -15; echo \"SRC_LINT_EXIT=${PIPESTATUS[0]}\"",
+      "description": "Check logs tracked status and lint source on node 22"
+    },
+    "tool_response": {
+      "stdout": "=== are logs/ tracked? ===\nexit: 0\n=== lint source only (node 22) ===\nSRC_LINT_EXIT=",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_014c36xGSyHqyUcAC23zpTja",
+    "duration_ms": 1872
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use 24 >/dev/null 2>&1; node -v; echo \"=== npm install (node 24) ===\"; npm install 2>&1 | tail -20; echo \"INSTALL_EXIT=${PIPESTATUS[0]}\"",
+      "timeout": 420000,
+      "description": "Fresh npm install under Node 24"
+    },
+    "tool_response": {
+      "stdout": "v24.17.0\n=== npm install (node 24) ===\nnpm warn Unknown user config \"always-auth\" (//go1-654654359634.d.codeartifact.us-east-1.amazonaws.com/npm/go1/:always-auth). This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.\nnpm warn Unknown user config \"//go1-654654359634.d.codeartifact.us-east-1.amazonaws.com/npm/go1/\". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.\n\nup to date, audited 1655 packages in 13s\n\n245 packages are looking for funding\n  run `npm fund` for details\n\n88 vulnerabilities (11 low, 34 moderate, 36 high, 7 critical)\n\nTo address issues that do not require attention, run:\n  npm audit fix\n\nTo address all issues possible (including breaking changes), run:\n  npm audit fix --force\n\nSome issues need review, and may require choosing\na different dependency.\n\nRun `npm audit` for details.\nINSTALL_EXIT=",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01N2xsRcGkBx63Tpxz3p6YMq",
+    "duration_ms": 15606
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use 24 >/dev/null 2>&1; node -v; npx eslint packages/ tests/serverless-plugins-integration/*.js 2>&1 | tail -15; echo \"SRC_LINT_EXIT=${PIPESTATUS[0]} (empty/0 = clean)\"",
+      "description": "Lint source under Node 24"
+    },
+    "tool_response": {
+      "stdout": "v24.17.0\nnpm warn Unknown user config \"always-auth\" (//go1-654654359634.d.codeartifact.us-east-1.amazonaws.com/npm/go1/:always-auth). This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.\nnpm warn Unknown user config \"//go1-654654359634.d.codeartifact.us-east-1.amazonaws.com/npm/go1/\". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.\nSRC_LINT_EXIT= (empty/0 = clean)",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_017HoQVXko9BDnbQVmgoZkn6",
+    "duration_ms": 3922
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/.nvmrc"
+    },
+    "tool_response": {
+      "type": "text",
+      "file": {
+        "filePath": "/Users/silouane/coorp/serverless-plugins/.nvmrc",
+        "content": "v18.18.2\n",
+        "numLines": 2,
+        "startLine": 1,
+        "totalLines": 2
+      }
+    },
+    "tool_use_id": "toolu_011WtxENP89NHcjhBfR4sd62",
+    "duration_ms": 5
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/.nvmrc",
+      "old_string": "v18.18.2",
+      "new_string": "v24.17.0",
+      "replace_all": false
+    },
+    "tool_response": {
+      "filePath": "/Users/silouane/coorp/serverless-plugins/.nvmrc",
+      "oldString": "v18.18.2",
+      "newString": "v24.17.0",
+      "originalFile": "v18.18.2\n",
+      "structuredPatch": [
+        {
+          "oldStart": 1,
+          "oldLines": 1,
+          "newStart": 1,
+          "newLines": 1,
+          "lines": [
+            "-v18.18.2",
+            "+v24.17.0"
+          ]
+        }
+      ],
+      "userModified": false,
+      "replaceAll": false
+    },
+    "tool_use_id": "toolu_01GR8nVK6My7VAgpr8Zeznk9",
+    "duration_ms": 12
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "grep -rniE \"node[ ._-]?(18|20)|>=18|nodejs18|node:18\" --include=\"*.md\" --include=\"*.yml\" --include=\"*.yaml\" --include=\"Dockerfile*\" --include=\"*.json\" . 2>/dev/null | grep -vi \"node_modules\" | grep -vE \"logs/\" | grep -viE \"nodejs18\\.x|runtime\" | head -30; echo \"=== runtimes in test ymls (informational) ===\"; grep -rn \"runtime\" tests/serverless-plugins-integration/*.yml 2>/dev/null | head",
+      "description": "Find remaining node 18/20 references"
+    },
+    "tool_response": {
+      "stdout": "package-lock.json:1594:        \"node\": \"^14.15.0 || ^16.10.0 || >=18.0.0\"\npackage-lock.json:2055:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:2142:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:2164:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:2179:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:2190:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:2198:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:2219:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:2230:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:2244:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:2259:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:2273:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3040:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3048:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3061:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3072:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3114:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3156:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3226:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3261:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3308:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3327:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3338:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3350:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3971:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:3983:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:4054:      \"resolved\": \"https://registry.npmjs.org/@types/node/-/node-20.8.10.tgz\",\npackage-lock.json:4721:        \"node\": \">=12.22 <13 || >=14.17 <15 || >=16.4 <17 || >=18\"\npackage-lock.json:5738:        \"node\": \"^14.17.0 || ^16.13.0 || >=18.0.0\"\npackage-lock.json:6760:        \"node\": \"^14.15.0 || ^16.10.0 || >=18.0.0\"\n=== runtimes in test ymls (informational) ===\ntests/serverless-plugins-integration/serverless.s3.yml:6:  runtime: nodejs18.x\ntests/serverless-plugins-integration/serverless.s3.yml:37:    runtime: python3.7\ntests/serverless-plugins-integration/serverless.dynamodb-streams.yml:6:  runtime: nodejs18.x\ntests/serverless-plugins-integration/serverless.dynamodb-streams.yml:34:    runtime: python3.7\ntests/serverless-plugins-integration/serverless.kinesis.yml:6:  runtime: nodejs18.x\ntests/serverless-plugins-integration/serverless.kinesis.yml:31:    runtime: python3.7\ntests/serverless-plugins-integration/serverless.sqs.autocreate.yml:6:  runtime: nodejs18.x\ntests/serverless-plugins-integration/serverless.sqs.yml:6:  runtime: nodejs18.x\ntests/serverless-plugins-integration/serverless.sqs.yml:39:    runtime: python3.7",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01JhgTB35XW7Xv6hnAxPnWy1",
+    "duration_ms": 118
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "perl -0pi -e 's/runtime: nodejs18\\.x/runtime: nodejs22.x/' tests/serverless-plugins-integration/serverless.*.yml && echo \"=== verify ===\" && grep -rn \"runtime: nodejs\" tests/serverless-plugins-integration/*.yml",
+      "description": "Bump integration test lambda runtime to nodejs22.x"
+    },
+    "tool_response": {
+      "stdout": "=== verify ===\ntests/serverless-plugins-integration/serverless.kinesis.yml:6:  runtime: nodejs22.x\ntests/serverless-plugins-integration/serverless.dynamodb-streams.yml:6:  runtime: nodejs22.x\ntests/serverless-plugins-integration/serverless.sqs.yml:6:  runtime: nodejs22.x\ntests/serverless-plugins-integration/serverless.s3.yml:6:  runtime: nodejs22.x\ntests/serverless-plugins-integration/serverless.sqs.autocreate.yml:6:  runtime: nodejs22.x",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_015JDg8EjzcySJUNnw5PL7KQ",
+    "duration_ms": 93
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git --no-pager diff --stat && echo \"=== full diff (excl lock) ===\" && git --no-pager diff -- . ':(exclude)package-lock.json'",
+      "description": "Review full diff"
+    },
+    "tool_response": {
+      "stdout": " .nvmrc                                                     |  2 +-\n .travis.yml                                                |  4 ++--\n package-lock.json                                          | 14 +++++++-------\n package.json                                               |  2 +-\n packages/dynamodb-streams-readable/package.json            |  2 +-\n packages/serverless-apigateway-access-logs/package.json    |  2 +-\n packages/serverless-offline-dynamodb-streams/package.json  |  2 +-\n packages/serverless-offline-kinesis/package.json           |  2 +-\n packages/serverless-offline-s3/package.json                |  2 +-\n packages/serverless-offline-sqs/package.json               |  2 +-\n .../serverless.dynamodb-streams.yml                        |  2 +-\n .../serverless-plugins-integration/serverless.kinesis.yml  |  2 +-\n tests/serverless-plugins-integration/serverless.s3.yml     |  2 +-\n .../serverless.sqs.autocreate.yml                          |  2 +-\n tests/serverless-plugins-integration/serverless.sqs.yml    |  2 +-\n 15 files changed, 22 insertions(+), 22 deletions(-)\n=== full diff (excl lock) ===\ndiff --git a/.nvmrc b/.nvmrc\nindex bb52a16..8e0b9a6 100644\n--- a/.nvmrc\n+++ b/.nvmrc\n@@ -1 +1 @@\n-v18.18.2\n+v24.17.0\ndiff --git a/.travis.yml b/.travis.yml\nindex 4f4ab8f..1424d38 100644\n--- a/.travis.yml\n+++ b/.travis.yml\n@@ -3,8 +3,8 @@ sudo: required\n language: node_js\n \n node_js:\n-  - \"20\"\n-  - \"18\"\n+  - \"24\"\n+  - \"22\"\n \n services:\n   - docker\ndiff --git a/package.json b/package.json\nindex 1fe78ae..77fd310 100644\n--- a/package.json\n+++ b/package.json\n@@ -2,7 +2,7 @@\n   \"name\": \"serverless-plugins\",\n   \"private\": true,\n   \"engines\": {\n-    \"node\": \">=18\"\n+    \"node\": \">=22\"\n   },\n   \"workspaces\": [\n     \"packages/*\",\ndiff --git a/packages/dynamodb-streams-readable/package.json b/packages/dynamodb-streams-readable/package.json\nindex aee9beb..44db005 100644\n--- a/packages/dynamodb-streams-readable/package.json\n+++ b/packages/dynamodb-streams-readable/package.json\n@@ -17,7 +17,7 @@\n   \"author\": \"Arthur Weber @godu\",\n   \"license\": \"MIT\",\n   \"engines\": {\n-    \"node\": \">=18\"\n+    \"node\": \">=22\"\n   },\n   \"devDependencies\": {\n     \"uuid\": \"^9.0.0\"\ndiff --git a/packages/serverless-apigateway-access-logs/package.json b/packages/serverless-apigateway-access-logs/package.json\nindex 1c9e0f1..84cfd86 100644\n--- a/packages/serverless-apigateway-access-logs/package.json\n+++ b/packages/serverless-apigateway-access-logs/package.json\n@@ -17,7 +17,7 @@\n   \"author\": \"Adrien Becchis @Coorpacademy (https://github.com/AdrieanKhisbe)\",\n   \"license\": \"MIT\",\n   \"engines\": {\n-    \"node\": \">=18\"\n+    \"node\": \">=22\"\n   },\n   \"dependencies\": {\n     \"aws-sdk\": \"^2.1234.0\",\ndiff --git a/packages/serverless-offline-dynamodb-streams/package.json b/packages/serverless-offline-dynamodb-streams/package.json\nindex 3b9de39..7873ad6 100644\n--- a/packages/serverless-offline-dynamodb-streams/package.json\n+++ b/packages/serverless-offline-dynamodb-streams/package.json\n@@ -20,7 +20,7 @@\n   \"author\": \"Arthur Weber @godu\",\n   \"license\": \"MIT\",\n   \"engines\": {\n-    \"node\": \">=18\"\n+    \"node\": \">=22\"\n   },\n   \"peerDependencies\": {\n     \"serverless-offline\": \"^10.0.2 || >=11\"\ndiff --git a/packages/serverless-offline-kinesis/package.json b/packages/serverless-offline-kinesis/package.json\nindex ba0c976..16f2b1f 100644\n--- a/packages/serverless-offline-kinesis/package.json\n+++ b/packages/serverless-offline-kinesis/package.json\n@@ -24,7 +24,7 @@\n   ],\n   \"license\": \"MIT\",\n   \"engines\": {\n-    \"node\": \">=18\"\n+    \"node\": \">=22\"\n   },\n   \"peerDependencies\": {\n     \"serverless-offline\": \"^10.0.2 || >=11\"\ndiff --git a/packages/serverless-offline-s3/package.json b/packages/serverless-offline-s3/package.json\nindex 5a4d55a..86e698f 100644\n--- a/packages/serverless-offline-s3/package.json\n+++ b/packages/serverless-offline-s3/package.json\n@@ -24,7 +24,7 @@\n   ],\n   \"license\": \"MIT\",\n   \"engines\": {\n-    \"node\": \">=18\"\n+    \"node\": \">=22\"\n   },\n   \"peerDependencies\": {\n     \"serverless-offline\": \"^10.0.2 || >=11\"\ndiff --git a/packages/serverless-offline-sqs/package.json b/packages/serverless-offline-sqs/package.json\nindex a01d9f1..5176311 100644\n--- a/packages/serverless-offline-sqs/package.json\n+++ b/packages/serverless-offline-sqs/package.json\n@@ -24,7 +24,7 @@\n   ],\n   \"license\": \"MIT\",\n   \"engines\": {\n-    \"node\": \">=18\"\n+    \"node\": \">=22\"\n   },\n   \"peerDependencies\": {\n     \"serverless-offline\": \"^10.0.2 || >=11\"\ndiff --git a/tests/serverless-plugins-integration/serverless.dynamodb-streams.yml b/tests/serverless-plugins-integration/serverless.dynamodb-streams.yml\nindex 36bdd23..5b92b23 100644\n--- a/tests/serverless-plugins-integration/serverless.dynamodb-streams.yml\n+++ b/tests/serverless-plugins-integration/serverless.dynamodb-streams.yml\n@@ -3,7 +3,7 @@ service: serverless-offline-dynamodb-streams\n provider:\n   name: aws\n   region: eu-west-1\n-  runtime: nodejs18.x\n+  runtime: nodejs22.x\n \n plugins:\n   - ../../packages/serverless-offline-dynamodb-streams\ndiff --git a/tests/serverless-plugins-integration/serverless.kinesis.yml b/tests/serverless-plugins-integration/serverless.kinesis.yml\nindex 83eff4a..7f3e094 100644\n--- a/tests/serverless-plugins-integration/serverless.kinesis.yml\n+++ b/tests/serverless-plugins-integration/serverless.kinesis.yml\n@@ -3,7 +3,7 @@ service: serverless-offline-kinesis\n provider:\n   name: aws\n   region: eu-west-1\n-  runtime: nodejs18.x\n+  runtime: nodejs22.x\n \n plugins:\n   - ../../packages/serverless-offline-kinesis\ndiff --git a/tests/serverless-plugins-integration/serverless.s3.yml b/tests/serverless-plugins-integration/serverless.s3.yml\nindex 69894d4..4f9e1bb 100644\n--- a/tests/serverless-plugins-integration/serverless.s3.yml\n+++ b/tests/serverless-plugins-integration/serverless.s3.yml\n@@ -3,7 +3,7 @@ service: serverless-offline-s3\n provider:\n   name: aws\n   region: eu-west-1\n-  runtime: nodejs18.x\n+  runtime: nodejs22.x\n \n plugins:\n   - ../../packages/serverless-offline-s3\ndiff --git a/tests/serverless-plugins-integration/serverless.sqs.autocreate.yml b/tests/serverless-plugins-integration/serverless.sqs.autocreate.yml\nindex 7f852fb..a0927cc 100644\n--- a/tests/serverless-plugins-integration/serverless.sqs.autocreate.yml\n+++ b/tests/serverless-plugins-integration/serverless.sqs.autocreate.yml\n@@ -3,7 +3,7 @@ service: serverless-offline-sqs\n provider:\n   name: aws\n   region: eu-west-1\n-  runtime: nodejs18.x\n+  runtime: nodejs22.x\n \n plugins:\n   - ../../packages/serverless-offline-sqs\ndiff --git a/tests/serverless-plugins-integration/serverless.sqs.yml b/tests/serverless-plugins-integration/serverless.sqs.yml\nindex c33426f..eccc93e 100644\n--- a/tests/serverless-plugins-integration/serverless.sqs.yml\n+++ b/tests/serverless-plugins-integration/serverless.sqs.yml\n@@ -3,7 +3,7 @@ service: serverless-offline-sqs\n provider:\n   name: aws\n   region: eu-west-1\n-  runtime: nodejs18.x\n+  runtime: nodejs22.x\n \n plugins:\n   - ../../packages/serverless-offline-sqs",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01PTxYiaRbG5WZCcU13pwkAs",
+    "duration_ms": 105
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git --no-pager diff -- package-lock.json | head -60",
+      "description": "Inspect package-lock changes"
+    },
+    "tool_response": {
+      "stdout": "diff --git a/package-lock.json b/package-lock.json\nindex 64ec13e..084a57b 100644\n--- a/package-lock.json\n+++ b/package-lock.json\n@@ -21,7 +21,7 @@\n         \"nyc\": \"^15.1.0\"\n       },\n       \"engines\": {\n-        \"node\": \">=18\"\n+        \"node\": \">=22\"\n       }\n     },\n     \"node_modules/@ampproject/remapping\": {\n@@ -18406,7 +18406,7 @@\n         \"uuid\": \"^9.0.0\"\n       },\n       \"engines\": {\n-        \"node\": \">=18\"\n+        \"node\": \">=22\"\n       }\n     },\n     \"packages/serverless-apigateway-access-logs\": {\n@@ -18417,7 +18417,7 @@\n         \"lodash\": \"^4.17.21\"\n       },\n       \"engines\": {\n-        \"node\": \">=18\"\n+        \"node\": \">=22\"\n       }\n     },\n     \"packages/serverless-offline-dynamodb-streams\": {\n@@ -18432,7 +18432,7 @@\n         \"serverless-offline\": \"^13\"\n       },\n       \"engines\": {\n-        \"node\": \">=18\"\n+        \"node\": \">=22\"\n       },\n       \"peerDependencies\": {\n         \"serverless-offline\": \"^10.0.2 || >=11\"\n@@ -18450,7 +18450,7 @@\n         \"serverless-offline\": \"^13\"\n       },\n       \"engines\": {\n-        \"node\": \">=18\"\n+        \"node\": \">=22\"\n       },\n       \"peerDependencies\": {\n         \"serverless-offline\": \"^10.0.2 || >=11\"\n@@ -18469,7 +18469,7 @@\n         \"serverless-offline\": \"^13\"\n       },\n       \"engines\": {\n-        \"node\": \">=18\"\n+        \"node\": \">=22\"\n       },\n       \"peerDependencies\": {\n         \"serverless-offline\": \"^10.0.2 || >=11\"\n@@ -18513,7 +18513,7 @@\n         \"serverless-offline\": \"^13\"",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01SkwEyNnBz6jSBj9iraqFW7",
+    "duration_ms": 76
+  }
+]

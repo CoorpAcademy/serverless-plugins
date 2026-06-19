@@ -1,0 +1,10 @@
+[
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "Notification",
+    "message": "Claude needs your permission",
+    "notification_type": "permission_prompt"
+  }
+]

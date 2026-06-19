@@ -1,0 +1,7 @@
+{
+  "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+  "prompts": [
+    "/prime & check out our recent work  /Users/silouane/coorp/serverless-plugins/docs then lets focus taking back this repository to its feet. A LOT OF ISSUE: https://github.com/CoorpAcademy/serverless-plugins/issues?q=sort%3Aupdated-desc+is%3Aissue+state%3Aopen+ let's read them all and perform categorization. I need everything written in the doc locally. Report on actual issue, issue we need to fix, issue we already fixed issue we cant ditch. THIS IS READ ONLY WORKFLOW FOR NOW, but local doc must be representative of the action plan for each issue so I can get clarity",
+    "ok, leading from my PR sls v4 can we create 10 PR for the real bug small fix ? and also adress the keep valuable and create PR for them ?  this is like 19 PR to be created. THIS IS SOME MASSIVE WORKFLOW WE NEED TO SETUP HERE. SET A CLEAR GOAL FOR THIS WORK. and create the workflow. ensure gating ( all PR need to be green before being push) and post push a loop mus tbe created to check PR CI and verify its still GREEN in travis. ANd all PR have clear description. Even if the work is maybe  decorelated IT IS NOT, same REPO, HIGH CHANCE OF OVERLAP, spawn 19 different workflow, but work will be sequentially merged. so it might be better to work on the same brand and sequentially adress issue ? help me out there for the good practice of this open source repository."
+  ]
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "SessionStart",
+    "source": "startup",
+    "model": "claude-opus-4-8[1m]"
+  },
+  {
+    "session_id": "4d542c19-d923-41bd-b81d-5a8e32e02bfa",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4d542c19-d923-41bd-b81d-5a8e32e02bfa.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "SessionStart",
+    "source": "startup",
+    "model": "claude-opus-4-8[1m]"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "SessionStart",
+    "source": "startup",
+    "model": "claude-opus-4-8[1m]"
+  },
+  {
+    "session_id": "03355ac2-04f1-4c79-b226-c48f5d5a7275",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/03355ac2-04f1-4c79-b226-c48f5d5a7275.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "SessionStart",
+    "source": "startup",
+    "model": "claude-opus-4-8[1m]"
+  },
+  {
+    "session_id": "2119c290-7515-4234-a1d9-5a11529eece7",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/2119c290-7515-4234-a1d9-5a11529eece7.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "SessionStart",
+    "source": "startup",
+    "model": "claude-opus-4-8[1m]"
+  }
+]

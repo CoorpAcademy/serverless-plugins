@@ -1,0 +1,100 @@
+[
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration\necho \"=== FULL error/stack from current branch ===\"\nnpx sls offline start --config serverless.sqs.yml 2>&1 | head -40",
+      "timeout": 60000,
+      "description": "Capture full sls offline crash stack"
+    },
+    "tool_use_id": "toolu_01RbJL767UBJw3DMmeKCJiWc"
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins\necho \"=== master branch latest CI state ===\"\nenv -u GITHUB_TOKEN gh api repos/CoorpAcademy/serverless-plugins/commits/master/check-runs --jq '.check_runs[] | \"\\(.name): \\(.conclusion)\"' 2>&1 | head\necho; echo \"=== CI log: context around test-sqs / sqs errors (node20 job) ===\"\ncurl -s -H \"Travis-API-Version: 3\" \"https://api.travis-ci.com/job/639778501/log.txt\" 2>/dev/null | grep -inE \"starting offline sqs|cannot redefine|test:sqs|test-sqs|TypeError|Error:|expected|assert|\u03bb:|exited with\" | head -40",
+      "description": "Master CI status + full CI log search"
+    },
+    "tool_use_id": "toolu_01DQV3RCa2mnGhF3utbZFqVn"
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration\necho \"=== what holds port 9324? ===\"; docker ps --format '{{.Names}}\\t{{.Ports}}' | grep 9324 || echo \"nothing\"\nexport NVM_DIR=\"$HOME/.nvm\"; \\. \"$NVM_DIR/nvm.sh\"\nnvm use 20.20.2 >/dev/null 2>&1; echo \"node now: $(node -v)\"\necho \"=== run test:sqs under Node 20 (reproduce CI) \u2014 capturing sls output ===\"\nnpm run -s test:sqs 2>&1 | head -40; echo \"EXIT=${PIPESTATUS[0]}\"",
+      "timeout": 120000,
+      "description": "Reproduce test:sqs under Node 20"
+    },
+    "tool_use_id": "toolu_016TSXo281MhCVJgnxYcH7uX"
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/scripts/create-queues.sh"
+    },
+    "tool_use_id": "toolu_01KSnMovWbpYD4vpesTrmY7b"
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins\necho \"=== latest master commit on origin ===\"; git ls-remote origin -h refs/heads/master | head -1\necho \"=== Travis: most recent builds (any branch) with sha+state ===\"\ncurl -s -H \"Travis-API-Version: 3\" \"https://api.travis-ci.com/repo/CoorpAcademy%2Fserverless-plugins/builds?limit=6&sort_by=started_at:desc\" 2>/dev/null | python3 -c \"\nimport sys,json\nd=json.load(sys.stdin)\nfor b in d.get('builds',[]):\n    print(b.get('number'), '|', b.get('state'), '|', b.get('branch',{}).get('name'), '|', b.get('commit',{}).get('sha','')[:8], '|', (b.get('commit',{}).get('message','') or '').splitlines()[0][:45])\n\"",
+      "description": "Read create-queues.sh + Travis recent builds"
+    },
+    "tool_use_id": "toolu_01LbibigEZN3A4RXFg1rpG32"
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins\necho \"=== node_modules/serverless-offline-sqs (symlink?) ===\"; ls -la node_modules/serverless-offline-sqs 2>&1 | head -2\necho \"=== temporarily restore MASTER's sqs src, test load on node20 ===\"\ngit checkout master -- packages/serverless-offline-sqs/src/index.js packages/serverless-offline-sqs/src/sqs.js\nexport NVM_DIR=\"$HOME/.nvm\"; \\. \"$NVM_DIR/nvm.sh\"; nvm use 20.20.2 >/dev/null 2>&1\ncd tests/serverless-plugins-integration\nnpx sls offline start --config serverless.sqs.yml 2>&1 | grep -iE \"redefine|error:|starting offline|getqueueurl|NonExistent|ECONNREFUSED\" | head -6\ncd /Users/silouane/coorp/serverless-plugins\necho \"=== restore my branch version ===\"\ngit checkout HEAD -- packages/serverless-offline-sqs/src/index.js packages/serverless-offline-sqs/src/sqs.js\ngit status --short packages/serverless-offline-sqs/src",
+      "timeout": 90000,
+      "description": "Test master's sqs code locally for same crash"
+    },
+    "tool_use_id": "toolu_01GDYqNgz3qQZoHCnbUXLurd"
+  }
+]

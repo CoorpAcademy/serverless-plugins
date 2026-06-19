@@ -1,0 +1,533 @@
+[
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git ls-files | head -200",
+      "description": "List tracked files in repo"
+    },
+    "tool_use_id": "toolu_014QxkkKCrr73icVwbW1QoBY"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "ls -la docs/ 2>/dev/null && echo \"---AI_DOCS---\" && ls -la ai_docs/ 2>/dev/null && echo \"---DOCS_TREE---\" && find docs -type f 2>/dev/null | head -100",
+      "description": "List docs and ai_docs directories"
+    },
+    "tool_use_id": "toolu_01V5sJ1zznrZHb5GFzGXmbrT"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "find docs -type f | sort && echo \"---PLANS---\" && ls -la docs/plans/",
+      "description": "List all docs files and plans"
+    },
+    "tool_use_id": "toolu_015cKVdAmruGhQMpzo9MK2GY"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/docs/README.md"
+    },
+    "tool_use_id": "toolu_01XNxG2Br3LbnorCiqBntRpC"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/docs/plans/00-goal.md"
+    },
+    "tool_use_id": "toolu_01KXCb6K2YkHAoNiPyWyZRx8"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/docs/open-pr-triage.md"
+    },
+    "tool_use_id": "toolu_011GZ6QEixhk2PH7pvvvQe9M"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "gh issue list --repo CoorpAcademy/serverless-plugins --state open --limit 100 --json number,title,labels,createdAt,updatedAt,comments,author --jq 'sort_by(.updatedAt) | reverse | .[] | \"#\\(.number) [\\(.updatedAt[0:10])] (\\(.comments)c) \\(.title) \u2014 @\\(.author.login)\"'",
+      "description": "List all open issues sorted by updated"
+    },
+    "tool_use_id": "toolu_01JS92sEpFpi53wmNjcbRxf6"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "gh auth status 2>&1 | head -20; echo \"---TOKEN---\"; [ -n \"$GITHUB_TOKEN\" ] && echo \"GITHUB_TOKEN set\" || echo \"no GITHUB_TOKEN\"; [ -n \"$GH_TOKEN\" ] && echo \"GH_TOKEN set\" || echo \"no GH_TOKEN\"",
+      "description": "Check gh auth status and tokens"
+    },
+    "tool_use_id": "toolu_011FXxT8TYaAeVzNEj641q5Z"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "unset GITHUB_TOKEN; gh issue list --repo CoorpAcademy/serverless-plugins --state open --limit 100 --json number,title,labels,createdAt,updatedAt,comments,author --jq 'sort_by(.updatedAt) | reverse | .[] | \"#\\(.number) [\\(.updatedAt[0:10])] (\\(.comments)c) \\(.title) \u2014 @\\(.author.login)\"'",
+      "description": "List open issues, bypassing bad env token"
+    },
+    "tool_use_id": "toolu_0145jkjQYHMcNFgMmtZB4cuY"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "unset GITHUB_TOKEN; gh issue list --repo CoorpAcademy/serverless-plugins --state open --limit 100 --json number,title,labels,createdAt,updatedAt,comments,author --jq 'sort_by(.updatedAt) | reverse | .[] | \"#\\(.number) | \\(.updatedAt[0:10]) | \\(.comments | length)c | \\(.title) | @\\(.author.login) | labels: \\([.labels[].name] | join(\",\"))\"'",
+      "description": "Clean metadata-only issue list"
+    },
+    "tool_use_id": "toolu_012vnA1ABvQr1hombauro9m5"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "unset GITHUB_TOKEN; gh issue list --repo CoorpAcademy/serverless-plugins --state open --limit 100 --json number,title,body,labels,createdAt,updatedAt,author > /tmp/sp-issues.json; echo \"Issues dumped: $(jq 'length' /tmp/sp-issues.json)\"; echo \"Size: $(wc -c < /tmp/sp-issues.json) bytes\"",
+      "description": "Dump all issue bodies to file"
+    },
+    "tool_use_id": "toolu_01CSVGYbYv2DETNnDR8T65go"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git log --oneline -15 origin/master..HEAD 2>/dev/null || git log --oneline -15; echo \"===DIFFSTAT vs master===\"; git diff --stat master...HEAD 2>/dev/null | tail -40",
+      "description": "Show branch commits and diffstat vs master"
+    },
+    "tool_use_id": "toolu_019QwGzKcNNMKV8sqcxkbMgN"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "jq -r 'sort_by(.number) | .[] | \"\\n========== #\\(.number) | \\(.title) ==========\\nupdated:\\(.updatedAt[0:10]) labels:[\\([.labels[].name]|join(\", \"))]\\n\\(.body // \"(no body)\" | .[0:1800])\"' /tmp/sp-issues.json > /tmp/sp-issues.txt; wc -l /tmp/sp-issues.txt",
+      "description": "Render issue bodies to readable text"
+    },
+    "tool_use_id": "toolu_01JQFMVSTbqpaoKQVrZdCxTV"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/tmp/sp-issues.txt"
+    },
+    "tool_use_id": "toolu_011hDN4BDB1LX1bd8rSdYsgR"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/tmp/sp-issues.txt",
+      "offset": 1267,
+      "limit": 500
+    },
+    "tool_use_id": "toolu_01LvCECdZ5pgbDxYCca77hi3"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/packages/serverless-offline-sqs/src/sqs.js"
+    },
+    "tool_use_id": "toolu_01CAB2SqzNBY6dPoHenGvzfT"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/packages/serverless-offline-sqs/src/sqs-event-definition.js"
+    },
+    "tool_use_id": "toolu_018HBU1nrcSeGnAaDDfLUWRp"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/packages/serverless-offline-sqs/src/index.js"
+    },
+    "tool_use_id": "toolu_01QLT24Bf2QiH6K6PPawDtKd"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/packages/serverless-offline-dynamodb-streams/src/dynamodb-streams.js"
+    },
+    "tool_use_id": "toolu_01VmzvwkpVt9GQ3hCJeppQjf"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/packages/serverless-offline-kinesis/src/index.js"
+    },
+    "tool_use_id": "toolu_018XwR57EeSirBroaqkwjKNf"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/packages/serverless-offline-kinesis/src/kinesis.js"
+    },
+    "tool_use_id": "toolu_01PT5811HFhFGqhc1nzzQJ86"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins; for p in s3 sqs kinesis dynamodb-streams; do echo \"=== $p ===\"; grep -E '\"aws-sdk|@aws-sdk' packages/serverless-offline-$p/package.json 2>/dev/null || echo \"(no aws-sdk dep line)\"; done",
+      "description": "Check aws-sdk version across packages"
+    },
+    "tool_use_id": "toolu_01KM6Rk3TMwioiYmQjpUc2Eu"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/packages/serverless-offline-dynamodb-streams/src/index.js",
+      "offset": 150,
+      "limit": 90
+    },
+    "tool_use_id": "toolu_01KFfDLyW6m7imZcVF7YZZxS"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/docs/open-issue-triage.md",
+      "content": "# Open ISSUE triage \u2014 `serverless-plugins`\n\n> **Date:** 2026-06-20 \u00b7 **65 open issues** \u00b7 **Status:** READ-ONLY analysis. No code changed.\n> Companions: [`open-pr-triage.md`](./open-pr-triage.md) \u00b7 [`serverless-v4-migration-review.md`](./serverless-v4-migration-review.md) \u00b7 [`plans/00-goal.md`](./plans/00-goal.md)\n>\n> Each issue was judged against the **current code on `feat/serverless-v4-support`** (not against the\n> title or the version the reporter was on). \"Fixed\" means the fix is present on this branch and ships\n> the moment we `lerna publish`. Numbers in `()` after a verdict are related issue/PR refs.\n\n## How to read this\n\nFour buckets, exactly as requested:\n\n1. **\u2705 FIXED \u2014 close on release** \u2014 our v4 branch already resolves it. Verify, reply, close when published.\n2. **\ud83d\udc1e REAL BUG \u2014 we should fix** \u2014 genuine defect in *current* code. Has an action plan below.\n3. **\ud83e\udde9 KEEP \u2014 valuable, can't ditch** \u2014 legitimate feature/bug we want, but bigger or deferred (Tier-2).\n4. **\ud83d\uddd1\ufe0f DITCH \u2014 close** \u2014 stale, environment/config, user error, out-of-scope, wontfix, or not our code.\n\nPlus two **investigation clusters** (recurring symptoms that need a repro before we can bucket each one).\n\n---\n\n## Headline findings\n\n1. **The v4 release alone closes a cluster.** `#263, #232, #182, #219, #165, #145, #169` are already fixed\n   on this branch. `#263` (the `@serverless/utils/log` crash) is the most-active, most-recent issue in the\n   tracker \u2014 publishing the v4 versions is the single highest-leverage action.\n2. **`aws-sdk@^2` is the next big theme.** *All four* plugins still `require('aws-sdk/clients/...')`\n   (v2, EOL). This is the root of `#248, #252, #260` and the noisy maintenance-mode warnings. A v3 migration\n   is the natural Tier-2 epic after v4 lands.\n3. **Two long-standing clusters dominate the bug tail:** SQS \"lambda not triggered / only runs once\"\n   (`#210, #255, #198, #147, #132, \u2026`) and DynamoDB-streams \"shard iterator / replay / empty table\"\n   (`#54, #82, #84, #154, #163, #164, #178`). Most need a clean repro on the v4 base before we touch code.\n4. **DLQ / autoCreate is a real feature gap** repeatedly reported (`#65, #133, #167, #87`) \u2014 the same need\n   behind PR `#183`. Worth owning.\n5. **`serverless-offline-ssm-provider` has no source in this monorepo** (only a `README.md` is tracked).\n   `#105, #152, #186` may not be ours to fix here \u2014 confirm where that package lives before acting.\n6. **`#259` is not our repo** (reporter uses none of our plugins) \u2014 close.\n\n---\n\n## Master table (all 65)\n\n| # | Pkg | Title (short) | Bucket | One-line action |\n|---|---|---|---|---|\n| 263 | core/sqs | v4 `@serverless/utils/log` not found | \u2705 FIXED | Close on release \u2014 log shim landed |\n| 232 | sqs | `Cannot read property 'debug'` | \u2705 FIXED | Close on release \u2014 `normalizeLog` defaults |\n| 182 | sqs | undefined `this.region` | \u2705 FIXED | Close \u2014 `this.options.region` |\n| 219 | sqs | SQS event region undefined (dup 182) | \u2705 FIXED | Close as dup of #182 |\n| 165 | sqs | ReadCountOutOfRange w/ batchSize>1 | \u2705 FIXED | Close \u2014 `MaxNumberOfMessages` capped at 10 |\n| 145 | ddb | `this._waitFor is not a function` | \u2705 FIXED | Close \u2014 catch now recurses `_describeTable` |\n| 169 | ddb | prevents serverless exiting | \u2705 FIXED | Close \u2014 `end()` now handles signal + exits |\n| 226 | sqs | uncaught handler error kills process | \u2705 FIXED? | Verify \u2014 `job()` now try/catches \u2192 `log.warning` |\n| 250 | kinesis | CJS/ESM build error | \u2705 FIXED? | Verify on v4 base \u2014 dynamic `import()` now used |\n| 197 | ddb | ECONNREFUSED on SIGINT | \u2705 FIXED? | Verify \u2014 tied to #169; mostly dynamodb-local env |\n| 200 | sqs | Missing QueueName w/ `Fn::Join` arn | \ud83d\udc1e BUG | Resolve `Fn::Join` arns; fix `switch` fallthrough |\n| 262 | sqs | `queueName` extraction + array support | \ud83d\udc1e BUG | Replace `switch('string')`; (opt) array of names |\n| 225 | sqs | explicit queue create fails (AWS/sqslite) | \ud83d\udc1e BUG | Omit `QueueName` from `Attributes` on `createQueue` |\n| 159 | sqs | FIFO not honored on autoCreate | \ud83d\udc1e BUG | Honor `FifoQueue`/`.fifo` when autocreating |\n| 158 | sqs | idle CPU spin (`setTimeout(f, NaN)`) | \ud83d\udc1e BUG | Add `functionCleanupIdleTimeSeconds` to defaults |\n| 241 | ddb | hangs if table/stream missing | \ud83d\udc1e BUG | Bound `_describeTable` retries; warn + continue |\n| 103 | ddb | several stream-ARN gaps | \ud83d\udc1e BUG | Add `arn` null-check; `Fn::ImportValue`/`Ref` (tableName already works) |\n| 101 | apigw | `__unused_stage__` non-alphanumeric | \ud83d\udc1e BUG | Fix stage-name templating in access-logs plugin |\n| 160 | sqs | docs link 404 / can't follow setup | \ud83d\udc1e BUG | Fix README integration link |\n| 186 | ssm | default `Parameter.Type` missing | \ud83d\udc1e BUG* | *Confirm we own ssm-provider source first |\n| 65 | sqs | autoCreate DLQs + redrive | \ud83e\udde9 KEEP | Feature \u2014 own PR #183 idea |\n| 133 | sqs | DLQ autoCreate broken (NonExistentQueue) | \ud83e\udde9 KEEP | Same root as #65/#167 |\n| 167 | sqs | can't create queue w/ RedrivePolicy | \ud83e\udde9 KEEP | Same root as #65/#133 |\n| 87 | sqs | MessageRetentionPeriod/redrive offline | \ud83e\udde9 KEEP | Partly ElasticMQ limit; tie to DLQ work |\n| 221 | sqs | partial batch failure reporting | \ud83e\udde9 KEEP | Implement `ReportBatchItemFailures` |\n| 227 | sqs | `maximumBatchingWindow` ignored | \ud83e\udde9 KEEP | Map to `WaitTimeSeconds` (now hard-coded 5) |\n| 242 | ddb | `filterPatterns` ignored | \ud83e\udde9 KEEP | Implement event-filtering locally |\n| 64 | apigw | apply access-logs to existing stack | \ud83e\udde9 KEEP | Support pre-existing stage |\n| 248 | ddb | still aws-sdk v2 | \ud83e\udde9 KEEP | v3 migration epic |\n| 252 | sqs | still aws-sdk v2 | \ud83e\udde9 KEEP | v3 migration epic |\n| 260 | sqs | breaks on newer @aws-sdk (500/HTML) | \ud83e\udde9 KEEP | Investigate w/ v3 migration |\n| 127 | kinesis | ProvisionedThroughputExceeded | \ud83e\udde9 KEEP | Add read backoff option |\n| 54 | ddb | premature `end` (TRIM_HORIZON fires once) | \ud83d\udd0d INVESTIGATE | Stream-iterator cluster (readable lib) |\n| 82 | ddb | only 1st read interval | \ud83d\udd0d INVESTIGATE | = #54 cluster |\n| 84 | ddb | doesn't work for empty table | \ud83d\udd0d INVESTIGATE | = #54 cluster |\n| 163 | ddb | handler triggered only once | \ud83d\udd0d INVESTIGATE | = #54 cluster |\n| 178 | ddb | past events replayed each start / OOM | \ud83d\udd0d INVESTIGATE | = #54 cluster (iterator persistence) |\n| 154 | ddb | Invalid ShardId in ShardIterator | \ud83d\udd0d INVESTIGATE | Iterator expiry on long sessions |\n| 164 | ddb | Invalid ShardId in ShardIterator | \ud83d\udd0d INVESTIGATE | = #154 |\n| 238 | ddb | `serverless-offline/lambda` not found + tableName warn | \ud83d\udd0d INVESTIGATE | Verify on v4 base; register `tableName` in schema |\n| 210 | sqs | only runs jobs on first run | \ud83d\udd0d INVESTIGATE | SQS-trigger cluster |\n| 255 | sqs | doesn't trigger lambda (elasticMQ) | \ud83d\udd0d INVESTIGATE | SQS-trigger cluster |\n| 198 | sqs | event doesn't start lambda (`--useDocker`) | \ud83d\udd0d INVESTIGATE | SQS-trigger cluster (docker) |\n| 147 | sqs | stops triggering | \ud83d\udd0d INVESTIGATE | SQS-trigger cluster |\n| 132 | sqs | SQS + HTTP, only one lambda starts | \ud83d\udd0d INVESTIGATE | Verify on v4 \u2014 `_createLambda` builds all |\n| 161 | sqs | breaks on non-default port | \ud83d\udd0d INVESTIGATE | Verify `_rewriteQueueUrl` + endpoint config |\n| 123 | sqs | frequent 503 Service Unavailable | \ud83d\udd0d INVESTIGATE | ElasticMQ timeout; verify on v4 |\n| 170 | sqs | won't boot under `node --inspect` | \ud83d\udd0d INVESTIGATE | Repro (Windows path in report) |\n| 189 | sqs | Missing QueueName/QueueUrl (fifo arn) | \ud83d\udd0d INVESTIGATE | = #200 arn-parsing family |\n| 74 | sqs | breaks w/ serverless-pseudo-parameters | \ud83d\udd0d INVESTIGATE | arn-resolution ordering; = #200 family |\n| 143 | sqs | vars outside handler break (2nd msg) | \ud83d\udd0d INVESTIGATE | Likely core serverless-offline; = #102 |\n| 102 | sqs | `--useWorkerThreads` resets `process.env` | \ud83d\udd0d INVESTIGATE | Likely core serverless-offline |\n| 135 | sqs | queue URL env var = `[object Object]` | \ud83d\udd0d INVESTIGATE | `Ref` not resolved offline; scope check |\n| 146 | sqs | bundle ElasticMQ | \ud83d\uddd1\ufe0f DITCH | Already `wontfix` \u2014 keep closed stance |\n| 130 | sqs | docker-compose http/https to elasticmq | \ud83d\uddd1\ufe0f DITCH | Config/support Q \u2014 answer & close |\n| 156 | sqs | subscribe SQS\u2192SNS offline | \ud83d\uddd1\ufe0f DITCH | Cross-plugin, out of scope |\n| 195 | sqs | `variablesResolutionMode: 20210326` | \ud83d\uddd1\ufe0f DITCH | Serverless v2-era, obsolete |\n| 222 | sqs | locally skip a plugin | \ud83d\uddd1\ufe0f DITCH | Low value \u2014 document \"remove the plugin\" |\n| 239 | sqs | lift + localstack guide | \ud83d\uddd1\ufe0f DITCH | HOWTO; its fix (#211 queueName) already landed |\n| 184 | ddb | doesn't work with Dynalite | \ud83d\uddd1\ufe0f DITCH | Dynalite lacks streams \u2014 not our bug |\n| 259 | core | serverless runs forever | \ud83d\uddd1\ufe0f DITCH | Reporter uses none of our plugins |\n| 254 | meta | still maintained? | \ud83d\uddd1\ufe0f DITCH | Reply \"yes, v4 landing\" & close |\n| 105 | ssm | example config file | \ud83d\uddd1\ufe0f DITCH* | Docs Q \u2014 *ssm-provider source not in repo |\n| 152 | ssm | clarify intended behavior | \ud83d\uddd1\ufe0f DITCH* | Docs Q \u2014 *ssm-provider source not in repo |\n\n---\n\n## \u2705 FIXED \u2014 close on release (7 verified + 3 to verify)\n\nThese resolve the moment the v4 versions publish. Reply on each thanking the reporter, link the release.\n\n- **#263 \u2014 `@serverless/utils/log` not found (v4).** Root cause of the whole v4 breakage. Branch replaces\n  the hard `require('@serverless/utils/log')` with the injected `{log}` 3rd arg + `src/log.js`\n  console-fallback shim. **The flagship close.**\n- **#232 \u2014 `Cannot read property 'debug' of undefined`.** Same logger problem from the v3 era;\n  `normalizeLog(log)` now defaults every level, so a missing logger can't crash.\n- **#182 / #219 \u2014 `this.region` undefined.** `sqs.js` now passes `this.options.region` to `SQSEvent`\n  (was `this.region`, never set). #219 is a duplicate \u2014 close both, credit zlalvani (PR #166).\n- **#165 \u2014 ReadCountOutOfRange with `batchSize > 1`.** `getMessages` caps `MaxNumberOfMessages` at 10 and\n  loops to fill `batchSize`, so SQS never sees an out-of-range count. Ask reporter to confirm on the new build.\n- **#145 \u2014 `this._waitFor is not a function`.** `_describeTable`'s catch now recurses `_describeTable`\n  (a real method), not the non-existent `_waitFor`. (See #241 for the *flip side* \u2014 it now retries forever.)\n- **#169 \u2014 prevents serverless from exiting.** `_listenForTermination` now actually handles `SIGINT/SIGTERM`\n  (`await this.end()` \u2192 `process.exit(0)`), instead of swallowing the first signal. Close.\n\n**Verify before closing (likely fixed, confirm with a repro):**\n- **#226 \u2014 uncaught handler error kills process.** `job()` wraps `runHandler()` in try/catch and logs via\n  `this.log.warning`, so a throwing handler no longer tears down the process. Confirm, then close.\n- **#250 \u2014 CJS/ESM kinesis build error.** Current code uses the deliberate dynamic `import('serverless-offline/lambda')`;\n  the old mixed-module crash should be gone on the v4 base. Reproduce on a no-`\"type\"` package and close.\n- **#197 \u2014 ECONNREFUSED on SIGINT.** Largely the `serverless-dynamodb-local` child process; the #169 fix\n  should make shutdown clean. Verify against the sample repo.\n\n---\n\n## \ud83d\udc1e REAL BUG \u2014 we should fix (current-code defects)\n\nSmall, well-scoped, high signal-to-noise. Good candidates for the next PR after v4 lands.\n\n- **#200 \u2014 Missing QueueName with `Fn::Join` ARN.** `index.js#_resolveFn` only unwraps `Fn::GetAtt`/`Arn`;\n  a `Fn::Join` ARN stays an object, so `SQSEventDefinition`'s `switch('string')` falls through and the ARN\n  becomes `\u2026:undefined`. **Fix:** resolve `Fn::Join` (and `Ref AWS::AccountId`) in `_resolveFn`, and make\n  `sqs-event-definition.js` guard non-string arns. Same family as #189, #74.\n- **#262 \u2014 `queueName` extraction (and array support).** The `switch('string')` construct is fragile and\n  misses object/array shapes (overlaps #200). **Fix:** replace with explicit `if/else` + missing-prop guard.\n  *Optionally* let `queueName` be an array \u2192 one listener per queue (the reporter's ask, niche).\n- **#225 \u2014 explicit queue creation fails on real AWS / sqslite.** `_createQueue` builds `Attributes` from the\n  *entire* `Properties` block, which includes `QueueName` \u2192 `InvalidAttributeName: Unknown Attribute QueueName`.\n  ElasticMQ tolerates it; AWS/sqslite don't. **Fix:** `omit(['QueueName'], properties)` before `mapValues`.\n- **#159 \u2014 FIFO queues not honored on autoCreate.** Autocreate ignores `FifoQueue`/the `.fifo` suffix, so a\n  FIFO queue is created as standard and `MessageGroupId` is rejected. **Fix:** pass the `FifoQueue`\n  (+ `ContentBasedDeduplication`) attributes through, or derive from a `.fifo` name. Overlaps the #225 fix.\n- **#158 \u2014 idle CPU spin.** `defaultOptions` omits `functionCleanupIdleTimeSeconds`, so serverless-offline's\n  `LambdaFunctionPool` does `setTimeout(f, NaN)` \u2192 busy loop. **Fix:** add `functionCleanupIdleTimeSeconds: 60`\n  to `defaultOptions` in each `index.js`. Cheap, broad win.\n- **#241 \u2014 hangs if table/stream missing.** Flip side of the #145 fix: `_describeTable` now recurses forever\n  when the table doesn't exist, so serverless-offline never finishes booting. **Fix:** bound the retries and,\n  on exhaustion, `log.warning` + skip that stream (don't block startup). Pairs with the #98 no-stream guard.\n- **#103 \u2014 DynamoDB stream-ARN gaps.** `tableName` is now supported (`_resolveFn` checks `event.tableName`).\n  Still missing: an `arn` null-check before `Fn::GetAtt`, and `Fn::ImportValue` / `Ref` ARN forms. **Fix:**\n  add the guard + the two resolver branches. Update README example accordingly.\n- **#101 \u2014 `__unused_stage__` non-alphanumeric** (serverless-apigateway-access-logs). Stage-name templating\n  emits `ApiGatewayStage__unused_stage__`. **Fix:** correct the logical-id/stage derivation in that plugin's\n  `src/index.js`. Self-contained.\n- **#160 \u2014 broken docs.** The README \"how it works\" links to a removed `\u2026-sqs-integration/docker-compose.yml`\n  (404). **Fix:** point to the live `tests/serverless-plugins-integration/` setup. Trivial doc fix.\n- **#186 \u2014 ssm-provider default `Parameter.Type`.** Real one-liner (default `Type: 'String'`), **but** the\n  ssm-provider source is *not tracked in this monorepo* (only its README). Confirm where the package lives\n  before doing anything; may belong to another repo / be unmaintained here.\n\n---\n\n## \ud83e\udde9 KEEP \u2014 valuable, can't ditch (features / Tier-2)\n\nLegitimate, repeatedly requested \u2014 keep open with a labelled roadmap. Don't close as \"won't do\".\n\n- **DLQ + redrive cluster \u2014 #65, #133, #167, #87.** The most-requested SQS feature: on `autoCreate`, create\n  dead-letter queues *first*, then the main queue with its `RedrivePolicy`. Today the redrive target doesn't\n  exist \u2192 `NonExistentQueue`. This is exactly PR **#183**'s idea \u2014 own it. (#87 also touches\n  `MessageRetentionPeriod`, partly an ElasticMQ limitation \u2014 set expectations there.)\n- **#221 \u2014 partial batch failure reporting.** Support `FunctionResponseTypes: ReportBatchItemFailures`:\n  only delete messages *not* in the handler's `batchItemFailures`. Modern, well-defined, high value.\n- **#227 \u2014 `maximumBatchingWindow`.** `WaitTimeSeconds` is hard-coded to 5 in `getMessages`; map the event's\n  `maximumBatchingWindow` onto it. Small, but currently a silent no-op.\n- **#242 \u2014 DynamoDB `filterPatterns`.** Apply event-source filter patterns locally before invoking the\n  handler. Larger (needs an AWS-compatible filter evaluator) but genuinely useful.\n- **#64 \u2014 apply access-logs to an existing stack.** `ApiGatewayStage \u2026 already exists` when the stage\n  predates the plugin. Support attaching to a pre-existing stage. apigateway-access-logs.\n- **aws-sdk v3 epic \u2014 #248, #252, #260.** All plugins still use `aws-sdk@^2` (EOL, maintenance warnings).\n  Migrate to modular `@aws-sdk/client-*`. #260 (deserialization 500/HTML) likely shakes out here too.\n  Big, coordinated, post-v4. The natural next milestone.\n- **#127 \u2014 Kinesis `ProvisionedThroughputExceededException`.** Local reads are too aggressive against a\n  shared dev stream. Add a configurable read interval / backoff. Question-flavoured but actionable.\n\n---\n\n## \ud83d\udd0d Investigation clusters (need a repro on the v4 base before bucketing)\n\nThese share symptoms; chasing them individually wastes effort. Build one repro harness per cluster on the\nv4 branch, then split into FIX / KEEP / DITCH.\n\n**A \u2014 SQS \"lambda not triggered / only runs once\": #210, #255, #198, #147, #132, #161, #123, #170, #135.**\nCurrent `_sqsEvent` re-adds `job` to a `PQueue` after each poll, so steady-state polling *should* work.\nMost reports are old and smell of config (ElasticMQ `receiveMessageWait`, `autoCreate:false` against a\nmissing queue, `--useDocker`, non-default port + endpoint mismatch). Reproduce against ElasticMQ on the v4\nbuild; several likely close as fixed/config. `#132` (SQS + HTTP) specifically should be re-tested \u2014 current\n`_createLambda` builds *all* lambdas, not just SQS ones.\n\n**B \u2014 DynamoDB-streams iterator/replay: #54, #82, #84, #163, #178, #154, #164, #238.** Two sub-themes:\n(1) `dynamodb-streams-readable` emits `end` prematurely so `TRIM_HORIZON` only fires on boot (#54 \u2192 #82, #84,\n#163); (2) shard-iterator expiry on long sessions (#154, #164) and replay/OOM on restart (#178). These point\nat the `dynamodb-streams-readable` package and the `startingPosition` handling \u2014 the real engineering work in\nthis repo. Needs a DynamoDB-Local + stream repro. `#238`'s `tableName` schema warning is separable (register\nthe property in the plugin schema).\n\n**C \u2014 env/runtime edge cases: #143, #102.** \"Variables outside the handler break on the 2nd message\",\n`--useWorkerThreads` resets `process.env`. These are most likely **core `serverless-offline`/Lambda-pool**\nbehavior, not ours. Confirm against a vanilla serverless-offline setup; if it reproduces without our plugin,\nredirect upstream and close.\n\n---\n\n## \ud83d\uddd1\ufe0f DITCH \u2014 close (with a short, kind rationale)\n\n- **#146 \u2014 bundle ElasticMQ** \u2014 already `wontfix`; out of scope (keep the plugin thin). Close.\n- **#130 \u2014 docker-compose http/https to ElasticMQ** \u2014 config (use `http://\u2026:9324`, not implicit https). Answer & close.\n- **#156 \u2014 subscribe offline SQS to offline SNS** \u2014 cross-plugin orchestration, out of scope. Close with pointer.\n- **#195 \u2014 `variablesResolutionMode: 20210326`** \u2014 Serverless v2-era resolver flag; obsolete under v3/v4. Close as stale.\n- **#222 \u2014 locally skip a plugin** \u2014 low value; documented answer is \"don't list the plugin for that run\". Close.\n- **#239 \u2014 lift + localstack guide** \u2014 a community HOWTO, not a bug; the modification it required (`queueName`\n  override) already shipped as #211. Thank, optionally fold into docs, close.\n- **#184 \u2014 Dynalite** \u2014 Dynalite doesn't implement DynamoDB Streams; not fixable here. Recommend DynamoDB-Local/LocalStack, close.\n- **#259 \u2014 serverless runs forever** \u2014 reporter's plugin list contains *none* of ours; not this repo. Close/redirect.\n- **#254 \u2014 still maintained?** \u2014 answer \"yes \u2014 v4 support is landing now\", link the branch/PR, close.\n- **#105 / #152 \u2014 ssm-provider docs questions** \u2014 answer if quick, but note ssm-provider source isn't in this\n  monorepo; verify ownership. Close as docs/support.\n\n---\n\n## Suggested execution order (when we leave read-only)\n\n1. **Publish the v4 versions.** Immediately reply+close the \u2705 bucket (`#263, #232, #182, #219, #165, #145, #169`),\n   and verify-then-close `#226, #250, #197`. Biggest, cheapest win.\n2. **Quick-bug PR** (one branch): `#225`, `#159`, `#158`, `#200`/`#262`, `#241`, `#103`, `#160`. All small,\n   current-code, low-risk, well-scoped.\n3. **DLQ/autoCreate feature** (`#65/#133/#167/#87`, owning PR #183's idea).\n4. **Investigation harnesses** for clusters A and B on the v4 base; re-bucket their issues from real repros.\n5. **aws-sdk v3 epic** (`#248/#252/#260`) as the next milestone.\n6. **Close the \ud83d\uddd1\ufe0f bucket** with rationale; convert `#239` to docs if useful.\n\n> Net of 65 open issues: **~10 close on release**, **~10 real small bugs**, **~9 keep (features/Tier-2)**,\n> **~24 need a repro (2 clusters + edge cases)**, **~12 ditch**. Counts overlap where issues are duplicates.\n</content>\n</invoke>\n"
+    },
+    "tool_use_id": "toolu_01W78JqFeGkAfJaFW9iTHQVr"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/docs/README.md",
+      "old_string": "| [`serverless-v4-migration-review.md`](./serverless-v4-migration-review.md) | Critical review of the v4 migration & PR #264. What's right, what to challenge, recommended path. |\n| [`open-pr-triage.md`](./open-pr-triage.md) | Triage of all 17 open PRs: keep / merge-as-is / merge-after-work / re-implement / close. |\n\n> Status: 2026-06-19 \u2014 initial review. Read-only analysis, no code changed yet.",
+      "new_string": "| [`serverless-v4-migration-review.md`](./serverless-v4-migration-review.md) | Critical review of the v4 migration & PR #264. What's right, what to challenge, recommended path. |\n| [`open-pr-triage.md`](./open-pr-triage.md) | Triage of all 17 open PRs: keep / merge-as-is / merge-after-work / re-implement / close. |\n| [`open-issue-triage.md`](./open-issue-triage.md) | Triage of all 65 open issues against current code: fixed-on-release / real bug / keep / ditch + 2 investigation clusters, with a per-issue action plan. |\n\n> Status: 2026-06-20 \u2014 read-only analysis. PR triage (2026-06-19) + issue triage (2026-06-20). No code changed.",
+      "replace_all": false
+    },
+    "tool_use_id": "toolu_01R2nhJs5Vc5psVTNUc2SEvQ"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "uv run /Users/silouane/.claude/hooks/utils/tts/higgs_tts.py \"Silou, I read all sixty-five open issues and wrote a full triage doc. Ten are already fixed by your v4 branch and close on release, ten are small real bugs, and the next big theme is migrating off aws-sdk v2.\"",
+      "description": "Speak audio summary to user"
+    },
+    "tool_use_id": "toolu_01AJgWVMuh6wieGaw31nanKG"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins\necho \"=== .travis.yml ===\"; cat .travis.yml 2>/dev/null\necho \"=== GH Actions? ===\"; ls -la .github/workflows/ 2>/dev/null || echo \"(none)\"\necho \"=== root package.json scripts ===\"; jq '.scripts' package.json\necho \"=== lerna/workspaces ===\"; jq '{version, packages, npmClient, useWorkspaces}' lerna.json 2>/dev/null; jq '.workspaces' package.json",
+      "description": "Inspect CI config and test scripts"
+    },
+    "tool_use_id": "toolu_01GjjWgTfqo8oexTcQASQZqq"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins\necho \"=== open PRs ===\"; unset GITHUB_TOKEN; gh pr list --repo CoorpAcademy/serverless-plugins --state open --limit 30 --json number,title,headRefName,author --jq '.[] | \"#\\(.number) [\\(.headRefName)] \\(.title) \u2014 @\\(.author.login)\"' 2>&1 | head -30\necho \"=== is our branch pushed? ===\"; git rev-parse --abbrev-ref HEAD; git config --get branch.feat/serverless-v4-support.remote 2>/dev/null || echo \"(no upstream set)\"\necho \"=== branch protection / default branch ===\"; gh repo view CoorpAcademy/serverless-plugins --json defaultBranchRef,viewerPermission --jq '{default: .defaultBranchRef.name, perm: .viewerPermission}' 2>&1",
+      "description": "Check open PRs, branch upstream, permissions"
+    },
+    "tool_use_id": "toolu_01KoPWQUwbk5CN9i8YpPZCqo"
+  },
+  {
+    "session_id": "abc7156b-6420-4373-a150-9b2eecad6805",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/abc7156b-6420-4373-a150-9b2eecad6805.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PreToolUse",
+    "tool_name": "AskUserQuestion",
+    "tool_input": {
+      "questions": [
+        {
+          "question": "How should the ~19 issues be packaged into PRs?",
+          "header": "PR granularity",
+          "options": [
+            {
+              "label": "~9 grouped PRs (Recommended)",
+              "description": "Group by package + concern. Each PR = one cohesive change, reviewable, green. Best OSS practice; minimizes conflicts since overlapping files (e.g. sqs.js _createQueue) are touched in ONE PR.",
+              "preview": "PR1  SQS arn/queueName parsing   #200 #262 #189\nPR2  SQS queue-create correctness #225 #159\nPR3  SQS DLQ/autoCreate feature    #65 #133 #167 #87\nPR4  SQS batching+batch-failure    #227 #221\nPR5  Idle-CPU defaults (3 pkgs)    #158\nPR6  DDB-streams robustness        #241 #103\nPR7  DDB filterPatterns            #242\nPR8  Kinesis read backoff          #127\nPR9  apigw access-logs + docs      #101 #64 #160"
+            },
+            {
+              "label": "19 issue-per-PR",
+              "description": "One PR per issue as you first framed it. Maximum traceability but heavy review burden and constant merge conflicts on shared files (sqs.js, sqs-event-definition.js).",
+              "preview": "19 separate branches, each tiny.\nMany touch the SAME lines:\n  #225, #159, #65, #133, #167 -> all edit sqs.js _createQueue\n  #200, #262, #189          -> all edit sqs-event-definition.js\n=> serial rebase/conflict pain"
+            },
+            {
+              "label": "~4 per-package PRs",
+              "description": "One big PR per package (all SQS bugs together, all DDB together, etc.). Fewer PRs but each is large and mixes bugs with features, harder to review/revert.",
+              "preview": "PR-SQS     #200 #262 #189 #225 #159 #65 #133\n           #167 #87 #227 #221 #158\nPR-DDB     #241 #103 #242 #158\nPR-Kinesis #127 #158\nPR-apigw   #101 #64 + docs #160"
+            }
+          ],
+          "multiSelect": false
+        },
+        {
+          "question": "What base branch should these PRs build on, given v4 (#265) isn't merged yet?",
+          "header": "Base / timing",
+          "options": [
+            {
+              "label": "Stack on the v4 branch now (Recommended)",
+              "description": "Branch each PR off feat/serverless-v4-support and proceed immediately. PRs target the v4 branch (or master with v4 as a noted dependency). We make progress now; rebase onto master after #265 merges.",
+              "preview": "master\n  \u2514\u2500 feat/serverless-v4-support (#265, open)\n       \u2514\u2500 fix/sqs-arn-parsing  (PR1)\n            \u2514\u2500 fix/sqs-queue-create (PR2)\n                 \u2514\u2500 ...  (stacked chain)"
+            },
+            {
+              "label": "Wait for #265 to merge",
+              "description": "Hold all new work until your v4 PR merges to master, then branch each PR off a clean master sequentially. Cleanest history, no restacking \u2014 but blocked until #265 lands.",
+              "preview": "1. Merge #265 -> master\n2. THEN: branch off master per PR,\n   rebase-as-you-go, one at a time.\n(no work starts until merge)"
+            }
+          ],
+          "multiSelect": false
+        },
+        {
+          "question": "How autonomous should the push-to-GitHub step be?",
+          "header": "Push gate",
+          "options": [
+            {
+              "label": "Stop for my review before each push (Recommended)",
+              "description": "Agents implement + get eslint/ava green locally and prepare the PR (branch, commit, description), then PAUSE. You review the diff, then approve the push + PR open. Safest for an OSS repo you maintain.",
+              "preview": "per PR: implement -> eslint+ava GREEN\n      -> commit + draft PR body\n      -> [STOP] you review diff\n      -> you approve -> push + gh pr create\n      -> CI monitor loop"
+            },
+            {
+              "label": "Auto-push once green",
+              "description": "Once eslint + ava pass locally, agents push the branch and open the PR automatically, then start the CI-monitor loop. Fastest, but unreviewed code reaches GitHub.",
+              "preview": "per PR: implement -> eslint+ava GREEN\n      -> auto push + gh pr create\n      -> CI monitor loop\n      -> next PR\n(no human gate before GitHub)"
+            }
+          ],
+          "multiSelect": false
+        },
+        {
+          "question": "Include the aws-sdk v2 to v3 migration (#248/#252/#260) in this batch?",
+          "header": "v3 scope",
+          "options": [
+            {
+              "label": "Defer v3 to its own epic (Recommended)",
+              "description": "This batch = the 10 bugs + feature keepers only. The v3 migration touches every file in every package and would conflict with all the above; do it as a dedicated milestone afterward.",
+              "preview": "This batch: bugs + features (PR1-PR9)\nLater milestone: aws-sdk v3\n  - touches every client in every pkg\n  - rebase nightmare if done concurrently"
+            },
+            {
+              "label": "Include v3 now",
+              "description": "Add the aws-sdk v3 migration as additional PRs in this workflow. Larger scope, higher conflict risk against the bug-fix PRs, longer runway.",
+              "preview": "This batch: bugs + features + v3 epic\n  +PR10 sqs -> @aws-sdk/client-sqs\n  +PR11 ddb -> @aws-sdk/client-dynamodb*\n  +PR12 kinesis -> @aws-sdk/client-kinesis\n(touches files PR1-PR9 also edit)"
+            }
+          ],
+          "multiSelect": false
+        }
+      ]
+    },
+    "tool_use_id": "toolu_01PNRas39FzkxEmrKDBfM5Fb"
+  }
+]

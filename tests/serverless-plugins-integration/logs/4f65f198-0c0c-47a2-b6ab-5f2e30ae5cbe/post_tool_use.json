@@ -1,0 +1,153 @@
+[
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration\necho \"=== setup sqs docker ===\"; npm run -s setup-service sqs 2>&1 | tail -4\necho; echo \"=== sls offline start (captured ~40s, combined streams) ===\"\nnpx sls offline start --config serverless.sqs.yml 2>&1 | grep -iE \"starting offline|error|cannot|throw|deprecat|offline\\]|halting|\u03bb\" | head -40",
+      "timeout": 75000,
+      "description": "Reproduce sls offline SQS startup locally"
+    },
+    "tool_response": {
+      "stdout": "=== setup sqs docker ===\n Container serverless-plugins-sqs-create-1 Creating \n Container serverless-plugins-sqs-create-1 Created \n Container serverless-plugins-sqs-1 Starting \nError response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint serverless-plugins-sqs-1 (4fa1dbbb38c3394ff5462d068d7cb71247c0cf544219bdc410be9ae002ceccf5): Bind for :::9324 failed: port is already allocated\n\n=== sls offline start (captured ~40s, combined streams) ===\nError:\nTypeError: Cannot redefine property: _serverlessExternalPluginName",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_013fYTbfT8dFWA9vZUt3G9YL",
+    "duration_ms": 4354
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration\necho \"=== FULL error/stack from current branch ===\"\nnpx sls offline start --config serverless.sqs.yml 2>&1 | head -40",
+      "timeout": 60000,
+      "description": "Capture full sls offline crash stack"
+    },
+    "tool_response": {
+      "stdout": "=== FULL error/stack from current branch ===\nEnvironment: darwin, node 22.22.3, framework 3.36.0 (local), plugin 7.1.0, SDK 4.4.0\nDocs:        docs.serverless.com\nSupport:     forum.serverless.com\nBugs:        github.com/serverless/serverless/issues\n\nError:\nTypeError: Cannot redefine property: _serverlessExternalPluginName\n    at Function.defineProperty (<anonymous>)\n    at PluginManager.resolveServicePlugins (/Users/silouane/coorp/serverless-plugins/node_modules/serverless/lib/classes/plugin-manager.js:230:14)\n    at async PluginManager.loadAllPlugins (/Users/silouane/coorp/serverless-plugins/node_modules/serverless/lib/classes/plugin-manager.js:136:36)\n    at async Serverless.init (/Users/silouane/coorp/serverless-plugins/node_modules/serverless/lib/serverless.js:146:5)\n    at async /Users/silouane/coorp/serverless-plugins/node_modules/serverless/scripts/serverless.js:601:7",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01RbJL767UBJw3DMmeKCJiWc",
+    "duration_ms": 1744
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins\necho \"=== nvm / node versions available ===\"\nexport NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\" 2>/dev/null\ncommand -v nvm >/dev/null 2>&1 && { echo \"nvm present\"; nvm ls --no-colors 2>/dev/null | grep -E 'v(18|20)' | head; } || echo \"no nvm\"\necho \"current node: $(node -v)\"\necho; echo \"=== does s3 config ALSO crash at plugin-load locally (Node 22)? ===\"\ncd tests/serverless-plugins-integration\nnpx sls offline start --config serverless.s3.yml 2>&1 | grep -iE \"redefine|error:|starting offline|cannot find\" | head -8",
+      "timeout": 60000,
+      "description": "Read custom.yml + check nvm + test s3 load locally"
+    },
+    "tool_response": {
+      "stdout": "=== nvm / node versions available ===\nnvm present\n       v18.19.0 *\n       v20.18.0 *\n       v20.19.2 *\n       v20.20.2 *\nlts/hydrogen -> v18.20.8 (-> N/A)\nlts/iron -> v20.20.2 *\ncurrent node: v22.22.3\n\n=== does s3 config ALSO crash at plugin-load locally (Node 22)? ===\nError:\nTypeError: Cannot redefine property: _serverlessExternalPluginName",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01JgH1WmMuuy9ZmxAaTYsviF",
+    "duration_ms": 8145
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration\necho \"=== what holds port 9324? ===\"; docker ps --format '{{.Names}}\\t{{.Ports}}' | grep 9324 || echo \"nothing\"\nexport NVM_DIR=\"$HOME/.nvm\"; \\. \"$NVM_DIR/nvm.sh\"\nnvm use 20.20.2 >/dev/null 2>&1; echo \"node now: $(node -v)\"\necho \"=== run test:sqs under Node 20 (reproduce CI) \u2014 capturing sls output ===\"\nnpm run -s test:sqs 2>&1 | head -40; echo \"EXIT=${PIPESTATUS[0]}\"",
+      "timeout": 120000,
+      "description": "Reproduce test:sqs under Node 20"
+    },
+    "tool_response": {
+      "stdout": "=== what holds port 9324? ===\napi-platform-sqs-1\t0.0.0.0:9324-9325->9324-9325/tcp, :::9324-9325->9324-9325/tcp\nnode now: v20.20.2\n=== run test:sqs under Node 20 (reproduce CI) \u2014 capturing sls output ===\ntime=\"2026-06-20T01:05:49+02:00\" level=warning msg=\"/Users/silouane/coorp/serverless-plugins/docker-compose.test.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion\"\n Container serverless-plugins-sqs-1 Stopping \n Container serverless-plugins-sqs-1 Stopped \ntime=\"2026-06-20T01:05:50+02:00\" level=warning msg=\"/Users/silouane/coorp/serverless-plugins/docker-compose.test.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion\"\nGoing to remove serverless-plugins-sqs-1\n Container serverless-plugins-sqs-1 Removing \n Container serverless-plugins-sqs-1 Removed \ntime=\"2026-06-20T01:05:50+02:00\" level=warning msg=\"/Users/silouane/coorp/serverless-plugins/docker-compose.test.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion\"\n Container serverless-plugins-sqs-create-1 Stopping \n Container serverless-plugins-sqs-create-1 Stopped \ntime=\"2026-06-20T01:05:50+02:00\" level=warning msg=\"/Users/silouane/coorp/serverless-plugins/docker-compose.test.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion\"\nGoing to remove serverless-plugins-sqs-create-1\n Container serverless-plugins-sqs-create-1 Removing \n Container serverless-plugins-sqs-create-1 Removed \ntime=\"2026-06-20T01:05:50+02:00\" level=warning msg=\"/Users/silouane/coorp/serverless-plugins/docker-compose.test.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion\"\n Container serverless-plugins-sqs-1 Creating \n Container serverless-plugins-sqs-1 Created \n Container serverless-plugins-sqs-create-1 Creating \n Container serverless-plugins-sqs-create-1 Created \n Container serverless-plugins-sqs-1 Starting \nError response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint serverless-plugins-sqs-1 (e4ad4678485846e29981046977e7a559c16202d939d7f4badfbd92c592ef1239): Bind for 0.0.0.0:9324 failed: port is already allocated\nEXIT=",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_016TSXo281MhCVJgnxYcH7uX",
+    "duration_ms": 3984
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/Users/silouane/coorp/serverless-plugins/scripts/create-queues.sh"
+    },
+    "tool_response": {
+      "type": "text",
+      "file": {
+        "filePath": "/Users/silouane/coorp/serverless-plugins/scripts/create-queues.sh",
+        "content": "#!/bin/sh\ntrap \"exit 1\" INT\n\nAWS_ENDPOINT_URL=${AWS_ENDPOINT_URL:-http://localhost:9324}\n\nQUEUES=\"MyFirstQueue MySecondQueue MyThirdQueue MyFourthQueue MyLargestBatchSizeQueue\";\nfor QUEUE in $QUEUES\ndo \n    until aws sqs --endpoint-url ${AWS_ENDPOINT_URL} get-queue-url --queue-name ${QUEUE}  > /dev/null 2> /dev/null\n    do\n        echo \"Creating queue $QUEUE\"\n        aws sqs --endpoint-url ${AWS_ENDPOINT_URL} create-queue \\\n            --queue-name ${QUEUE} \\\n            > /dev/null 2> /dev/null\n    done &\ndone\n\nwait\n\ntrap - INT",
+        "numLines": 20,
+        "startLine": 1,
+        "totalLines": 20
+      }
+    },
+    "tool_use_id": "toolu_01KSnMovWbpYD4vpesTrmY7b",
+    "duration_ms": 1
+  },
+  {
+    "session_id": "4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4f65f198-0c0c-47a2-b6ab-5f2e30ae5cbe.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration",
+    "permission_mode": "bypassPermissions",
+    "effort": {
+      "level": "xhigh"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cd /Users/silouane/coorp/serverless-plugins/tests/serverless-plugins-integration\nexport NVM_DIR=\"$HOME/.nvm\"; \\. \"$NVM_DIR/nvm.sh\"; nvm use 20.20.2 >/dev/null 2>&1; echo \"node: $(node -v)\"\necho \"=== sls offline start --config serverless.sqs.yml (Node 20, full head) ===\"\nnpx sls offline start --config serverless.sqs.yml 2>&1 | head -50",
+      "timeout": 90000,
+      "description": "Run SQS config on Node 20, capture full startup"
+    },
+    "tool_response": {
+      "stdout": "node: v20.20.2\n=== sls offline start --config serverless.sqs.yml (Node 20, full head) ===\nEnvironment: darwin, node 20.20.2, framework 3.36.0 (local), plugin 7.1.0, SDK 4.4.0\nDocs:        docs.serverless.com\nSupport:     forum.serverless.com\nBugs:        github.com/serverless/serverless/issues\n\nError:\nTypeError: Cannot redefine property: _serverlessExternalPluginName\n    at Function.defineProperty (<anonymous>)\n    at PluginManager.resolveServicePlugins (/Users/silouane/coorp/serverless-plugins/node_modules/serverless/lib/classes/plugin-manager.js:230:14)\n    at async PluginManager.loadAllPlugins (/Users/silouane/coorp/serverless-plugins/node_modules/serverless/lib/classes/plugin-manager.js:136:36)\n    at async Serverless.init (/Users/silouane/coorp/serverless-plugins/node_modules/serverless/lib/serverless.js:146:5)\n    at async /Users/silouane/coorp/serverless-plugins/node_modules/serverless/scripts/serverless.js:601:7",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    },
+    "tool_use_id": "toolu_01BjjoeA2upoogMz8FWhWyQh",
+    "duration_ms": 3536
+  }
+]

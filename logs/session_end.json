@@ -1,0 +1,10 @@
+[
+  {
+    "session_id": "4d542c19-d923-41bd-b81d-5a8e32e02bfa",
+    "transcript_path": "/Users/silouane/.claude/projects/-Users-silouane-coorp-serverless-plugins/4d542c19-d923-41bd-b81d-5a8e32e02bfa.jsonl",
+    "cwd": "/Users/silouane/coorp/serverless-plugins",
+    "hook_event_name": "SessionEnd",
+    "reason": "prompt_input_exit",
+    "logged_at": "2026-06-20T01:00:59.691252"
+  }
+]
