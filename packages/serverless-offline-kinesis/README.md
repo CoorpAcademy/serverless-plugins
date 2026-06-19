@@ -25,6 +25,10 @@ plugins:
 
 [See example](../../tests/serverless-plugins-integration/README.md#kinesis)
 
+## Serverless Framework v4
+
+This plugin is compatible with both Serverless Framework **v3** and **v4**. Serverless v4 removed the global `@serverless/utils/log` and `serverless.cli.log` APIs; the plugin now reads the structured logger from the third constructor argument injected by the framework (`{log}`) and falls back to `console` when run standalone, so no configuration change is required on either version.
+
 ## Configure
 
 ### Functions
@@ -42,7 +46,10 @@ functions:
           arn: arn:aws:kinesis:eu-west-1:XXXXXX:stream/polls
           batchSize: 10
           startingPosition: TRIM_HORIZON
+          maximumRetryAttempts: 10
 ```
+
+When a handler invocation throws, the plugin retries it (500ms backoff) up to `maximumRetryAttempts` times (default `10`) and logs each failed attempt, instead of retrying forever silently.
 
 ### Kinesis
 

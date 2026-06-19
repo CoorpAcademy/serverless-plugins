@@ -9,6 +9,7 @@ const extractStreamNameFromARN = arn => {
 class KinesisEventDefinition {
   constructor(rawKinesisEventDefinition, region, accountId) {
     this.batchSize = 10;
+    this.maximumRetryAttempts = 10;
     this.startingPosition = 'LATEST';
 
     let enabled;
@@ -39,7 +40,7 @@ class KinesisEventDefinition {
     this.streamName = streamName;
 
     if (typeof rawKinesisEventDefinition !== 'string') {
-      Object.assign(this, omit(['arn', 'tableName', 'enabled'], rawKinesisEventDefinition));
+      Object.assign(this, omit(['arn', 'streamName', 'enabled'], rawKinesisEventDefinition));
     }
   }
 }
