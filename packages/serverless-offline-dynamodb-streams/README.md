@@ -6,6 +6,10 @@ This Serverless-offline-dynamodb-streams plugin emulates AWS λ and DynamoDBStre
 - [Serverless Webpack](https://github.com/serverless-heaven/serverless-webpack/) support.
 - DynamoDBStreams configurations: batchsize and startingPosition.
 
+## Serverless Framework v4
+
+This plugin is compatible with both Serverless Framework **v3** and **v4**. Serverless v4 removed the global `@serverless/utils/log` and `serverless.cli.log` APIs; the plugin now reads the structured logger from the third constructor argument injected by the framework (`{log}`) and falls back to `console` when run standalone, so no configuration change is required on either version.
+
 ## Installation
 
 First, add `serverless-offline-dynamodb-streams` to your project:

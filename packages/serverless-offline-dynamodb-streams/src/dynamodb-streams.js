@@ -3,6 +3,8 @@ const DynamodbClient = require('aws-sdk/clients/dynamodb');
 const DynamodbStreamsClient = require('aws-sdk/clients/dynamodbstreams');
 const DynamodbStreamsReadable = require('dynamodb-streams-readable');
 const {assign} = require('lodash/fp');
+
+const {normalizeLog} = require('./log');
 const DynamodbStreamsEventDefinition = require('./dynamodb-streams-event-definition');
 const DynamodbStreamsEvent = require('./dynamodb-streams-event');
 
@@ -11,13 +13,21 @@ const delay = timeout =>
     setTimeout(resolve, timeout);
   });
 
+// #98 (dolsem): fail fast with a clear message when the table has no stream
+// instead of letting `describeStream({StreamArn: undefined})` fail cryptically.
+const assertStreamEnabled = (tableName, latestStreamArn) => {
+  if (!latestStreamArn) throw new Error(`Table ${tableName} does not have streams enabled`);
+  return latestStreamArn;
+};
+
 class DynamodbStreams {
-  constructor(lambda, options) {
+  constructor(lambda, options, log) {
     this.lambda = null;
     this.options = null;
 
     this.lambda = lambda;
     this.options = options;
+    this.log = normalizeLog(log);
 
     this.client = new DynamodbClient(this.options);
     this.streamsClient = new DynamodbStreamsClient(this.options);
@@ -72,18 +82,20 @@ class DynamodbStreams {
       Table: {LatestStreamArn}
     } = await this._describeTable(tableName);
 
+    const streamArn = assertStreamEnabled(tableName, LatestStreamArn);
+
     const {
       StreamDescription: {Shards: shards}
     } = await this.streamsClient
       .describeStream({
-        StreamArn: LatestStreamArn
+        StreamArn: streamArn
       })
       .promise();
 
     shards.forEach(({ShardId: shardId}) => {
       const readable = DynamodbStreamsReadable(
         this.streamsClient,
-        LatestStreamArn,
+        streamArn,
         assign(dynamodbStreamsEvent, {
           shardId,
           limit: batchSize,
@@ -98,11 +110,12 @@ class DynamodbStreams {
             try {
               const lambdaFunction = this.lambda.get(functionKey);
 
-              const event = new DynamodbStreamsEvent(chunk, this.region, arn);
+              const event = new DynamodbStreamsEvent(chunk, this.options.region, arn);
               lambdaFunction.setEvent(event);
 
               await lambdaFunction.runHandler();
             } catch (err) {
+              this.log.warning(err.stack);
               if (remainingAttempts > 0) {
                 await delay(500);
                 return task(remainingAttempts - 1);
@@ -125,3 +138,4 @@ class DynamodbStreams {
 }
 
 module.exports = DynamodbStreams;
+module.exports.assertStreamEnabled = assertStreamEnabled;
