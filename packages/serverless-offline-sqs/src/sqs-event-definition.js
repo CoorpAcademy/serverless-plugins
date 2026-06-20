@@ -7,9 +7,9 @@ const pseudoParams = (region, accountId) => ({'AWS::Region': region, 'AWS::Accou
 // Flattens the intrinsic / pseudo-parameter forms an SQS event `arn` can take into a plain string
 // so the queue name can be extracted. Returns undefined for anything we cannot resolve offline
 // (e.g. Fn::ImportValue, Ref to a stack resource) — the caller surfaces that as a clear miss.
-//   #74 (DenisOgr): serverless-pseudo-parameters leaves `#{AWS::AccountId}` inside the ARN string.
-//   #200 (sndr): an `arn` supplied as `{Fn::Join: [sep, parts]}` (with a nested `{Ref}`) never
-//   reached extraction at all, yielding `arn:...:undefined`.
+//   #74 (maximusinc): serverless-pseudo-parameters leaves `#{AWS::AccountId}` in the ARN string.
+//   #200 (jlgouwyapizr): an `arn` supplied as `{Fn::Join: [sep, parts]}` (with a nested `{Ref}`)
+//   never reached extraction at all, yielding `arn:...:undefined`.
 const resolveCfnValue = (value, ctx) => {
   // Substitute both `#{AWS::X}` (serverless-pseudo-parameters) and `${AWS::X}` (Fn::Sub) tokens;
   // unknown tokens are left untouched so a bad ARN stays visibly bad rather than silently wrong.
