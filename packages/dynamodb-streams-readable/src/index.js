@@ -1,10 +1,23 @@
 const stream = require('stream');
+const {getOr} = require('lodash/fp');
+
+const {normalizeLog} = require('./log');
+const {
+  selectShardId,
+  isRecoverableIteratorError,
+  nextRetryState,
+  shouldKeepPolling,
+  canRead
+} = require('./stream-helpers');
+
+const DEFAULT_READ_INTERVAL = 500;
+const DEFAULT_MAX_ITERATOR_RETRIES = 10;
 
 /**
- * A factory to generate a {@link KinesisClient} that pulls records from a DynamoDB stream
+ * A factory to generate a {@link DynamoDBStreamClient} that pulls records from a DynamoDB stream
  *
  * @param {object} client - an AWS.DynamoDBStream client capable of reading the desired stream
- * @param {string} [name] - the name of the shard to read. Not required if already
+ * @param {string} [arn] - the stream ARN to read. Not required if already
  * set by the provided AWS.DynamoDBStream client.
  * @param {object} [options] - configuration details
  * @param {string} [options.shardId] - the shard id to read from. Each DynamoDBStreamReadable
@@ -17,6 +30,8 @@ const stream = require('stream');
  * @param {number} [options.limit] - the maximum number of records that will
  * be passed to any single `data` event.
  * @param {number} [options.readInterval] - time in ms to wait between getRecords API calls
+ * @param {number} [options.maxIteratorRetries] - max consecutive iterator recoveries before failing
+ * @param {object} [options.log] - a normalized logger ({debug,info,warning,...}); defaults to console
  * @returns {DynamoDBStreamClient} a readable stream of DynamoDB records
  */
 function DynamoDBStreamReadable(client, arn, options) {
@@ -30,6 +45,10 @@ function DynamoDBStreamReadable(client, arn, options) {
   if (options.iterator && options.iterator !== 'LATEST' && options.iterator !== 'TRIM_HORIZON')
     throw new Error('options.iterator must be one of LATEST or TRIM_HORIZON');
 
+  const log = normalizeLog(options.log);
+  const readInterval = getOr(DEFAULT_READ_INTERVAL, 'readInterval', options);
+  const maxIteratorRetries = getOr(DEFAULT_MAX_ITERATOR_RETRIES, 'maxIteratorRetries', options);
+
   const readable = new stream.Readable({
     objectMode: true,
     highWaterMark: 100
@@ -40,10 +59,28 @@ function DynamoDBStreamReadable(client, arn, options) {
     highWaterMark: 100
   });
 
+  // Mutable stream lifecycle state — the only mutation in this module. Every *decision* about this
+  // state (drain/keep-polling/recoverable/select-shard/can-read) lives in the pure helpers; this
+  // wiring layer merely applies them and performs the AWS side effects.
   let iterator,
-    drain,
-    ended,
-    pending = 0;
+    drain = false,
+    ended = false,
+    closed = false, // #197 (cnuss): set by close(); short-circuits every further read
+    endPushed = false, // guards a single `push(null)` so close()/pending-read end the stream once
+    pending = 0,
+    recovery = {attempt: 0, max: maxIteratorRetries};
+
+  // #54 (asprouse): push the end-of-stream sentinel exactly once (close() and a pending read racing
+  // to finish must not double-push null).
+  function pushEnd() {
+    if (endPushed) return;
+    endPushed = true;
+    readable.push(null);
+  }
+
+  // A genuinely sealed shard (real AWS returns NextShardIterator=null permanently) would set this;
+  // local emulators do not reliably signal sealing, so by default only close() drains the stream.
+  const sealed = false;
 
   function getShardIterator(shardId, callback) {
     const params = {
@@ -73,26 +110,24 @@ function DynamoDBStreamReadable(client, arn, options) {
   }
 
   function describeStream(callback) {
+    if (closed) return callback(); // #197 (cnuss): no describeStream against a shutting-down endpoint
     pending++;
     client.describeStream({StreamArn: arn}, function (err, data) {
       pending--;
       if (err) return callback(err);
 
-      const shardId = options.shardId
-        ? data.StreamDescription.Shards.filter(function (shard) {
-            return shard.ShardId === options.shardId;
-          }).map(function (shard) {
-            return shard.ShardId;
-          })[0]
-        : data.StreamDescription.Shards[0].ShardId;
-
+      // #164 (mdrijwan/rynvelt): select the shard via the pure helper — no silent Shards[0] fallback
+      // when a specific shardId was requested but is absent.
+      const shardId = selectShardId(data.StreamDescription.Shards, options.shardId);
       if (!shardId) return callback(new Error(`Shard ${options.shardId} does not exist`));
+
       getShardIterator(shardId, callback);
     });
   }
 
   function read(callback) {
-    if ((drain && !pending) || !iterator) return callback(null, {Records: null});
+    // #197 (cnuss): a closed/destroyed stream (or one without an iterator yet) issues no read.
+    if (!canRead({closed, iterator, drain, pending})) return callback(null, {Records: null});
     if (drain && pending) return setImmediate(read, callback);
 
     pending++;
@@ -104,24 +139,50 @@ function DynamoDBStreamReadable(client, arn, options) {
       function (err, data) {
         pending--;
 
+        // #197 (cnuss): the endpoint may have been torn down while this read was in flight; swallow
+        // the late response (success or ECONNREFUSED) and let the stream end cleanly.
+        if (closed) return callback(null, {Records: null});
+
         if (err) {
-          if (err.name === 'TrimmedDataAccessException') {
+          // #154 (mshick) / #164 (mdrijwan): a stale/expired/invalid iterator is recoverable —
+          // re-describe for a fresh iterator and retry, within a bounded budget.
+          if (isRecoverableIteratorError(err)) {
+            const step = nextRetryState(recovery);
+            recovery = {attempt: step.attempt, max: step.max};
+            if (!step.retry) return callback(err); // bounded exhausted -> surface the error
+            log.warning(
+              `ddb-streams: re-fetching shard iterator after ${err.name} (attempt ${step.attempt}/${step.max})`
+            );
+            iterator = undefined; // force a fresh iterator on the next read
             return describeStream(function (e) {
-              if (e) return checkpoint.emit('error', e);
+              if (e) return callback(e);
               read(callback);
             });
           }
           return callback(err);
         }
 
-        if (data.NextShardIterator) {
-          iterator = data.NextShardIterator;
-        } else {
-          drain = true;
-        }
+        // #154/#164: a successful getRecords is real forward progress — reset the bounded recovery
+        // budget so future stale-iterator errors get a full retry allowance (not consumed by a past,
+        // already-recovered hiccup).
+        if (recovery.attempt !== 0) recovery = {...recovery, attempt: 0};
+
+        // origin/master latched drain=true here on an absent NextShardIterator; we no longer do.
+        iterator = data.NextShardIterator;
 
         if (data.Records.length === 0) {
-          if (!drain) return setTimeout(read, options.readInterval || 500, callback);
+          // #54 (asprouse) / #82 (kalitamih) / #163 (mcopik): an empty batch on an OPEN, non-closed
+          // stream must keep polling — even when NextShardIterator is absent (re-describe first).
+          if (shouldKeepPolling({closed, sealed})) {
+            if (!iterator)
+              return describeStream(function (e) {
+                if (e) return callback(e);
+                setTimeout(read, readInterval, callback);
+              });
+            return setTimeout(read, readInterval, callback);
+          }
+          // Only a consumer-initiated close (or a genuinely sealed shard) ends the stream.
+          drain = true;
           data.Records = null;
         }
 
@@ -131,14 +192,19 @@ function DynamoDBStreamReadable(client, arn, options) {
   }
 
   readable._read = function () {
+    if (closed) return pushEnd(); // #197 (cnuss): never read after close
+
     function gotRecords(err, data) {
+      // #197 (cnuss): once closed, do not push late records — end the stream exactly once instead.
+      if (closed) return pushEnd();
       if (err) return checkpoint.emit('error', err);
-      setTimeout(readable.push.bind(readable), options.readInterval || 500, data.Records);
+      setTimeout(readable.push.bind(readable), readInterval, data.Records);
     }
 
     if (iterator) return read(gotRecords);
 
     describeStream(function (err) {
+      if (closed) return;
       if (err) return checkpoint.emit('error', err);
       read(gotRecords);
     });
@@ -165,8 +231,14 @@ function DynamoDBStreamReadable(client, arn, options) {
    * @returns {DynamoDBStreamClient}
    */
   checkpoint.close = function () {
+    // #54 (asprouse) / #197 (cnuss): close() stops scheduling new polls and ends the stream by
+    // pushing `null` once — it must NOT trigger a brand-new network read (origin/master called
+    // readable._read() here, firing a getRecords against a shutting-down endpoint -> ECONNREFUSED).
+    closed = true;
     drain = true;
-    if (!ended) readable._read();
+    // If a read is in flight, its post-close guard ends the readable via pushEnd(); only end here
+    // ourselves when nothing is pending and the stream has not already ended.
+    if (!pending && !ended) pushEnd();
     return checkpoint;
   };
 

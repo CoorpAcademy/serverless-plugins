@@ -12,12 +12,17 @@
   },
   "homepage": "https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/dynamodb-streams-readable#readme",
   "files": [
-    "src/index.js"
+    "src/index.js",
+    "src/stream-helpers.js",
+    "src/log.js"
   ],
   "author": "Arthur Weber @godu",
   "license": "MIT",
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
     "uuid": "^9.0.0"
