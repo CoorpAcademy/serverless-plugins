@@ -6,6 +6,7 @@ const {defaultLog, normalizeLog} = require('../src/log');
 const {toDeleteEntries, resolveQueueName} = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
+const {defaultOptions} = require('../src');
 
 // ---------------------------------------------------------------------------
 // normalizeLog
@@ -207,4 +208,25 @@ test('src/sqs.js builds SQSEvent with this.options.region, not this.region (#166
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'sqs.js'), 'utf8');
   t.true(source.includes('this.options.region'));
   t.false(/new SQSEvent\(messages, this\.region\b/.test(source));
+});
+
+// ---------------------------------------------------------------------------
+// defaultOptions — idle-CPU guard (#158 raymond-w-ko)
+// ---------------------------------------------------------------------------
+
+test('#158 defaultOptions sets a finite idle-cleanup time so the pool timer is not NaN', t => {
+  // serverless-offline's LambdaFunctionPool schedules its idle-cleanup timer as
+  // setTimeout(fn, options.<idleOption> * 1000). When the option is absent the product is NaN,
+  // which busy-loops the timer at ~50% CPU on idle. The option was renamed across versions:
+  //   <= v12: functionCleanupIdleTimeSeconds   >= v13: terminateIdleLambdaTime
+  // so both must be a finite number for setTimeout(fn, x * 1000) to be valid.
+  t.true(Number.isFinite(defaultOptions.terminateIdleLambdaTime));
+  t.true(Number.isFinite(defaultOptions.functionCleanupIdleTimeSeconds));
+  t.false(Number.isNaN(defaultOptions.terminateIdleLambdaTime * 1000));
+  t.false(Number.isNaN(defaultOptions.functionCleanupIdleTimeSeconds * 1000));
+});
+
+test('#158 the idle-cleanup defaults match serverless-offline default of 60 seconds', t => {
+  t.is(defaultOptions.terminateIdleLambdaTime, 60);
+  t.is(defaultOptions.functionCleanupIdleTimeSeconds, 60);
 });

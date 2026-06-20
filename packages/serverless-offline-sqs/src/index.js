@@ -25,6 +25,14 @@ const defaultOptions = {
   startingPosition: 'TRIM_HORIZON',
   autoCreate: false,
 
+  // #158 (raymond-w-ko): serverless-offline's LambdaFunctionPool schedules its idle-cleanup timer
+  // as setTimeout(fn, options.<idleOption> * 1000). The plugin builds its own pool options, so when
+  // the option is missing the product is NaN and the timer busy-loops at ~50% CPU on idle. The key
+  // was renamed across serverless-offline versions (functionCleanupIdleTimeSeconds <= v12,
+  // terminateIdleLambdaTime >= v13); default both to serverless-offline's own default (60s).
+  functionCleanupIdleTimeSeconds: 60,
+  terminateIdleLambdaTime: 60,
+
   accountId: '000000000000'
 };
 
@@ -231,3 +239,4 @@ class ServerlessOfflineSQS {
 }
 
 module.exports = ServerlessOfflineSQS;
+module.exports.defaultOptions = defaultOptions;
