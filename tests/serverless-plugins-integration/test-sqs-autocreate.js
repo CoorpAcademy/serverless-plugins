@@ -8,12 +8,16 @@ const client = new SQS({
   endpoint: 'http://localhost:9324'
 });
 
-// AutocreatedImplicitQueue, AutocreatedQueue, AutocreatedFifoQueue.fifo -> autoCreatedHandler.
+// AutocreatedImplicitQueue, AutocreatedQueue, AutocreatedFifoQueue.fifo, MainQueue ->
+// autoCreatedHandler. MainQueue redrives to MainDlq, a DLQ declared ONLY in Resources and bound to
+// no function: MainQueue can only be created (and only delivers below) if MainDlq was autocreated
+// FIRST — otherwise createQueue rejects with AWS.SimpleQueueService.NonExistentQueue (#167/#133/#65).
 const S = 'serverless-offline-sqs-dev';
 const EXPECTED_KEYS = [
   `${S}-autoCreatedHandler sqs:AutocreatedImplicitQueue`,
   `${S}-autoCreatedHandler sqs:AutocreatedQueue`,
-  `${S}-autoCreatedHandler sqs:AutocreatedFifoQueue.fifo`
+  `${S}-autoCreatedHandler sqs:AutocreatedFifoQueue.fifo`,
+  `${S}-autoCreatedHandler sqs:MainQueue`
 ];
 
 const sendMessages = async () => {
@@ -36,6 +40,12 @@ const sendMessages = async () => {
         QueueUrl: 'http://localhost:9324/queue/AutocreatedFifoQueue.fifo',
         MessageBody: 'AutocreatedFifoQueue',
         MessageGroupId: '1'
+      })
+      .promise(),
+    client
+      .sendMessage({
+        QueueUrl: 'http://localhost:9324/queue/MainQueue',
+        MessageBody: 'MainQueue'
       })
       .promise()
   ]);
