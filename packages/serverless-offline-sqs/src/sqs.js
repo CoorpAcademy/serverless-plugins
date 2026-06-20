@@ -17,11 +17,14 @@ const {
   isFinite,
   isNil,
   isPlainObject,
+  keyBy,
+  map,
   mapValues,
   matches,
   omit,
   pick,
   pipe,
+  reduce,
   toString,
   values
 } = require('lodash/fp');
@@ -29,6 +32,8 @@ const {default: PQueue} = require('p-queue');
 const {normalizeLog} = require('./log');
 const SQSEventDefinition = require('./sqs-event-definition');
 const SQSEvent = require('./sqs-event');
+
+const {extractQueueNameFromARN} = SQSEventDefinition;
 
 const delay = timeout =>
   new Promise(resolve => {
@@ -145,6 +150,63 @@ const partitionBatchForDeletion = (messages, {reportBatchItemFailures, result, f
   return filter(({MessageId}) => !includes(String(MessageId), failedIds), messages || []);
 };
 
+// #65 (tclindner) / #133 (esetnik): autoCreate only ever created queues wired to a lambda event, so
+// a dead-letter queue declared purely in resources.Resources — referenced only via another queue's
+// RedrivePolicy.deadLetterTargetArn — was never created. collectQueueDefinitions scans EVERY
+// AWS::SQS::Queue in the (already Fn::resolved) resources map and returns {queueName, properties}.
+// Pure + non-mutating; the QueueName comes from Properties (the resource key is not the queue name).
+const collectQueueDefinitions = (resources = {}) =>
+  pipe(
+    values,
+    filter(matches({Type: 'AWS::SQS::Queue'})),
+    map(resource => ({
+      queueName: get(['Properties', 'QueueName'], resource),
+      properties: get('Properties', resource) || {}
+    })),
+    filter(({queueName}) => !isNil(queueName))
+  )(resources || {});
+
+// #167 (jlippitt): a queue's Properties.RedrivePolicy.deadLetterTargetArn names the DLQ that must
+// exist first. By the time SQS sees this.resources, index._resolveFn has flattened a Fn::GetAtt
+// target into a resolved ARN string; reuse extractQueueNameFromARN so a resolved ARN yields the name
+// and an unresolvable intrinsic (Fn::ImportValue, Ref) yields undefined (no throw) instead of a
+// bogus target. Returns undefined when there is no RedrivePolicy/deadLetterTargetArn at all.
+const extractDlqTargetName = (properties, region, accountId) => {
+  const target = get(['RedrivePolicy', 'deadLetterTargetArn'], properties);
+  if (isNil(target)) return undefined;
+  return extractQueueNameFromARN(target, region, accountId);
+};
+
+// #133 (will-holley) / #167 (Zer0x00): createQueue against a RedrivePolicy fails with
+// AWS.SimpleQueueService.NonExistentQueue unless the DLQ already exists, but create() fired every
+// _create concurrently with an unordered Promise.all. orderQueuesForCreation topologically orders
+// the creation set DLQ-first. Pure + immutable (no input mutation, no raw loops): a per-call
+// `visiting` set bounds recursion so a self/cyclic reference cannot loop forever, an `emitted` set
+// guarantees every input queue is emitted exactly once, and a target absent from the set is simply
+// ignored (the referencing queue is still emitted). Stable for queues with no redrive relationship.
+const orderQueuesForCreation = (queueDefs, region, accountId) => {
+  const defs = queueDefs || [];
+  const byName = keyBy('queueName', defs);
+
+  const visit = (def, visiting, acc) => {
+    if (acc.emitted.has(def.queueName)) return acc;
+    if (visiting.has(def.queueName)) return acc; // cycle / self-reference guard
+
+    const dlqName = extractDlqTargetName(def.properties, region, accountId);
+    const dlqDef = dlqName && dlqName !== def.queueName ? byName[dlqName] : undefined;
+    const afterDlq = dlqDef ? visit(dlqDef, new Set([...visiting, def.queueName]), acc) : acc;
+
+    if (afterDlq.emitted.has(def.queueName)) return afterDlq;
+    return {
+      emitted: new Set([...afterDlq.emitted, def.queueName]),
+      list: [...afterDlq.list, def]
+    };
+  };
+
+  return reduce((acc, def) => visit(def, new Set(), acc), {emitted: new Set(), list: []}, defs)
+    .list;
+};
+
 class SQS {
   constructor(lambda, resources, options, log) {
     this.lambda = null;
@@ -161,7 +223,42 @@ class SQS {
     this.queue = new PQueue({autoStart: false});
   }
 
-  create(events) {
+  async create(events) {
+    const {region, accountId} = this.options;
+
+    // #65/#133/#167: when autoCreate is on, create EVERY declared queue — including a dead-letter
+    // queue that lives only in resources.Resources and is referenced solely via another queue's
+    // RedrivePolicy — and create them DLQ-first, sequentially, so createQueue does not reject with
+    // AWS.SimpleQueueService.NonExistentQueue (the old unordered Promise.all race).
+    if (this.options.autoCreate) {
+      const resourceDefs = collectQueueDefinitions(this.resources);
+      const resourceNames = new Set(map('queueName', resourceDefs));
+
+      // Union in event-only queues (a string-ARN event with no resources entry) so the existing
+      // implicit-queue autoCreate keeps working; dedupe by queueName so a queue declared BOTH as a
+      // lambda event and a resource is created once, not twice.
+      const eventDefs = pipe(
+        map(
+          ({sqs}) =>
+            new SQSEventDefinition(resolveQueueName(this.options, sqs), region, accountId).queueName
+        ),
+        filter(queueName => !isNil(queueName) && !resourceNames.has(queueName)),
+        // de-duplicate event names that repeat across functions
+        queueNames => [...new Set(queueNames)],
+        map(queueName => ({queueName, properties: {}}))
+      )(events);
+
+      const ordered = orderQueuesForCreation([...resourceDefs, ...eventDefs], region, accountId);
+
+      // sequential, DLQ-first (no Promise.all race); _createQueue is idempotent so the per-event
+      // call below is a harmless no-op re-create.
+      await reduce(
+        (chain, {queueName}) => chain.then(() => this._createQueue({queueName})),
+        Promise.resolve(),
+        ordered
+      );
+    }
+
     return Promise.all(events.map(({functionKey, sqs}) => this._create(functionKey, sqs)));
   }
 
@@ -301,3 +398,6 @@ module.exports.resolveQueueName = resolveQueueName;
 module.exports.toCreateQueueParams = toCreateQueueParams;
 module.exports.resolveWaitTimeSeconds = resolveWaitTimeSeconds;
 module.exports.partitionBatchForDeletion = partitionBatchForDeletion;
+module.exports.collectQueueDefinitions = collectQueueDefinitions;
+module.exports.extractDlqTargetName = extractDlqTargetName;
+module.exports.orderQueuesForCreation = orderQueuesForCreation;

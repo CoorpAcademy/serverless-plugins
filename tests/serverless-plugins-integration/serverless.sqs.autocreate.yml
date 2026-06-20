@@ -26,6 +26,13 @@ functions:
             Fn::GetAtt:
               - AutocreatedFifoQueue
               - Arn
+      # #167/#133/#65: a queue whose RedrivePolicy points at a DLQ declared only in Resources.
+      - sqs:
+          queueName: MainQueue
+          arn:
+            Fn::GetAtt:
+              - MainQueue
+              - Arn
 
 resources:
   Resources:
@@ -40,10 +47,25 @@ resources:
         FifoQueue: true
         MessageRetentionPeriod: 1209600
         ContentBasedDeduplication: true
-        # NOTE: a RedrivePolicy (DLQ) + Policy with CloudFormation intrinsics (Fn::GetAtt/Ref) used
-        # to live here, but autoCreate does not implement DLQ-from-RedrivePolicy against ElasticMQ
-        # (the resolved deadLetterTargetArn region never matches ElasticMQ's). That is the deferred
-        # community feature #183 — its fixture belongs with that implementation, not here.
+    # #167/#133/#65/#87: MainQueue redrives to MainDlq via RedrivePolicy.deadLetterTargetArn
+    # (a resolved Fn::GetAtt Arn). MainDlq is declared ONLY here and is bound to no function, yet
+    # autoCreate must still create it — and create it BEFORE MainQueue so the RedrivePolicy resolves
+    # offline instead of failing with AWS.SimpleQueueService.NonExistentQueue.
+    MainQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: MainQueue
+        MessageRetentionPeriod: 1209600
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt:
+              - MainDlq
+              - Arn
+          maxReceiveCount: 5
+    MainDlq:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: MainDlq
 
 custom:
   serverless-offline:

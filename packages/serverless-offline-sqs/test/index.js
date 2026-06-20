@@ -8,7 +8,10 @@ const {
   resolveQueueName,
   toCreateQueueParams,
   resolveWaitTimeSeconds,
-  partitionBatchForDeletion
+  partitionBatchForDeletion,
+  collectQueueDefinitions,
+  extractDlqTargetName,
+  orderQueuesForCreation
 } = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
@@ -562,4 +565,169 @@ test('#221 partitionBatchForDeletion survivors feed toDeleteEntries with fresh u
     {Id: '0', ReceiptHandle: 'rh-a'},
     {Id: '1', ReceiptHandle: 'rh-c'}
   ]);
+});
+
+// ---------------------------------------------------------------------------
+// collectQueueDefinitions — scan ALL AWS::SQS::Queue resources (#65 tclindner, #133 esetnik)
+// ---------------------------------------------------------------------------
+
+test('#65 collectQueueDefinitions returns every AWS::SQS::Queue, incl. a non-event DLQ', t => {
+  // NOTE: resources here are POST index._resolveFn, so deadLetterTargetArn is a resolved ARN string.
+  const resources = {
+    MainQueue: {
+      Type: 'AWS::SQS::Queue',
+      Properties: {
+        QueueName: 'MainQueue',
+        RedrivePolicy: {
+          deadLetterTargetArn: 'arn:aws:sqs:eu-west-1:000000000000:MainDlq',
+          maxReceiveCount: 5
+        }
+      }
+    },
+    MainDlq: {Type: 'AWS::SQS::Queue', Properties: {QueueName: 'MainDlq'}},
+    NotAQueue: {Type: 'AWS::S3::Bucket', Properties: {BucketName: 'nope'}}
+  };
+  const defs = collectQueueDefinitions(resources);
+  const names = defs.map(({queueName}) => queueName).sort();
+  t.deepEqual(names, ['MainDlq', 'MainQueue']);
+  // S3 bucket excluded
+  t.false(names.includes('nope'));
+  // properties are carried through for downstream toCreateQueueParams
+  const main = defs.find(({queueName}) => queueName === 'MainQueue');
+  t.is(main.properties.RedrivePolicy.maxReceiveCount, 5);
+});
+
+test('#65 collectQueueDefinitions tolerates missing/empty resources without throwing', t => {
+  t.deepEqual(collectQueueDefinitions(undefined), []);
+  t.deepEqual(collectQueueDefinitions({}), []);
+  t.deepEqual(collectQueueDefinitions(null), []);
+});
+
+test('#65 collectQueueDefinitions does not mutate its input', t => {
+  const resources = {Q: {Type: 'AWS::SQS::Queue', Properties: {QueueName: 'Q'}}};
+  const before = JSON.parse(JSON.stringify(resources));
+  collectQueueDefinitions(resources);
+  t.deepEqual(resources, before);
+});
+
+// ---------------------------------------------------------------------------
+// extractDlqTargetName — derive the DLQ name from a RedrivePolicy (#167 jlippitt)
+// ---------------------------------------------------------------------------
+
+test('#167 extractDlqTargetName reads the DLQ name from a resolved deadLetterTargetArn', t => {
+  const properties = {
+    QueueName: 'MainQueue',
+    RedrivePolicy: {
+      deadLetterTargetArn: 'arn:aws:sqs:eu-west-1:000000000000:MainDlq',
+      maxReceiveCount: 5
+    }
+  };
+  t.is(extractDlqTargetName(properties, 'eu-west-1', '000000000000'), 'MainDlq');
+});
+
+test('#167 extractDlqTargetName returns undefined when there is no RedrivePolicy', t => {
+  t.is(extractDlqTargetName({QueueName: 'Plain'}, 'eu-west-1', '0'), undefined);
+  t.is(extractDlqTargetName({}, 'eu-west-1', '0'), undefined);
+  t.is(extractDlqTargetName(undefined, 'eu-west-1', '0'), undefined);
+});
+
+test('#167 extractDlqTargetName degrades to undefined for an unresolvable intrinsic (no throw)', t => {
+  const properties = {
+    QueueName: 'MainQueue',
+    RedrivePolicy: {deadLetterTargetArn: {'Fn::ImportValue': 'SomeExportedDlqArn'}}
+  };
+  t.notThrows(() => extractDlqTargetName(properties, 'eu-west-1', '0'));
+  t.is(extractDlqTargetName(properties, 'eu-west-1', '0'), undefined);
+});
+
+test('#167 extractDlqTargetName keeps a .fifo DLQ suffix intact', t => {
+  const properties = {
+    RedrivePolicy: {deadLetterTargetArn: 'arn:aws:sqs:eu-west-1:000000000000:Orders-dlq.fifo'}
+  };
+  t.is(extractDlqTargetName(properties, 'eu-west-1', '0'), 'Orders-dlq.fifo');
+});
+
+// ---------------------------------------------------------------------------
+// orderQueuesForCreation — DLQ-first dependency ordering (#133 will-holley, #167 Zer0x00)
+// ---------------------------------------------------------------------------
+
+const mkDef = (queueName, dlqArn) => ({
+  queueName,
+  properties: {
+    ...(dlqArn ? {RedrivePolicy: {deadLetterTargetArn: dlqArn, maxReceiveCount: 5}} : {}),
+    QueueName: queueName
+  }
+});
+const arnOf = name => `arn:aws:sqs:eu-west-1:000000000000:${name}`;
+
+test('#167 orderQueuesForCreation puts a referenced DLQ before its referencing queue', t => {
+  const defs = [mkDef('MainQueue', arnOf('MainDlq')), mkDef('MainDlq')];
+  const ordered = orderQueuesForCreation(defs, 'eu-west-1', '000000000000').map(d => d.queueName);
+  t.true(ordered.indexOf('MainDlq') < ordered.indexOf('MainQueue'));
+  // same set, no drops/dups
+  t.deepEqual([...ordered].sort(), ['MainDlq', 'MainQueue']);
+});
+
+test('#133 orderQueuesForCreation is stable for queues with no redrive relationship', t => {
+  const defs = [mkDef('A'), mkDef('B'), mkDef('C')];
+  const ordered = orderQueuesForCreation(defs, 'eu-west-1', '0').map(d => d.queueName);
+  t.deepEqual(ordered, ['A', 'B', 'C']);
+});
+
+test('#133 orderQueuesForCreation orders a chained DLQ (A->B->C => C,B,A)', t => {
+  // A redrives to B, B redrives to C
+  const defs = [mkDef('A', arnOf('B')), mkDef('B', arnOf('C')), mkDef('C')];
+  const ordered = orderQueuesForCreation(defs, 'eu-west-1', '000000000000').map(d => d.queueName);
+  t.true(ordered.indexOf('C') < ordered.indexOf('B'));
+  t.true(ordered.indexOf('B') < ordered.indexOf('A'));
+  t.deepEqual([...ordered].sort(), ['A', 'B', 'C']);
+});
+
+test('#167 orderQueuesForCreation keeps a queue whose DLQ target is absent from the set', t => {
+  const defs = [mkDef('MainQueue', arnOf('ExternalDlq'))]; // ExternalDlq not in the set
+  const ordered = orderQueuesForCreation(defs, 'eu-west-1', '000000000000').map(d => d.queueName);
+  t.deepEqual(ordered, ['MainQueue']);
+});
+
+test('#167 orderQueuesForCreation does not loop forever on a cyclic reference', t => {
+  // pathological: A redrives to B and B redrives to A
+  const defs = [mkDef('A', arnOf('B')), mkDef('B', arnOf('A'))];
+  const ordered = orderQueuesForCreation(defs, 'eu-west-1', '000000000000').map(d => d.queueName);
+  t.is(ordered.length, 2);
+  t.deepEqual([...ordered].sort(), ['A', 'B']);
+});
+
+test('#167 orderQueuesForCreation does not mutate its input', t => {
+  const defs = [mkDef('MainQueue', arnOf('MainDlq')), mkDef('MainDlq')];
+  const before = JSON.parse(JSON.stringify(defs));
+  orderQueuesForCreation(defs, 'eu-west-1', '000000000000');
+  t.deepEqual(defs, before);
+});
+
+// ---------------------------------------------------------------------------
+// #87 confirm-only regression guards (PhouvanhKCSV): RedrivePolicy + maxReceiveCount +
+// MessageRetentionPeriod are forwarded to createQueue as stringified Attributes.
+// (toCreateQueueParams is already exported & imported in this file.)
+// ---------------------------------------------------------------------------
+
+test('#87 toCreateQueueParams forwards MessageRetentionPeriod as a stringified Attribute', t => {
+  const params = toCreateQueueParams('MainQueue', {
+    QueueName: 'MainQueue',
+    MessageRetentionPeriod: 1209600
+  });
+  t.is(params.Attributes.MessageRetentionPeriod, '1209600');
+});
+
+test('#87 toCreateQueueParams forwards RedrivePolicy incl. maxReceiveCount for the main queue', t => {
+  const params = toCreateQueueParams('MainQueue', {
+    QueueName: 'MainQueue',
+    RedrivePolicy: {
+      deadLetterTargetArn: 'arn:aws:sqs:eu-west-1:000000000000:MainDlq',
+      maxReceiveCount: 5
+    }
+  });
+  t.is(
+    params.Attributes.RedrivePolicy,
+    '{"deadLetterTargetArn":"arn:aws:sqs:eu-west-1:000000000000:MainDlq","maxReceiveCount":5}'
+  );
 });

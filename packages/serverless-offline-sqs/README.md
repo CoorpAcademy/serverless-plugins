@@ -45,6 +45,40 @@ Once ElasticMQ is running and initialized, we can proceed with the configuration
 
 Note that starting from version v3.1 of the plugin, it supports autocreation of SQS fifo queues that are specified in the cloudformation `Resources`.
 
+### Dead-letter queues & redrive (`#167`, `#133`, `#65`, `#87`)
+
+When `autoCreate: true`, the plugin now creates **every** `AWS::SQS::Queue` declared in
+`resources.Resources` — not only the queues wired to a lambda `sqs` event. This means a dead-letter
+queue (DLQ) that exists purely to back another queue's `RedrivePolicy.deadLetterTargetArn`, and is
+never itself bound to a function, is created too (#65, #133).
+
+Queues are created in dependency order: a DLQ is always created **before** the queue that redrives to
+it, so `createQueue` no longer fails offline with `AWS.SimpleQueueService.NonExistentQueue` (#167,
+#133). Chained DLQs (`A → B → C`) are ordered `C, B, A`, and self/cyclic references are tolerated
+without looping. The `RedrivePolicy` (including `maxReceiveCount`) and `MessageRetentionPeriod`
+attributes are forwarded to `createQueue`, so a message that exceeds `maxReceiveCount` is moved to the
+DLQ by the local queue system instead of being redelivered forever (#87).
+
+```yml
+resources:
+  Resources:
+    MainQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: MainQueue
+        MessageRetentionPeriod: 1209600
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt:
+              - MainDlq
+              - Arn
+          maxReceiveCount: 5
+    MainDlq: # never referenced by a function — still autocreated, before MainQueue
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: MainDlq
+```
+
 ## Configure
 
 ### Functions
