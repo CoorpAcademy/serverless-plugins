@@ -1,13 +1,26 @@
 const {Writable} = require('stream');
-const DynamodbClient = require('aws-sdk/clients/dynamodb');
-const DynamodbStreamsClient = require('aws-sdk/clients/dynamodbstreams');
+// #248 (EdgarOrtegaRamirez): migrated off aws-sdk v2 (`aws-sdk/clients/dynamodb(streams)`), which
+// emitted the maintenance-mode warning, to the modular @aws-sdk v3 clients/commands/waiters.
+const {
+  DynamoDBClient,
+  DescribeTableCommand,
+  waitUntilTableExists
+} = require('@aws-sdk/client-dynamodb');
+const {DynamoDBStreamsClient, DescribeStreamCommand} = require('@aws-sdk/client-dynamodb-streams');
 const DynamodbStreamsReadable = require('dynamodb-streams-readable');
 const {assign, isEmpty} = require('lodash/fp');
 
 const {normalizeLog} = require('./log');
+const {toClientConfig} = require('./aws-client');
+const {toCallbackStreamsClient} = require('./dynamodb-streams-client');
 const DynamodbStreamsEventDefinition = require('./dynamodb-streams-event-definition');
 const DynamodbStreamsEvent = require('./dynamodb-streams-event');
 const {filterRecords} = require('./filter-patterns');
+
+// Bound the v3 `waitUntilTableExists` waiter so a not-yet-created table makes the waiter reject
+// promptly; our recursive retry in `_describeTable` then re-arms it (preserving the v2 behaviour of
+// blocking until the table appears) instead of one call hanging forever.
+const TABLE_EXISTS_MAX_WAIT_SECONDS = 60;
 
 const delay = timeout =>
   new Promise(resolve => {
@@ -30,8 +43,13 @@ class DynamodbStreams {
     this.options = options;
     this.log = normalizeLog(log);
 
-    this.client = new DynamodbClient(this.options);
-    this.streamsClient = new DynamodbStreamsClient(this.options);
+    // #248: v3 wants region/endpoint at the top level and credentials nested — `toClientConfig`
+    // normalizes the flat v2-style options bag once at this boundary.
+    const clientConfig = toClientConfig(this.options);
+    this.client = new DynamoDBClient(clientConfig);
+    this.streamsClient = new DynamoDBStreamsClient(clientConfig);
+    // The readable consumes the v2 callback contract; adapt the v3 streams client to it.
+    this.streamsCallbackClient = toCallbackStreamsClient(this.streamsClient);
 
     this.readables = [];
   }
@@ -62,12 +80,13 @@ class DynamodbStreams {
 
   async _describeTable(tableName) {
     try {
-      await this.client.waitFor('tableExists', {TableName: tableName}).promise();
-      return await this.client
-        .describeTable({
-          TableName: tableName
-        })
-        .promise();
+      // #248: v3 replaces v2 `waitFor('tableExists')` with the standalone `waitUntilTableExists`
+      // waiter and `describeTable().promise()` with `client.send(new DescribeTableCommand(...))`.
+      await waitUntilTableExists(
+        {client: this.client, maxWaitTime: TABLE_EXISTS_MAX_WAIT_SECONDS},
+        {TableName: tableName}
+      );
+      return await this.client.send(new DescribeTableCommand({TableName: tableName}));
     } catch (err) {
       return this._describeTable(tableName);
     }
@@ -94,15 +113,13 @@ class DynamodbStreams {
 
     const {
       StreamDescription: {Shards: shards}
-    } = await this.streamsClient
-      .describeStream({
-        StreamArn: streamArn
-      })
-      .promise();
+    } = await this.streamsClient.send(new DescribeStreamCommand({StreamArn: streamArn}));
 
     shards.forEach(({ShardId: shardId}) => {
       const readable = DynamodbStreamsReadable(
-        this.streamsClient,
+        // #248: the readable still speaks the v2 callback API; hand it the adapter, not the raw v3
+        // client (which only exposes `send`).
+        this.streamsCallbackClient,
         streamArn,
         assign(dynamodbStreamsEvent, {
           shardId,

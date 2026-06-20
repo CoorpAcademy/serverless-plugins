@@ -10,6 +10,10 @@ This Serverless-offline-dynamodb-streams plugin emulates AWS λ and DynamoDBStre
 
 This plugin is compatible with both Serverless Framework **v3** and **v4**. Serverless v4 removed the global `@serverless/utils/log` and `serverless.cli.log` APIs; the plugin now reads the structured logger from the third constructor argument injected by the framework (`{log}`) and falls back to `console` when run standalone, so no configuration change is required on either version.
 
+## AWS SDK v3
+
+As of this release the plugin uses the modular [AWS SDK for JavaScript **v3**](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/welcome.html) (`@aws-sdk/client-dynamodb` and `@aws-sdk/client-dynamodb-streams`) instead of the end-of-support `aws-sdk` v2 package, which removes the AWS-SDK-v2 maintenance-mode warning ([#248](https://github.com/CoorpAcademy/serverless-plugins/issues/248)). The plugin options are unchanged: it still accepts the flat `region`/`endpoint`/`accessKeyId`/`secretAccessKey` keys and normalizes them into the v3 client config internally, so existing `custom.serverless-offline-dynamodb-streams` configuration keeps working as-is.
+
 ## Installation
 
 First, add `serverless-offline-dynamodb-streams` to your project:

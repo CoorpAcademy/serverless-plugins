@@ -25,6 +25,8 @@
     "lodash": "^4.17.21"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.621.0",
+    "@aws-sdk/client-dynamodb-streams": "^3.621.0",
     "uuid": "^9.0.0"
   },
   "keywords": [

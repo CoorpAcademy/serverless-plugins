@@ -1,8 +1,38 @@
 const test = require('ava');
 const {v4: uuid} = require('uuid');
-const DynamoDB = require('aws-sdk/clients/dynamodb');
-const DynamoDBStreams = require('aws-sdk/clients/dynamodbstreams');
+const {
+  DynamoDBClient,
+  CreateTableCommand,
+  BatchWriteItemCommand,
+  ScanCommand
+} = require('@aws-sdk/client-dynamodb');
+const {
+  DynamoDBStreamsClient,
+  DescribeStreamCommand,
+  GetShardIteratorCommand,
+  GetRecordsCommand
+} = require('@aws-sdk/client-dynamodb-streams');
 const DynamoDBStreamReadable = require('..');
+
+// #248 (EdgarOrtegaRamirez): migrated the test off aws-sdk v2 to @aws-sdk v3. DynamoDBStreamReadable
+// consumes the v2 *callback* contract (`client.getRecords(params, cb)`), so wrap the v3 streams
+// client's promise-based `send(command)` back into that trio — the same adapter shape the consumer
+// package ships in production.
+const toCallbackStreamsClient = client => {
+  const method = Command => (params, callback) =>
+    client.send(new Command(params)).then(data => callback(null, data), callback);
+  return {
+    getShardIterator: method(GetShardIteratorCommand),
+    describeStream: method(DescribeStreamCommand),
+    getRecords: method(GetRecordsCommand)
+  };
+};
+
+const LOCAL_CONFIG = {
+  credentials: {accessKeyId: 'local', secretAccessKey: 'local'},
+  endpoint: 'http://localhost:8000',
+  region: 'eu-west-1'
+};
 
 const delay = timeout =>
   new Promise(resolve => {
@@ -10,29 +40,19 @@ const delay = timeout =>
   });
 
 const batchWriteItem = (dynamodb, tableName, items) =>
-  dynamodb
-    .batchWriteItem({
+  dynamodb.send(
+    new BatchWriteItemCommand({
       RequestItems: {
         [tableName]: items.map(document => ({
           PutRequest: document
         }))
       }
     })
-    .promise();
+  );
 
 test.before(t => {
-  t.context.dynamodb = new DynamoDB({
-    accessKeyId: 'local',
-    secretAccessKey: 'local',
-    endpoint: 'http://localhost:8000',
-    region: 'eu-west-1'
-  });
-  t.context.dynamodbstreams = new DynamoDBStreams({
-    accessKeyId: 'local',
-    secretAccessKey: 'local',
-    endpoint: 'http://localhost:8000',
-    region: 'eu-west-1'
-  });
+  t.context.dynamodb = new DynamoDBClient(LOCAL_CONFIG);
+  t.context.dynamodbstreams = toCallbackStreamsClient(new DynamoDBStreamsClient(LOCAL_CONFIG));
 });
 
 test.beforeEach(async t => {
@@ -41,8 +61,8 @@ test.beforeEach(async t => {
   const tableName = uuid();
   t.context.tableName = tableName;
 
-  const table = await dynamodb
-    .createTable({
+  const table = await dynamodb.send(
+    new CreateTableCommand({
       TableName: tableName,
       AttributeDefinitions: [
         {
@@ -65,7 +85,7 @@ test.beforeEach(async t => {
         WriteCapacityUnits: 1
       }
     })
-    .promise();
+  );
 
   t.context.table = table;
 });
@@ -90,15 +110,13 @@ test.serial('reads records that already exist', async t => {
 
   await batchWriteItem(dynamodb, tableName, documents);
 
-  t.deepEqual(
-    await dynamodb
-      .scan({
-        TableName: tableName,
-        Select: 'COUNT'
-      })
-      .promise(),
-    {Count: documents.length, ScannedCount: documents.length}
+  const {Count, ScannedCount} = await dynamodb.send(
+    new ScanCommand({
+      TableName: tableName,
+      Select: 'COUNT'
+    })
   );
+  t.deepEqual({Count, ScannedCount}, {Count: documents.length, ScannedCount: documents.length});
 
   const readable = DynamoDBStreamReadable(dynamodbstreams, LatestStreamArn, {readInterval: 1});
 

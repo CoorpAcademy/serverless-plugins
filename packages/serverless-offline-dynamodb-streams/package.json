@@ -15,6 +15,8 @@
     "src/index.js",
     "src/log.js",
     "src/dynamodb-streams.js",
+    "src/dynamodb-streams-client.js",
+    "src/aws-client.js",
     "src/dynamodb-streams-event.js",
     "src/dynamodb-streams-event-definition.js",
     "src/resolve-arn.js",
@@ -30,7 +32,8 @@
     "serverless-offline": "^10.0.2 || >=11"
   },
   "dependencies": {
-    "aws-sdk": "^2.1234.0",
+    "@aws-sdk/client-dynamodb": "^3.621.0",
+    "@aws-sdk/client-dynamodb-streams": "^3.621.0",
     "dynamodb-streams-readable": "^3.0.0",
     "lodash": "^4.17.21",
     "serverless-offline-eventbridge": "^1.0.0"
