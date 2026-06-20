@@ -170,7 +170,12 @@ function DynamoDBStreamReadable(client, arn, options) {
         // origin/master latched drain=true here on an absent NextShardIterator; we no longer do.
         iterator = data.NextShardIterator;
 
-        if (data.Records.length === 0) {
+        // #248 (aws-sdk v3): a v3 GetRecords response OMITS `Records` entirely when empty (aws-sdk v2
+        // always returned []). Guard here in the I/O wiring (the pure stream-helpers stay untouched)
+        // so `.length` never reads `undefined` and the empty-batch poll loop below keeps working.
+        const records = getOr([], 'Records', data);
+
+        if (records.length === 0) {
           // #54 (asprouse) / #82 (kalitamih) / #163 (mcopik): an empty batch on an OPEN, non-closed
           // stream must keep polling — even when NextShardIterator is absent (re-describe first).
           if (shouldKeepPolling({closed, sealed})) {

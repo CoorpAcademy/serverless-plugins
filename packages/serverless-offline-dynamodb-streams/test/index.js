@@ -22,8 +22,88 @@ const {
   loadState,
   saveState
 } = require('../src/checkpoint-store');
+const {
+  buildClientConfig,
+  buildCredentials,
+  resolveRegion,
+  ensureArray,
+  DEFAULT_REGION
+} = require('../src/client-config');
+const {toCallbackMethod, buildCallbackClient} = require('../src/callback-adapter');
 
 const LOG_LEVELS = ['debug', 'info', 'notice', 'warning', 'error', 'success'];
+
+// --- buildClientConfig (#248/#252 aws-sdk v3 migration) -------------------
+
+// EARS5: accessKeyId without secretAccessKey must NOT build a half-empty credentials object.
+test('buildCredentials returns undefined when only one key is provided (EARS5)', t => {
+  t.is(buildCredentials({accessKeyId: 'local'}), undefined);
+  t.is(buildCredentials({secretAccessKey: 'local'}), undefined);
+});
+
+test('buildCredentials returns credentials only when BOTH keys are present', t => {
+  t.deepEqual(buildCredentials({accessKeyId: 'a', secretAccessKey: 's'}), {
+    accessKeyId: 'a',
+    secretAccessKey: 's'
+  });
+});
+
+test('buildClientConfig omits credentials when only accessKeyId is set (EARS5)', t => {
+  t.false('credentials' in buildClientConfig({accessKeyId: 'local', endpoint: 'http://x'}));
+});
+
+// EARS4: a custom endpoint without provider.region still works (default region supplied).
+test('buildClientConfig injects a default region for an endpoint with no region (EARS4)', t => {
+  t.is(buildClientConfig({endpoint: 'http://localhost:8000'}).region, DEFAULT_REGION);
+});
+
+test('resolveRegion keeps the provided region untouched', t => {
+  t.is(resolveRegion({endpoint: 'http://x', region: 'eu-west-1'}), 'eu-west-1');
+});
+
+// EARS3: an omitted response array must be treated as [] (no undefined.length crash).
+test('ensureArray returns [] for undefined/null (EARS3)', t => {
+  t.deepEqual(ensureArray(undefined), []);
+  t.deepEqual(ensureArray(null), []);
+});
+
+// --- callback-adapter (#248 promise->callback shim for the readable) -------
+
+class FakeCommand {
+  constructor(params) {
+    this.params = params;
+  }
+}
+
+test('toCallbackMethod forwards a resolved v3 send as (null, data)', async t => {
+  const client = {send: command => Promise.resolve({echoed: command.params})};
+  const method = toCallbackMethod(client, FakeCommand);
+  const data = await new Promise((resolve, reject) => {
+    method({StreamArn: 's'}, (err, d) => (err ? reject(err) : resolve(d)));
+  });
+  t.deepEqual(data, {echoed: {StreamArn: 's'}});
+});
+
+test('toCallbackMethod forwards a rejected v3 send as the err arg (no throw)', async t => {
+  const boom = new Error('boom');
+  const client = {send: () => Promise.reject(boom)};
+  const method = toCallbackMethod(client, FakeCommand);
+  const err = await new Promise(resolve => {
+    method({}, e => resolve(e));
+  });
+  t.is(err, boom);
+});
+
+test('buildCallbackClient exposes a callback method per command plus a passthrough send', t => {
+  const wrapped = buildCallbackClient(
+    {send: () => Promise.resolve('ok')},
+    {getRecords: FakeCommand, describeStream: FakeCommand, getShardIterator: FakeCommand}
+  );
+  t.is(typeof wrapped.getRecords, 'function');
+  t.is(typeof wrapped.describeStream, 'function');
+  t.is(typeof wrapped.getShardIterator, 'function');
+  t.is(typeof wrapped.send, 'function');
+});
 
 // --- normalizeLog --------------------------------------------------------
 

@@ -20,7 +20,6 @@
     "node": ">=18"
   },
   "dependencies": {
-    "aws-sdk": "^2.1234.0",
     "lodash": "^4.17.21"
   },
   "keywords": [

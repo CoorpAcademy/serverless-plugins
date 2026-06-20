@@ -13,6 +13,49 @@ const {
 } = require('../src/eventbridge');
 const EventBridgeEvent = require('../src/eventbridge-event');
 const EventBridgeEventDefinition = require('../src/eventbridge-event-definition');
+const {
+  buildClientConfig,
+  buildCredentials,
+  resolveRegion,
+  ensureArray,
+  DEFAULT_REGION
+} = require('../src/client-config');
+
+// ---------------------------------------------------------------------------
+// buildClientConfig (#248/#252 aws-sdk v3 migration)
+// ---------------------------------------------------------------------------
+
+// EARS5: accessKeyId without secretAccessKey must NOT build a half-empty credentials object.
+test('buildCredentials returns undefined when only one key is provided (EARS5)', t => {
+  t.is(buildCredentials({accessKeyId: 'local'}), undefined);
+  t.is(buildCredentials({secretAccessKey: 'local'}), undefined);
+});
+
+test('buildCredentials returns credentials only when BOTH keys are present', t => {
+  t.deepEqual(buildCredentials({accessKeyId: 'a', secretAccessKey: 's'}), {
+    accessKeyId: 'a',
+    secretAccessKey: 's'
+  });
+});
+
+test('buildClientConfig omits credentials when only accessKeyId is set (EARS5)', t => {
+  t.false('credentials' in buildClientConfig({accessKeyId: 'local', endpoint: 'http://x'}));
+});
+
+// EARS4: a custom endpoint without provider.region still works (default region supplied).
+test('buildClientConfig injects a default region for an endpoint with no region (EARS4)', t => {
+  t.is(buildClientConfig({endpoint: 'http://localhost:9324'}).region, DEFAULT_REGION);
+});
+
+test('resolveRegion keeps the provided region untouched', t => {
+  t.is(resolveRegion({endpoint: 'http://x', region: 'eu-west-1'}), 'eu-west-1');
+});
+
+// EARS3: an omitted response array must be treated as [] (no undefined.length crash).
+test('ensureArray returns [] for undefined/null (EARS3)', t => {
+  t.deepEqual(ensureArray(undefined), []);
+  t.deepEqual(ensureArray(null), []);
+});
 
 // ---------------------------------------------------------------------------
 // Group A — normalizeLog (SQS-identical)

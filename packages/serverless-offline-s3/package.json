@@ -30,7 +30,6 @@
     "serverless-offline": "^10.0.2 || >=11"
   },
   "dependencies": {
-    "aws-sdk": "^2.1234.0",
     "figures": "^5.0.0",
     "lodash": "^4.17.21",
     "minio": "^8.0.7"

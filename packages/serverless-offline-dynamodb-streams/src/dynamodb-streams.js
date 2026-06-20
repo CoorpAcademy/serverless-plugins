@@ -1,10 +1,21 @@
 const {Writable} = require('stream');
-const DynamodbClient = require('aws-sdk/clients/dynamodb');
-const DynamodbStreamsClient = require('aws-sdk/clients/dynamodbstreams');
+const {
+  DynamoDBClient,
+  DescribeTableCommand,
+  waitUntilTableExists
+} = require('@aws-sdk/client-dynamodb');
+const {
+  DynamoDBStreamsClient,
+  DescribeStreamCommand,
+  GetRecordsCommand,
+  GetShardIteratorCommand
+} = require('@aws-sdk/client-dynamodb-streams');
 const DynamodbStreamsReadable = require('dynamodb-streams-readable');
 const {assign, isEmpty, last, get} = require('lodash/fp');
 
 const {normalizeLog} = require('./log');
+const {buildClientConfig} = require('./client-config');
+const {buildCallbackClient} = require('./callback-adapter');
 const DynamodbStreamsEventDefinition = require('./dynamodb-streams-event-definition');
 const DynamodbStreamsEvent = require('./dynamodb-streams-event');
 const {filterRecords} = require('./filter-patterns');
@@ -15,6 +26,16 @@ const {
   loadState,
   saveState
 } = require('./checkpoint-store');
+
+// #248 (aws-sdk v3): the v2 callback methods `dynamodb-streams-readable` calls, mapped to v3 Commands.
+const DDB_STREAMS_READABLE_COMMANDS = {
+  describeStream: DescribeStreamCommand,
+  getShardIterator: GetShardIteratorCommand,
+  getRecords: GetRecordsCommand
+};
+
+// waitUntilTableExists needs a bounded max wait; mirror the v2 waiter's generous polling budget.
+const TABLE_EXISTS_MAX_WAIT_SECONDS = 120;
 
 const delay = timeout =>
   new Promise(resolve => {
@@ -42,8 +63,14 @@ class DynamodbStreams {
     this.options = options;
     this.log = normalizeLog(log);
 
-    this.client = new DynamodbClient(this.options);
-    this.streamsClient = new DynamodbStreamsClient(this.options);
+    this.client = new DynamoDBClient(buildClientConfig(this.options));
+    this.streamsClient = new DynamoDBStreamsClient(buildClientConfig(this.options));
+    // #248 (aws-sdk v3): dynamodb-streams-readable drives the streams client via v2 callback methods;
+    // wrap the v3 client in a promise->callback shim so the readable's pure logic stays untouched.
+    this.readableStreamsClient = buildCallbackClient(
+      this.streamsClient,
+      DDB_STREAMS_READABLE_COMMANDS
+    );
 
     this.readables = [];
 
@@ -81,12 +108,11 @@ class DynamodbStreams {
 
   async _describeTable(tableName) {
     try {
-      await this.client.waitFor('tableExists', {TableName: tableName}).promise();
-      return await this.client
-        .describeTable({
-          TableName: tableName
-        })
-        .promise();
+      await waitUntilTableExists(
+        {client: this.client, maxWaitTime: TABLE_EXISTS_MAX_WAIT_SECONDS},
+        {TableName: tableName}
+      );
+      return await this.client.send(new DescribeTableCommand({TableName: tableName}));
     } catch (err) {
       return this._describeTable(tableName);
     }
@@ -113,11 +139,7 @@ class DynamodbStreams {
 
     const {
       StreamDescription: {Shards: shards}
-    } = await this.streamsClient
-      .describeStream({
-        StreamArn: streamArn
-      })
-      .promise();
+    } = await this.streamsClient.send(new DescribeStreamCommand({StreamArn: streamArn}));
 
     shards.forEach(({ShardId: shardId}) => {
       // #178 (ddb-streams-checkpoint): pick the iterator from any saved checkpoint —
@@ -133,7 +155,7 @@ class DynamodbStreams {
       );
 
       const readable = DynamodbStreamsReadable(
-        this.streamsClient,
+        this.readableStreamsClient,
         streamArn,
         assign(dynamodbStreamsEvent, {
           ...iteratorOptions,

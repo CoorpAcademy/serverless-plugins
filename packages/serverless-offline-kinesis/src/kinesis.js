@@ -1,11 +1,29 @@
 const {Writable} = require('stream');
-const KinesisClient = require('aws-sdk/clients/kinesis');
+const {
+  KinesisClient,
+  DescribeStreamCommand,
+  GetRecordsCommand,
+  GetShardIteratorCommand,
+  waitUntilStreamExists
+} = require('@aws-sdk/client-kinesis');
 const KinesisReadable = require('kinesis-readable');
 const {assign} = require('lodash/fp');
 
 const {normalizeLog} = require('./log');
+const {buildClientConfig} = require('./client-config');
+const {buildCallbackClient} = require('./callback-adapter');
 const KinesisEventDefinition = require('./kinesis-event-definition');
 const KinesisEvent = require('./kinesis-event');
+
+// #248 (aws-sdk v3): the v2 callback methods `kinesis-readable` calls, mapped to their v3 Commands.
+const KINESIS_READABLE_COMMANDS = {
+  describeStream: DescribeStreamCommand,
+  getShardIterator: GetShardIteratorCommand,
+  getRecords: GetRecordsCommand
+};
+
+// waitUntilStreamExists needs a bounded max wait; mirror the v2 waiter's generous polling budget.
+const STREAM_EXISTS_MAX_WAIT_SECONDS = 120;
 
 const delay = timeout =>
   new Promise(resolve => {
@@ -25,7 +43,10 @@ class Kinesis {
     this.lambda = lambda;
     this.options = options;
     this.log = normalizeLog(log);
-    this.client = new KinesisClient(this.options);
+    this.client = new KinesisClient(buildClientConfig(this.options));
+    // #248 (aws-sdk v3): kinesis-readable drives the client via v2 callback methods; wrap the v3
+    // client in a promise->callback shim so the readable's pure logic is untouched.
+    this.readableClient = buildCallbackClient(this.client, KINESIS_READABLE_COMMANDS);
 
     this.readables = [];
   }
@@ -54,12 +75,11 @@ class Kinesis {
 
   async _describeStream(streamName) {
     try {
-      await this.client.waitFor('streamExists', {StreamName: streamName}).promise();
-      return await this.client
-        .describeStream({
-          StreamName: streamName
-        })
-        .promise();
+      await waitUntilStreamExists(
+        {client: this.client, maxWaitTime: STREAM_EXISTS_MAX_WAIT_SECONDS},
+        {StreamName: streamName}
+      );
+      return await this.client.send(new DescribeStreamCommand({StreamName: streamName}));
     } catch (err) {
       return this._describeStream(streamName);
     }
@@ -77,7 +97,7 @@ class Kinesis {
 
     shards.forEach(({ShardId: shardId}) => {
       const readable = KinesisReadable(
-        this.client,
+        this.readableClient,
         streamName,
         assign(kinesisEvent, {
           shardId,

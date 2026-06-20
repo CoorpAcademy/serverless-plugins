@@ -1,6 +1,6 @@
 const http = require('http');
 const {randomUUID} = require('crypto');
-const SQSClient = require('aws-sdk/clients/sqs');
+const {SQSClient, GetQueueUrlCommand, SendMessageCommand} = require('@aws-sdk/client-sqs');
 
 const {
   castArray,
@@ -15,6 +15,7 @@ const {
 } = require('lodash/fp');
 
 const {normalizeLog} = require('./log');
+const {buildClientConfig} = require('./client-config');
 const EventBridgeEventDefinition = require('./eventbridge-event-definition');
 const EventBridgeEvent = require('./eventbridge-event');
 const {buildEventBridgeEvent} = require('./eventbridge-event');
@@ -395,18 +396,18 @@ class EventBridge {
     if (isNil(arn)) return;
 
     try {
-      if (!this.sqsClient) this.sqsClient = new SQSClient(this.options);
+      if (!this.sqsClient) this.sqsClient = new SQSClient(buildClientConfig(this.options));
       const queueName = String(arn).split(':').pop();
-      const {QueueUrl} = await this.sqsClient.getQueueUrl({QueueName: queueName}).promise();
-      await this.sqsClient
-        .sendMessage({
+      const {QueueUrl} = await this.sqsClient.send(new GetQueueUrlCommand({QueueName: queueName}));
+      await this.sqsClient.send(
+        new SendMessageCommand({
           QueueUrl,
           MessageBody: JSON.stringify({
             requestPayload: event,
             responsePayload: {errorMessage: err.message, errorType: err.name}
           })
         })
-        .promise();
+      );
     } catch (dlqErr) {
       this.log.warning(dlqErr.stack);
     }
