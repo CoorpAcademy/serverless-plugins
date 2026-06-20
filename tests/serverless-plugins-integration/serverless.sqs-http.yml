@@ -1,0 +1,42 @@
+# #132: SQS + HTTP co-registration regression config. A single service declares BOTH a plain `http`
+# function and an `sqs` function. The plugin must only augment serverless-offline's lifecycle, so the
+# HTTP route registers (and responds) AND the SQS listener fires in the same `serverless offline` run.
+service: serverless-offline-sqs-http
+
+provider:
+  name: aws
+  region: eu-west-1
+  runtime: nodejs18.x
+
+plugins:
+  - ../../packages/serverless-offline-sqs
+  - serverless-offline
+
+functions:
+  myHttpHandler:
+    handler: lambda/handler.http
+    events:
+      - http:
+          path: ping
+          method: get
+  mySqsHandler:
+    handler: lambda/handler.promise
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - CoFunctionQueue
+              - Arn
+
+resources:
+  Resources:
+    CoFunctionQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: CoFunctionQueue
+
+custom:
+  serverless-offline:
+    httpPort: 3336
+    lambdaPort: 3034
+  serverless-offline-sqs: ${file(./custom.yml):serverless-offline-sqs}

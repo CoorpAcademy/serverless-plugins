@@ -33,6 +33,17 @@ plugins:
 
 [See example](../../tests/serverless-plugins-integration/README.md#sqs)
 
+### HTTP and SQS functions in the same service (`#132`)
+
+A service can mix plain `http` (API Gateway) functions and `sqs` functions and run them all under a
+single `serverless-offline`. The plugin only **augments** serverless-offline's lifecycle — it listens
+to `offline:start:init` / `offline:start:ready` / `offline:start:end` and never registers the bare
+`offline:start` hook, so it no longer competes with serverless-offline's own start path. The result is
+that the HTTP routes register and respond **and** the SQS listeners fire in the same run. Its
+SIGINT/SIGTERM handler also cleans up only its own SQS/lambda resources (it does not `process.exit`),
+leaving serverless-offline to own shutdown of the shared HTTP server. Run `serverless offline start`
+(the documented multi-plugin command) for this to work as intended.
+
 ## How it works?
 
 To be able to emulate AWS SQS queue on local machine there should be some queue system actually running. One of the existing implementations suitable for the task is [ElasticMQ](https://github.com/adamw/elasticmq).

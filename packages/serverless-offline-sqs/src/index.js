@@ -7,6 +7,7 @@ const {
   isPlainObject,
   isUndefined,
   map,
+  mapValues,
   omitBy,
   pick,
   pipe,
@@ -50,18 +51,49 @@ const isPluginEnabled = options => {
   return Boolean(enabled);
 };
 
+// #132 (sqs-http-cofunction-registration): serverless-offline v13 owns the whole `offline:start`
+// lifecycle. Its hook map is:
+//   offline:start        -> #startWithExplicitEnd  (start + ready + end; ready BLOCKS on a signal)
+//   offline:start:init   -> start
+//   offline:start:ready  -> ready
+//   offline:start:end    -> end
+// The documented contract (serverless-offline README, "Usage with other plugins") is that
+// augmenting plugins listen to `offline:start:init` / `offline:start:end` and the user runs
+// `serverless offline start`. This plugin used to ALSO register the bare `offline:start` hook
+// (`_startWithReady`), which then co-ran on the same lifecycle event as serverless-offline's own
+// `#startWithExplicitEnd`. The two compete: if serverless-offline's hook runs first it blocks in
+// `#ready()` and the SQS start never runs (HTTP up, SQS dead); if ours runs first its `ready()`
+// installs `process.exit(0)` SIGINT/SIGTERM handlers that tear the shared process down from under
+// serverless-offline's HTTP server. Either way only one side wires up — the reported symptom.
+//
+// Fix: build the hook map WITHOUT the bare `offline:start` key, so the plugin only AUGMENTS
+// serverless-offline's lifecycle (init/ready/end) and never pre-empts it. Keep the decision as a
+// pure, exported value so it is unit-testable in isolation from the Serverless runtime.
+// `offline:start:end` maps to `stop` (not `end`) so the plugin tears down only its own SQS/lambda
+// resources and lets serverless-offline own the `process.exit` — see #132 note above.
+const HOOK_METHOD_BY_EVENT = {
+  'offline:start:init': 'start',
+  'offline:start:ready': 'ready',
+  'offline:start:end': 'stop'
+};
+
+const buildHookMap = () => ({...HOOK_METHOD_BY_EVENT});
+
+// #132: the SIGINT/SIGTERM listener is what makes AVA/CI hang and what would `process.exit` the
+// shared run, so it is skipped entirely under NODE_ENV=test. Extracted as a pure predicate so the
+// gate (test env -> no termination trap) is asserted directly.
+const shouldListenForTermination = nodeEnv => nodeEnv !== 'test';
+
 class ServerlessOfflineSQS {
   constructor(serverless, cliOptions, {log} = {}) {
     this.cliOptions = cliOptions;
     this.serverless = serverless;
     this.log = normalizeLog(log);
 
-    this.hooks = {
-      'offline:start:init': this.start.bind(this),
-      'offline:start:ready': this.ready.bind(this),
-      'offline:start': this._startWithReady.bind(this),
-      'offline:start:end': this.end.bind(this)
-    };
+    // #132: register only the augmenting lifecycle hooks (init/ready/end). Binding the methods named
+    // by the pure hook map keeps the wiring declarative and free of the bare `offline:start` hook
+    // that used to compete with serverless-offline's own start path.
+    this.hooks = mapValues(methodName => this[methodName].bind(this), buildHookMap());
   }
 
   async start() {
@@ -87,7 +119,7 @@ class ServerlessOfflineSQS {
   }
 
   ready() {
-    if (process.env.NODE_ENV !== 'test') {
+    if (shouldListenForTermination(process.env.NODE_ENV)) {
       this._listenForTermination();
     }
   }
@@ -99,14 +131,19 @@ class ServerlessOfflineSQS {
       process.on(signal, async () => {
         this.log.notice(`Got ${signal} signal. Offline Halting...`);
 
-        await this.end();
+        // #132: clean up only our own lambda/sqs resources and let serverless-offline own process
+        // termination. Calling end() with skipExit avoids a `process.exit(0)` that would tear down
+        // the shared run (and its HTTP server) out from under serverless-offline's own SIGINT path.
+        await this.end(true);
       })
     );
   }
 
-  async _startWithReady() {
-    await this.start();
-    this.ready();
+  // #132: the `offline:start:end` lifecycle hook. Cleans up the SQS/lambda resources but never
+  // forces a process exit, so serverless-offline's own `offline:start:end` handler is free to run
+  // and own the shutdown of the shared HTTP server / process.
+  async stop() {
+    await this.end(true);
   }
 
   async end(skipExit) {
@@ -255,3 +292,5 @@ class ServerlessOfflineSQS {
 module.exports = ServerlessOfflineSQS;
 module.exports.defaultOptions = defaultOptions;
 module.exports.isPluginEnabled = isPluginEnabled;
+module.exports.buildHookMap = buildHookMap;
+module.exports.shouldListenForTermination = shouldListenForTermination;

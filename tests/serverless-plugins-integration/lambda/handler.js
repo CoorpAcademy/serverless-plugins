@@ -32,3 +32,12 @@ module.exports.callback = (event, context, cb) => {
   mark(event, context);
   cb();
 };
+
+// #132: a plain HTTP (API Gateway) handler. An http event carries no `Records`, so it emits its own
+// `__INVOKED__ <fn> http:<path>` marker. Used by test-sqs-http to assert that an HTTP route and an
+// SQS listener register and fire in the SAME `serverless-offline` run (SQS+HTTP co-registration).
+module.exports.http = (event, context) => {
+  const path = (event && (event.path || event.rawPath)) || 'unknown';
+  console.log(`__INVOKED__ ${context.functionName} http:${path} 1`);
+  return {statusCode: 200, body: JSON.stringify({ok: true})};
+};

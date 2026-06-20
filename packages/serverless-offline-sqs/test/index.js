@@ -17,7 +17,12 @@ const {
 } = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
-const {defaultOptions, isPluginEnabled} = require('../src');
+const {
+  defaultOptions,
+  isPluginEnabled,
+  buildHookMap,
+  shouldListenForTermination
+} = require('../src');
 const {extractQueueNameFromARN, resolveCfnValue} = require('../src/sqs-event-definition');
 
 // ---------------------------------------------------------------------------
@@ -853,4 +858,104 @@ test('#262 expandSqsEventDefinitions: {arn} object event with no literal queueNa
   const built = new SQSEventDefinition(defs[0], 'eu-west-1', '000000000000');
   t.is(built.queueName, 'Q');
   t.is(built.batchSize, 2);
+});
+
+// ---------------------------------------------------------------------------
+// buildHookMap / shouldListenForTermination — SQS+HTTP co-registration (#132)
+// ---------------------------------------------------------------------------
+//
+// serverless-offline v13 owns the whole `offline:start` lifecycle: its hook map is
+//   offline:start        -> #startWithExplicitEnd (start + ready + end, ready BLOCKS on a signal)
+//   offline:start:init   -> start
+//   offline:start:ready  -> ready
+//   offline:start:end    -> end
+// The documented contract (README "Usage with other plugins") is that augmenting plugins listen to
+// `offline:start:init`/`offline:start:end` and the user runs `serverless offline start`.
+//
+// This plugin used to ALSO register the bare `offline:start` hook (`_startWithReady`). Both bare
+// hooks then run on the same lifecycle event: if serverless-offline's runs first it blocks in
+// `#ready()` and the SQS start never runs (HTTP up, SQS dead); if the SQS one runs first its
+// `ready()` installs `process.exit(0)` SIGINT/SIGTERM handlers that tear the shared process down
+// from under serverless-offline's HTTP server. Either way only one side wires up — exactly the
+// #132 symptom ("only the SQS lambda works unless NODE_ENV=test or `offline start` is used").
+//
+// Fix: drop the bare `offline:start` hook so the plugin only AUGMENTS serverless-offline's
+// lifecycle and never pre-empts it, and route `offline:start:end` through `stop` (cleanup without
+// `process.exit`) so serverless-offline keeps ownership of the shared process/HTTP server.
+// buildHookMap encodes that decision as pure data.
+
+test('#132 buildHookMap never registers the bare `offline:start` hook (no pre-emption of serverless-offline)', t => {
+  const map = buildHookMap();
+  t.false('offline:start' in map);
+});
+
+test('#132 buildHookMap augments serverless-offline via init/ready/end only', t => {
+  t.deepEqual(Object.keys(buildHookMap()).sort(), [
+    'offline:start:end',
+    'offline:start:init',
+    'offline:start:ready'
+  ]);
+});
+
+test('#132 buildHookMap maps each lifecycle event to the matching method name', t => {
+  // `offline:start:end` maps to `stop` (cleanup without process.exit), not `end`, so the plugin
+  // never owns the shutdown of serverless-offline's shared HTTP server / process.
+  t.deepEqual(buildHookMap(), {
+    'offline:start:init': 'start',
+    'offline:start:ready': 'ready',
+    'offline:start:end': 'stop'
+  });
+});
+
+test('#132 buildHookMap is a stable, non-mutating pure value', t => {
+  const a = buildHookMap();
+  const b = buildHookMap();
+  t.deepEqual(a, b);
+  t.not(a, b); // a fresh object each call, safe to bind methods into
+});
+
+test('#132 every method named by buildHookMap exists on the plugin (declarative wiring is sound)', t => {
+  // the constructor wires hooks as `this[methodName].bind(this)`; an unknown name would throw at
+  // construction, so assert each mapped method is a real function on the prototype.
+  const ServerlessOfflineSQS = require('../src');
+  Object.values(buildHookMap()).forEach(methodName => {
+    t.is(typeof ServerlessOfflineSQS.prototype[methodName], 'function', methodName);
+  });
+});
+
+test('#132 shouldListenForTermination is false under NODE_ENV=test (keeps AVA/CI from trapping signals)', t => {
+  t.false(shouldListenForTermination('test'));
+});
+
+test('#132 shouldListenForTermination is true for a normal offline run', t => {
+  t.true(shouldListenForTermination('development'));
+  t.true(shouldListenForTermination('production'));
+  t.true(shouldListenForTermination(undefined));
+  t.true(shouldListenForTermination(''));
+});
+
+// ---------------------------------------------------------------------------
+// #132 source-level guards: the plugin must not own a competing bare-start path,
+// and its signal handler must not force `process.exit` on the SHARED process
+// (serverless-offline owns process exit; tearing it down kills the HTTP server).
+// ---------------------------------------------------------------------------
+
+test('#132 src/index.js no longer wires a bare `offline:start` hook', t => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.js'), 'utf8');
+  // no hooks-object entry keyed on the bare lifecycle event (init/ready/end keys are `…start:xxx`)
+  t.false(/['"]offline:start['"]\s*:/.test(source));
+  // and the competing combined-start method definition is gone (prose mentions are fine)
+  t.false(/\b_startWithReady\s*\(/.test(source));
+});
+
+test('#132 buildHookMap (the actual registered hooks) carries no bare `offline:start` key', t => {
+  // belt-and-braces beyond the source scan: the live map must not contain the bare event.
+  t.false(Object.prototype.hasOwnProperty.call(buildHookMap(), 'offline:start'));
+});
+
+test('#132 src/index.js signal handler calls end() with skipExit so the shared HTTP server survives', t => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.js'), 'utf8');
+  // _listenForTermination must hand a truthy skipExit to end() — the SQS plugin cleans up its own
+  // lambda/sqs but leaves process termination to serverless-offline, which owns the http server.
+  t.regex(source, /this\.end\(\s*true\s*\)/);
 });
