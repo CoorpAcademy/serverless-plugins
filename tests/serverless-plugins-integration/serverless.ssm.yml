@@ -1,0 +1,39 @@
+service: serverless-offline-ssm
+
+provider:
+  name: aws
+  region: eu-west-1
+  runtime: nodejs22.x
+  stage: offline
+  environment:
+    # Resolved at config-parse time from the local map (no AWS round-trip).
+    PLAIN: ${ssm:/it/plain}
+
+plugins:
+  # MUST be loaded before serverless-offline: the constructor patches aws.request
+  # before the framework resolves ${ssm:...} at config-parse time.
+  - ../../packages/serverless-offline-ssm-provider
+  - serverless-offline
+
+custom:
+  # NOTE: key is `serverless-offline-ssm` (matches the plugin's CUSTOM_OPTION),
+  # so a downstream service migrates by "swap the dependency, keep the config".
+  serverless-offline-ssm:
+    stages:
+      - offline
+    ssm:
+      /it/plain: hello-world # -> String
+      /it/list: 'a,b,c' # -> StringList (built-in splits on ',')
+      /it/json: '{"type":"service_account","ok":true}' # -> SecureString (built-in JSON.parses)
+  # A plain `custom` block accepts non-string values, so we can assert the
+  # StringList -> array and SecureString -> object transforms too.
+  resolved:
+    plain: ${ssm:/it/plain}
+    list: ${ssm:/it/list}
+    json: ${ssm:/it/json}
+
+functions:
+  echo:
+    handler: lambda/handler.promise
+    environment:
+      PLAIN: ${ssm:/it/plain}

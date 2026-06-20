@@ -1,0 +1,6 @@
+serverless-offline-ssm-provider
+Copyright (c) 2019-2026 CoorpAcademy
+
+This product adapts the AWS request-interception approach from
+serverless-offline-ssm v6.2.0 (MIT License), Copyright (c) Jim Anders (janders223).
+https://github.com/janders223/serverless-offline-ssm
