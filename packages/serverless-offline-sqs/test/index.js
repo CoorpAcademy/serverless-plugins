@@ -3,7 +3,13 @@ const path = require('path');
 const test = require('ava');
 
 const {defaultLog, normalizeLog} = require('../src/log');
-const {toDeleteEntries, resolveQueueName, toCreateQueueParams} = require('../src/sqs');
+const {
+  toDeleteEntries,
+  resolveQueueName,
+  toCreateQueueParams,
+  resolveWaitTimeSeconds,
+  partitionBatchForDeletion
+} = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
 const {defaultOptions, isPluginEnabled} = require('../src');
@@ -446,4 +452,114 @@ test('#189 toCreateQueueParams infers FIFO from a .fifo name even without the Fi
 
 test('toCreateQueueParams leaves a standard queue without a FifoQueue attribute', t => {
   t.false('FifoQueue' in toCreateQueueParams('plain-queue', {QueueName: 'plain-queue'}).Attributes);
+});
+
+// ---------------------------------------------------------------------------
+// resolveWaitTimeSeconds — maximumBatchingWindow support (#227 tomusiaka)
+// ---------------------------------------------------------------------------
+
+test('#227 resolveWaitTimeSeconds falls back to the default when unset', t => {
+  t.is(resolveWaitTimeSeconds({}, 5), 5);
+  t.is(resolveWaitTimeSeconds({maximumBatchingWindow: undefined}, 5), 5);
+  t.is(resolveWaitTimeSeconds({maximumBatchingWindow: 'oops'}, 5), 5);
+});
+
+test('#227 resolveWaitTimeSeconds honors 0 (instant short-poll), not treated as falsy', t => {
+  t.is(resolveWaitTimeSeconds({maximumBatchingWindow: 0}, 5), 0);
+});
+
+test('#227 resolveWaitTimeSeconds passes through a valid in-range value', t => {
+  t.is(resolveWaitTimeSeconds({maximumBatchingWindow: 20}, 5), 20);
+  t.is(resolveWaitTimeSeconds({maximumBatchingWindow: 12}, 5), 12);
+});
+
+test('#227 resolveWaitTimeSeconds clamps to the SQS long-poll max of 20s', t => {
+  // serverless allows maximumBatchingWindow up to 300, but ReceiveMessage WaitTimeSeconds maxes at 20
+  t.is(resolveWaitTimeSeconds({maximumBatchingWindow: 300}, 5), 20);
+});
+
+test('#227 resolveWaitTimeSeconds clamps negatives to 0', t => {
+  t.is(resolveWaitTimeSeconds({maximumBatchingWindow: -3}, 5), 0);
+});
+
+// ---------------------------------------------------------------------------
+// partitionBatchForDeletion — partial batch failure reporting (#221 successkrisz)
+// ---------------------------------------------------------------------------
+
+const mkMessages = ids => ids.map(id => ({MessageId: id, ReceiptHandle: `rh-${id}`}));
+
+test('#221 partitionBatchForDeletion deletes the whole batch when report mode is OFF', t => {
+  const messages = mkMessages(['a', 'b', 'c']);
+  const toDelete = partitionBatchForDeletion(messages, {
+    reportBatchItemFailures: false,
+    result: {batchItemFailures: [{itemIdentifier: 'b'}]} // ignored in legacy mode
+  });
+  t.deepEqual(
+    toDelete.map(({MessageId}) => MessageId),
+    ['a', 'b', 'c']
+  );
+});
+
+test('#221 partitionBatchForDeletion deletes only the successes in report mode', t => {
+  const messages = mkMessages(['a', 'b', 'c']);
+  const toDelete = partitionBatchForDeletion(messages, {
+    reportBatchItemFailures: true,
+    result: {batchItemFailures: [{itemIdentifier: 'b'}]}
+  });
+  t.deepEqual(
+    toDelete.map(({MessageId}) => MessageId),
+    ['a', 'c']
+  );
+  // the failed message is NOT deleted -> SQS redrives it
+  t.false(toDelete.some(({ReceiptHandle}) => ReceiptHandle === 'rh-b'));
+});
+
+test('#221 partitionBatchForDeletion treats empty/absent batchItemFailures as full success', t => {
+  const messages = mkMessages(['a', 'b']);
+  t.is(partitionBatchForDeletion(messages, {reportBatchItemFailures: true, result: {}}).length, 2);
+  t.is(
+    partitionBatchForDeletion(messages, {
+      reportBatchItemFailures: true,
+      result: {batchItemFailures: []}
+    }).length,
+    2
+  );
+  t.is(
+    partitionBatchForDeletion(messages, {reportBatchItemFailures: true, result: null}).length,
+    2
+  );
+});
+
+test('#221 partitionBatchForDeletion deletes nothing on total failure (thrown handler)', t => {
+  const messages = mkMessages(['a', 'b']);
+  t.deepEqual(
+    partitionBatchForDeletion(messages, {reportBatchItemFailures: true, failed: true}),
+    []
+  );
+});
+
+test('#221 partitionBatchForDeletion tolerates unknown and duplicate itemIdentifiers', t => {
+  const messages = mkMessages(['a', 'b']);
+  const toDelete = partitionBatchForDeletion(messages, {
+    reportBatchItemFailures: true,
+    result: {
+      batchItemFailures: [{itemIdentifier: 'b'}, {itemIdentifier: 'zzz'}, {itemIdentifier: 'b'}]
+    }
+  });
+  t.deepEqual(
+    toDelete.map(({MessageId}) => MessageId),
+    ['a']
+  );
+});
+
+test('#221 partitionBatchForDeletion survivors feed toDeleteEntries with fresh unique Ids', t => {
+  const messages = mkMessages(['a', 'b', 'c']);
+  const kept = partitionBatchForDeletion(messages, {
+    reportBatchItemFailures: true,
+    result: {batchItemFailures: [{itemIdentifier: 'b'}]}
+  });
+  t.deepEqual(toDeleteEntries(kept), [
+    {Id: '0', ReceiptHandle: 'rh-a'},
+    {Id: '1', ReceiptHandle: 'rh-c'}
+  ]);
 });

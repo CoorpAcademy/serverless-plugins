@@ -3,12 +3,19 @@ const SQSClient = require('aws-sdk/clients/sqs');
 const {
   assign,
   chunk,
+  clamp,
   endsWith,
+  filter,
   find,
+  flatMap,
   fromPairs,
   get,
+  getOr,
+  includes,
   isArray,
   isEmpty,
+  isFinite,
+  isNil,
   isPlainObject,
   mapValues,
   matches,
@@ -106,6 +113,38 @@ const toCreateQueueParams = (queueName, properties = {}) => {
   };
 };
 
+// SQS ReceiveMessage long-poll caps WaitTimeSeconds at 20, even though the serverless
+// maximumBatchingWindow property accepts 0-300.
+const SQS_MAX_WAIT_TIME_SECONDS = 20;
+
+// #227 (tomusiaka): honor the event-level `maximumBatchingWindow` as the receiveMessage
+// WaitTimeSeconds instead of a hard-coded 5. Clamp to the SQS long-poll range [0, 20]; fall back to
+// the previous default when the option is absent or not a finite number (0 is honored, not falsy).
+const resolveWaitTimeSeconds = (sqsEvent, defaultWaitTimeSeconds) =>
+  isFinite(get('maximumBatchingWindow', sqsEvent))
+    ? clamp(0, SQS_MAX_WAIT_TIME_SECONDS, sqsEvent.maximumBatchingWindow)
+    : defaultWaitTimeSeconds;
+
+// #221 (successkrisz): support SQS partial batch failure reporting. When the event mapping sets
+// `functionResponseType: ReportBatchItemFailures`, the handler returns
+// `{batchItemFailures: [{itemIdentifier: messageId}]}` and only the successes must be deleted so the
+// rest are redriven. Pure + immutable: returns the subset of `messages` to delete.
+//   - legacy mode (reportBatchItemFailures false): delete the whole batch (unchanged behavior)
+//   - thrown handler (failed): delete nothing -> redrive the whole batch
+//   - report mode: delete every message whose MessageId is NOT a reported itemIdentifier
+//     (empty/absent batchItemFailures => full-batch success => delete all)
+const partitionBatchForDeletion = (messages, {reportBatchItemFailures, result, failed} = {}) => {
+  if (!reportBatchItemFailures) return messages || [];
+  if (failed) return [];
+
+  const failedIds = flatMap(
+    item => (item && !isNil(item.itemIdentifier) ? [String(item.itemIdentifier)] : []),
+    getOr([], 'batchItemFailures', result)
+  );
+
+  return filter(({MessageId}) => !includes(String(MessageId), failedIds), messages || []);
+};
+
 class SQS {
   constructor(lambda, resources, options, log) {
     this.lambda = null;
@@ -166,7 +205,7 @@ class SQS {
   }
 
   async _sqsEvent(functionKey, sqsEvent) {
-    const {enabled, arn, queueName, batchSize = 10} = sqsEvent;
+    const {enabled, arn, queueName, batchSize = 10, functionResponseType} = sqsEvent;
 
     if (!enabled) return;
 
@@ -175,6 +214,11 @@ class SQS {
     const QueueUrl = this._rewriteQueueUrl(
       (await this.client.getQueueUrl({QueueName: queueName}).promise()).QueueUrl
     );
+
+    // #227 (tomusiaka): use maximumBatchingWindow as the long-poll wait (default 5s) per queue.
+    const WaitTimeSeconds = resolveWaitTimeSeconds(sqsEvent, 5);
+    // #221 (successkrisz): only honor partial-batch-failure when the mapping opts in.
+    const reportBatchItemFailures = functionResponseType === 'ReportBatchItemFailures';
 
     const getMessages = async (size, messages = []) => {
       if (size <= 0) return messages;
@@ -185,7 +229,7 @@ class SQS {
           MaxNumberOfMessages: size > 10 ? 10 : size,
           AttributeNames: ['All'],
           MessageAttributeNames: ['All'],
-          WaitTimeSeconds: 5
+          WaitTimeSeconds
         })
         .promise();
 
@@ -203,18 +247,24 @@ class SQS {
           const event = new SQSEvent(messages, this.options.region, arn);
           lambdaFunction.setEvent(event);
 
-          await lambdaFunction.runHandler();
+          // #221 (successkrisz): capture the handler result so ReportBatchItemFailures can keep the
+          // failed records for redrive. A thrown handler is caught below and deletes nothing.
+          const result = await lambdaFunction.runHandler();
 
-          await Promise.all(
-            chunk(10, toDeleteEntries(messages)).map(Entries =>
-              this.client
-                .deleteMessageBatch({
-                  Entries,
-                  QueueUrl
-                })
-                .promise()
-            )
-          );
+          const toDelete = partitionBatchForDeletion(messages, {reportBatchItemFailures, result});
+
+          if (toDelete.length > 0) {
+            await Promise.all(
+              chunk(10, toDeleteEntries(toDelete)).map(Entries =>
+                this.client
+                  .deleteMessageBatch({
+                    Entries,
+                    QueueUrl
+                  })
+                  .promise()
+              )
+            );
+          }
         } catch (err) {
           this.log.warning(err.stack);
         }
@@ -249,3 +299,5 @@ module.exports = SQS;
 module.exports.toDeleteEntries = toDeleteEntries;
 module.exports.resolveQueueName = resolveQueueName;
 module.exports.toCreateQueueParams = toCreateQueueParams;
+module.exports.resolveWaitTimeSeconds = resolveWaitTimeSeconds;
+module.exports.partitionBatchForDeletion = partitionBatchForDeletion;
