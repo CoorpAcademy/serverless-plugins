@@ -3,6 +3,7 @@ const {
   fromPairs,
   get,
   has,
+  isNil,
   isPlainObject,
   isUndefined,
   map,
@@ -38,6 +39,17 @@ const defaultOptions = {
 
 const omitUndefined = omitBy(isUndefined);
 
+// #222 (gndelia): allow locally skipping the whole SQS emulator (e.g. when only HTTP lambdas are
+// needed and no local queue system is running) without commenting out the plugin. Honors
+// `custom.serverless-offline-sqs.enabled: false` (also a `--enabled false` CLI flag); enabled by
+// default when unset. YAML/CLI may deliver the value as the string "false", so treat that as off too.
+const isPluginEnabled = options => {
+  const enabled = get('enabled', options);
+  if (isNil(enabled)) return true;
+  if (enabled === 'false') return false;
+  return Boolean(enabled);
+};
+
 class ServerlessOfflineSQS {
   constructor(serverless, cliOptions, {log} = {}) {
     this.cliOptions = cliOptions;
@@ -63,7 +75,9 @@ class ServerlessOfflineSQS {
 
     const eventModules = [];
 
-    if (sqsEvents.length > 0) {
+    // #222 (gndelia): skip SQS setup entirely when disabled, but still create the lambdas so plain
+    // HTTP functions keep working under serverless-offline.
+    if (isPluginEnabled(this.options) && sqsEvents.length > 0) {
       eventModules.push(this._createSqs(sqsEvents));
     }
 
@@ -240,3 +254,4 @@ class ServerlessOfflineSQS {
 
 module.exports = ServerlessOfflineSQS;
 module.exports.defaultOptions = defaultOptions;
+module.exports.isPluginEnabled = isPluginEnabled;
