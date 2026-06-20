@@ -1,9 +1,5 @@
-const {Writable} = require('stream');
-const {spawn} = require('child_process');
-const onExit = require('signal-exit');
 const {DynamoDB} = require('aws-sdk');
-const pump = require('pump');
-const {delay, getSplitLinesTransform} = require('./utils');
+const {delay, runOfflineTest} = require('./utils');
 
 const client = new DynamoDB({
   region: 'eu-west-1',
@@ -12,77 +8,32 @@ const client = new DynamoDB({
   endpoint: 'http://localhost:8000'
 });
 
-// Dynamodb-local doesn't create stream until table isn't empty
-const unemptyTables = () =>
-  Promise.all(
-    ['MyFirstTable', 'MySecondTable', 'MyThirdTable', 'MyFourthTable'].map(TableName =>
-      client
-        .putItem({
-          Item: {id: {S: 'Stub'}},
-          TableName
-        })
-        .promise()
-    )
-  );
+// MyFirstTable + MySecondTable (myPromiseHandler), MyThirdTable (myCallbackHandler),
+// MyFourthTable (mySecondCallbackHandler) => 4 distinct invocations.
+const S = 'serverless-offline-dynamodb-streams-dev';
+const EXPECTED_KEYS = [
+  `${S}-myPromiseHandler dynamodb:MyFirstTable`,
+  `${S}-myPromiseHandler dynamodb:MySecondTable`,
+  `${S}-myCallbackHandler dynamodb:MyThirdTable`,
+  `${S}-mySecondCallbackHandler dynamodb:MyFourthTable`
+];
 
-const putItems = () =>
-  Promise.all(
-    ['First', 'Second', 'Third', 'Fourth'].map(order =>
-      client
-        .putItem({
-          Item: {id: {S: `My${order}Id`}},
-          TableName: `My${order}Table`
-        })
-        .promise()
-    )
-  );
+const TABLES = ['MyFirstTable', 'MySecondTable', 'MyThirdTable', 'MyFourthTable'];
 
-let setupInProgress = true;
+const putItem = (TableName, id) => client.putItem({Item: {id: {S: id}}, TableName}).promise();
+
+// Dynamodb-local only surfaces stream records once a table is non-empty, so seed every table,
+// let the readers attach, then write the records the handlers should receive.
 const populateTables = async () => {
-  await unemptyTables();
-  await delay(1200);
-  setupInProgress = false;
-  await putItems();
+  await Promise.all(TABLES.map(TableName => putItem(TableName, 'Stub')));
+  await delay(1500);
+  await Promise.all(TABLES.map(TableName => putItem(TableName, `${TableName}Id`)));
 };
 
-const serverless = spawn(
-  'sls',
-  ['offline', 'start', '--config', 'serverless.dynamodb-streams.yml'],
-  {
-    stdio: ['pipe', 'pipe', 'pipe'],
-    cwd: __dirname
-  }
-);
-
-const set = new Set();
-let invocationCount = 0;
-pump(
-  serverless.stderr,
-  getSplitLinesTransform(),
-  new Writable({
-    objectMode: true,
-    write(line, enc, cb) {
-      if (/Starting Offline Dynamodb Streams/.test(line)) {
-        populateTables(); // will run in the background
-      }
-
-      if (setupInProgress) return cb(); // do not consider lambda executions before we post the real items
-
-      const matches = /\(λ: (.*)\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g.exec(
-        line
-      );
-
-      if (matches) {
-        invocationCount++;
-        set.add(matches[1]);
-      }
-
-      if (set.size === 3 && invocationCount === 4) serverless.kill(); // myPromiseHandler is mapped to two tables
-      cb();
-    }
-  })
-);
-
-onExit((code, signal) => {
-  if (signal) serverless.kill(signal);
+runOfflineTest({
+  config: 'serverless.dynamodb-streams.yml',
+  label: 'test-dynamodb-streams',
+  expectedKeys: EXPECTED_KEYS,
+  readyPattern: /Starting Offline Dynamodb Streams/,
+  onReady: populateTables
 });

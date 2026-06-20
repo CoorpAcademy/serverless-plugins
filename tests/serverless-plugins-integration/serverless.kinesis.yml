@@ -27,9 +27,8 @@ functions:
             Fn::GetAtt:
               - MyThirdStream
               - Arn
-  myPythonHandler:
-    runtime: python3.7
-    handler: lambda/handler.handler
+  mySecondCallbackHandler:
+    handler: lambda/handler.callback
     events:
       - stream:
           type: kinesis
@@ -49,4 +48,5 @@ resources:
 custom:
   serverless-offline:
     httpPort: 3223
+    lambdaPort: 3012
   serverless-offline-kinesis: ${file(./custom.yml):serverless-offline-kinesis}

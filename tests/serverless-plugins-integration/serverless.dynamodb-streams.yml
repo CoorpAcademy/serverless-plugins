@@ -30,9 +30,8 @@ functions:
             Fn::GetAtt:
               - MyThirdTable
               - Arn
-  myPythonHandler:
-    runtime: python3.7
-    handler: lambda/handler.handler
+  mySecondCallbackHandler:
+    handler: lambda/handler.callback
     events:
       - stream:
           type: dynamodb
@@ -62,4 +61,5 @@ resources:
 custom:
   serverless-offline:
     httpPort: 3443
+    lambdaPort: 3002
   serverless-offline-dynamodb-streams: ${file(./custom.yml):serverless-offline-dynamodb-streams}
