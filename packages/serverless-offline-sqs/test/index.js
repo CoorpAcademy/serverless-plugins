@@ -8,6 +8,8 @@ const {
   resolveQueueName,
   toCreateQueueParams,
   resolveWaitTimeSeconds,
+  resolveDefaultWaitTimeSeconds,
+  DEFAULT_WAIT_TIME_SECONDS,
   partitionBatchForDeletion,
   collectQueueDefinitions,
   extractDlqTargetName,
@@ -17,6 +19,7 @@ const {
 } = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
+const ServerlessOfflineSQS = require('../src');
 const {defaultOptions, isPluginEnabled} = require('../src');
 const {extractQueueNameFromARN, resolveCfnValue} = require('../src/sqs-event-definition');
 
@@ -485,6 +488,113 @@ test('#227 resolveWaitTimeSeconds clamps to the SQS long-poll max of 20s', t => 
 
 test('#227 resolveWaitTimeSeconds clamps negatives to 0', t => {
   t.is(resolveWaitTimeSeconds({maximumBatchingWindow: -3}, 5), 0);
+});
+
+// ---------------------------------------------------------------------------
+// resolveDefaultWaitTimeSeconds — configurable long-poll wait (#123 zoellner)
+// The global long-poll fallback used to be a hard-coded 5s with no way to tune
+// the receiveMessage WaitTimeSeconds except per-event maximumBatchingWindow
+// (#227). A 20s long-poll against ElasticMQ/localstack produced frequent 503s
+// (#123, bisected by zoellner to 40efaf9); esetnik agreed to expose it as
+// configuration with the 20s default debated down to ~15s.
+// ---------------------------------------------------------------------------
+
+test('#123 DEFAULT_WAIT_TIME_SECONDS is the 15s thread compromise within the long-poll range', t => {
+  t.is(DEFAULT_WAIT_TIME_SECONDS, 15);
+  t.true(DEFAULT_WAIT_TIME_SECONDS >= 0 && DEFAULT_WAIT_TIME_SECONDS <= 20);
+});
+
+test('#123 resolveDefaultWaitTimeSeconds falls back to the built-in default when unconfigured', t => {
+  t.is(resolveDefaultWaitTimeSeconds({}), DEFAULT_WAIT_TIME_SECONDS);
+  t.is(resolveDefaultWaitTimeSeconds(undefined), DEFAULT_WAIT_TIME_SECONDS);
+  t.is(resolveDefaultWaitTimeSeconds({waitTimeSeconds: undefined}), DEFAULT_WAIT_TIME_SECONDS);
+  t.is(resolveDefaultWaitTimeSeconds({waitTimeSeconds: 'oops'}), DEFAULT_WAIT_TIME_SECONDS);
+});
+
+test('#123 resolveDefaultWaitTimeSeconds honors a configured waitTimeSeconds', t => {
+  t.is(resolveDefaultWaitTimeSeconds({waitTimeSeconds: 3}), 3);
+  t.is(resolveDefaultWaitTimeSeconds({waitTimeSeconds: 20}), 20);
+});
+
+test('#123 resolveDefaultWaitTimeSeconds honors 0 (instant short-poll), not treated as falsy', t => {
+  t.is(resolveDefaultWaitTimeSeconds({waitTimeSeconds: 0}), 0);
+});
+
+test('#123 resolveDefaultWaitTimeSeconds accepts pollingInterval as an alias', t => {
+  t.is(resolveDefaultWaitTimeSeconds({pollingInterval: 8}), 8);
+  // an explicit waitTimeSeconds wins over the pollingInterval alias
+  t.is(resolveDefaultWaitTimeSeconds({waitTimeSeconds: 4, pollingInterval: 8}), 4);
+});
+
+test('#123 resolveDefaultWaitTimeSeconds clamps to the SQS long-poll range [0, 20]', t => {
+  t.is(resolveDefaultWaitTimeSeconds({waitTimeSeconds: 300}), 20);
+  t.is(resolveDefaultWaitTimeSeconds({waitTimeSeconds: -3}), 0);
+});
+
+test('#123 a configured plugin default flows into resolveWaitTimeSeconds when no event window is set', t => {
+  // The plugin-level default is the fallback the live poll handler passes as the
+  // second arg of resolveWaitTimeSeconds; an event-level maximumBatchingWindow still wins.
+  const pluginDefault = resolveDefaultWaitTimeSeconds({waitTimeSeconds: 10});
+  t.is(resolveWaitTimeSeconds({}, pluginDefault), 10);
+  t.is(resolveWaitTimeSeconds({maximumBatchingWindow: 2}, pluginDefault), 2);
+});
+
+test('#123 the live poll handler passes the options-derived default to resolveWaitTimeSeconds', t => {
+  // source-level guard: the hard-coded `resolveWaitTimeSeconds(sqsEvent, 5)` must be gone,
+  // replaced by the options-derived plugin default.
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'sqs.js'), 'utf8');
+  t.false(/resolveWaitTimeSeconds\(sqsEvent,\s*5\)/.test(source));
+  t.true(
+    /resolveWaitTimeSeconds\(\s*sqsEvent,\s*resolveDefaultWaitTimeSeconds\(this\.options\)/.test(
+      source
+    )
+  );
+});
+
+test('#123 defaultOptions registers the waitTimeSeconds long-poll default (15s compromise)', t => {
+  t.is(defaultOptions.waitTimeSeconds, DEFAULT_WAIT_TIME_SECONDS);
+  t.is(defaultOptions.waitTimeSeconds, 15);
+});
+
+test('#123 resolveDefaultWaitTimeSeconds is a pure read with no side effects on its input', t => {
+  const options = {waitTimeSeconds: 7, region: 'eu-west-1'};
+  const before = {...options};
+  resolveDefaultWaitTimeSeconds(options);
+  t.deepEqual(options, before);
+});
+
+const mkPlugin = (custom, cliOptions = {}) =>
+  new ServerlessOfflineSQS({service: {custom, provider: {}}}, cliOptions, {log: normalizeLog()});
+
+test('#123 _mergeOptions threads a configured waitTimeSeconds through to the receiveMessage default', t => {
+  const plugin = mkPlugin({'serverless-offline-sqs': {waitTimeSeconds: 12}});
+  plugin._mergeOptions();
+  t.is(plugin.options.waitTimeSeconds, 12);
+  // and that merged value is exactly what the live poll handler uses as the WaitTimeSeconds fallback
+  t.is(resolveDefaultWaitTimeSeconds(plugin.options), 12);
+  t.is(resolveWaitTimeSeconds({}, resolveDefaultWaitTimeSeconds(plugin.options)), 12);
+});
+
+test('#123 _mergeOptions clamps an out-of-range configured waitTimeSeconds at the receiveMessage edge', t => {
+  const plugin = mkPlugin({'serverless-offline-sqs': {waitTimeSeconds: 300}});
+  plugin._mergeOptions();
+  // the raw option survives the merge as-is; clamping happens in resolveDefaultWaitTimeSeconds
+  t.is(plugin.options.waitTimeSeconds, 300);
+  t.is(resolveDefaultWaitTimeSeconds(plugin.options), 20);
+});
+
+test('#123 _mergeOptions falls back to the 15s default when waitTimeSeconds is unconfigured', t => {
+  const plugin = mkPlugin({'serverless-offline-sqs': {autoCreate: true}});
+  plugin._mergeOptions();
+  t.is(plugin.options.waitTimeSeconds, DEFAULT_WAIT_TIME_SECONDS);
+  t.is(resolveDefaultWaitTimeSeconds(plugin.options), 15);
+});
+
+test('#123 a --waitTimeSeconds CLI option overrides custom config through the merge pipeline', t => {
+  const plugin = mkPlugin({'serverless-offline-sqs': {waitTimeSeconds: 12}}, {waitTimeSeconds: 3});
+  plugin._mergeOptions();
+  t.is(plugin.options.waitTimeSeconds, 3);
+  t.is(resolveDefaultWaitTimeSeconds(plugin.options), 3);
 });
 
 // ---------------------------------------------------------------------------

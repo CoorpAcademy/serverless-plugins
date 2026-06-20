@@ -16,6 +16,8 @@ const {
 const {normalizeLog} = require('./log');
 const SQS = require('./sqs');
 
+const {DEFAULT_WAIT_TIME_SECONDS} = SQS;
+
 const OFFLINE_OPTION = 'serverless-offline';
 const CUSTOM_OPTION = 'serverless-offline-sqs';
 
@@ -33,6 +35,14 @@ const defaultOptions = {
   // terminateIdleLambdaTime >= v13); default both to serverless-offline's own default (60s).
   functionCleanupIdleTimeSeconds: 60,
   terminateIdleLambdaTime: 60,
+
+  // #123 (zoellner): the receiveMessage long-poll wait used to be a hard-coded 5s fallback with no
+  // knob — the only lever was the per-event maximumBatchingWindow (#227). A 20s long-poll against
+  // ElasticMQ/localstack produced the frequent 503s in #123 (bisected to 40efaf9); esetnik agreed to
+  // expose it as config with the 20s default debated down to ~15s. Expose it as a plugin option
+  // (clamped to [0,20] in sqs.resolveDefaultWaitTimeSeconds); the event-level maximumBatchingWindow
+  // still wins per queue.
+  waitTimeSeconds: DEFAULT_WAIT_TIME_SECONDS,
 
   accountId: '000000000000'
 };

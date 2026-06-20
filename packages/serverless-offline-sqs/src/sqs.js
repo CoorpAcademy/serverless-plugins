@@ -178,9 +178,29 @@ const toCreateQueueParams = (queueName, properties = {}) => {
 // maximumBatchingWindow property accepts 0-300.
 const SQS_MAX_WAIT_TIME_SECONDS = 20;
 
+// #123 (zoellner) / agreed by esetnik: the global long-poll fallback used to be a hard-coded 5s and
+// the only way to influence WaitTimeSeconds was the per-event maximumBatchingWindow (#227). A 20s
+// long-poll against ElasticMQ/localstack produced the frequent 503s in #123 (bisected to 40efaf9),
+// so the maintainer agreed to expose it as configuration with the 20s default debated down to ~15s.
+// 15s is the thread compromise: long enough to keep poll churn (and the 503s) low, short enough to
+// stay responsive.
+const DEFAULT_WAIT_TIME_SECONDS = 15;
+
+// #123 (zoellner): derive the plugin-level long-poll default from the merged options
+// (custom.serverless-offline-sqs.waitTimeSeconds, or `pollingInterval` as an alias). Clamp to the
+// SQS long-poll range [0, 20]; fall back to DEFAULT_WAIT_TIME_SECONDS when neither option is a finite
+// number (0 is honored, not falsy — it means short-poll). `waitTimeSeconds` wins over the alias.
+// Pure: reads only its argument, returns a number.
+const resolveDefaultWaitTimeSeconds = options => {
+  const configured = get('waitTimeSeconds', options);
+  const value = isFinite(configured) ? configured : get('pollingInterval', options);
+  return isFinite(value) ? clamp(0, SQS_MAX_WAIT_TIME_SECONDS, value) : DEFAULT_WAIT_TIME_SECONDS;
+};
+
 // #227 (tomusiaka): honor the event-level `maximumBatchingWindow` as the receiveMessage
-// WaitTimeSeconds instead of a hard-coded 5. Clamp to the SQS long-poll range [0, 20]; fall back to
-// the previous default when the option is absent or not a finite number (0 is honored, not falsy).
+// WaitTimeSeconds. Clamp to the SQS long-poll range [0, 20]; fall back to the supplied default
+// (#123: now the options-derived plugin default, no longer a hard-coded 5) when the option is absent
+// or not a finite number (0 is honored, not falsy).
 const resolveWaitTimeSeconds = (sqsEvent, defaultWaitTimeSeconds) =>
   isFinite(get('maximumBatchingWindow', sqsEvent))
     ? clamp(0, SQS_MAX_WAIT_TIME_SECONDS, sqsEvent.maximumBatchingWindow)
@@ -375,8 +395,14 @@ class SQS {
       (await this.client.getQueueUrl({QueueName: queueName}).promise()).QueueUrl
     );
 
-    // #227 (tomusiaka): use maximumBatchingWindow as the long-poll wait (default 5s) per queue.
-    const WaitTimeSeconds = resolveWaitTimeSeconds(sqsEvent, 5);
+    // #227 (tomusiaka): use the event-level maximumBatchingWindow as the long-poll wait per queue.
+    // #123 (zoellner): when no event window is set, fall back to the configurable plugin-level
+    // default (custom.serverless-offline-sqs.waitTimeSeconds / pollingInterval, default 15s) instead
+    // of the old hard-coded 5s that left the long-poll behavior untunable.
+    const WaitTimeSeconds = resolveWaitTimeSeconds(
+      sqsEvent,
+      resolveDefaultWaitTimeSeconds(this.options)
+    );
     // #221 (successkrisz): only honor partial-batch-failure when the mapping opts in.
     const reportBatchItemFailures = functionResponseType === 'ReportBatchItemFailures';
 
@@ -462,6 +488,8 @@ module.exports.normalizeQueueNames = normalizeQueueNames;
 module.exports.expandSqsEventDefinitions = expandSqsEventDefinitions;
 module.exports.toCreateQueueParams = toCreateQueueParams;
 module.exports.resolveWaitTimeSeconds = resolveWaitTimeSeconds;
+module.exports.resolveDefaultWaitTimeSeconds = resolveDefaultWaitTimeSeconds;
+module.exports.DEFAULT_WAIT_TIME_SECONDS = DEFAULT_WAIT_TIME_SECONDS;
 module.exports.partitionBatchForDeletion = partitionBatchForDeletion;
 module.exports.collectQueueDefinitions = collectQueueDefinitions;
 module.exports.extractDlqTargetName = extractDlqTargetName;
