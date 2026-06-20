@@ -40,6 +40,8 @@ class DynamodbStreamsEventDefinition {
     this.tableName = tableName;
 
     if (typeof rawSqsEventDefinition !== 'string') {
+      // #242 (cremoon): this rest-spread copies any extra event keys (notably
+      // `filterPatterns`) onto the instance; dynamodb-streams.js reads them at runtime.
       Object.assign(this, omit(['arn', 'tableName', 'enabled'], rawSqsEventDefinition));
     }
   }

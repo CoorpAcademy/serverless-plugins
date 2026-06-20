@@ -1,0 +1,25 @@
+serverless-offline-dynamodb-streams
+Copyright (c) 2019-2026 CoorpAcademy
+
+This product includes software adapted from third-party open-source projects.
+
+-------------------------------------------------------------------------------
+Lambda event-source-mapping filterPatterns matching
+-------------------------------------------------------------------------------
+
+The `filterPatterns` matching in `src/filter-patterns.js` (#242) reuses the
+EventBridge content-filter matcher (`matchesPattern` / `matchesFilter` and the
+leaf content filters: prefix, suffix, anything-but, exists, equals-ignore-case,
+numeric, wildcard, cidr) from the sibling package `serverless-offline-eventbridge`
+(imported as a dependency). AWS Lambda event-source-mapping `filterPatterns` use
+the same content-filter grammar, so the grammar is kept in a single source of
+truth rather than re-implemented here.
+
+That matcher is itself adapted in spirit from:
+
+  rubenkaiser/serverless-offline-aws-eventbridge
+  https://github.com/rubenkaiser/serverless-offline-aws-eventbridge
+  Licensed under the MIT License.
+
+See serverless-offline-eventbridge/NOTICE for the full attribution and the MIT
+License text governing the original work.

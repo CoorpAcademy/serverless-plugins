@@ -16,7 +16,10 @@
     "src/log.js",
     "src/dynamodb-streams.js",
     "src/dynamodb-streams-event.js",
-    "src/dynamodb-streams-event-definition.js"
+    "src/dynamodb-streams-event-definition.js",
+    "src/resolve-arn.js",
+    "src/filter-patterns.js",
+    "NOTICE"
   ],
   "author": "Arthur Weber @godu",
   "license": "MIT",
@@ -29,7 +32,8 @@
   "dependencies": {
     "aws-sdk": "^2.1234.0",
     "dynamodb-streams-readable": "^3.0.0",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "serverless-offline-eventbridge": "^1.0.0"
   },
   "devDependencies": {
     "serverless-offline": "^13"
