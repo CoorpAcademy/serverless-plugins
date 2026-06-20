@@ -2,8 +2,10 @@ const SQSClient = require('aws-sdk/clients/sqs');
 
 const {
   assign,
+  castArray,
   chunk,
   clamp,
+  compact,
   endsWith,
   filter,
   find,
@@ -17,6 +19,7 @@ const {
   isFinite,
   isNil,
   isPlainObject,
+  isString,
   keyBy,
   map,
   mapValues,
@@ -25,7 +28,10 @@ const {
   pick,
   pipe,
   reduce,
+  split,
   toString,
+  trim,
+  uniq,
   values
 } = require('lodash/fp');
 const {default: PQueue} = require('p-queue');
@@ -59,6 +65,56 @@ const resolveQueueName = (options, rawSqsEventDefinition) => {
       : rawSqsEventDefinition;
 
   return {...omit(['arn'], base), queueName: options.queueName};
+};
+
+// #262 (renanlido): a single SQS event may target MULTIPLE queues. The `queueName` (event-level
+// or the custom.serverless-offline-sqs.queueName / --queueName override) may be:
+//   - a scalar string            'orders'
+//   - a comma-separated string   'orders, billing'   (CLI form: --queueName a,b)
+//   - an array of either         ['orders', 'billing,audit']
+// Normalize all of these into a de-duplicated, trimmed string[]. Anything falsy/empty -> [].
+// Note: this is for *literal* queue names only; ARN strings are left to the SQSEventDefinition
+// ARN-extraction path (#74/#200) and never reach here (see expandSqsEventDefinitions). Pure +
+// non-throwing: castArray(undefined|null) yields a one-element array whose non-string member is
+// dropped, so empty/nullish input resolves to [] without throwing.
+const normalizeQueueNames = pipe(
+  castArray,
+  flatMap(name => (isString(name) ? split(',', name) : [])),
+  map(trim),
+  compact, // drop '' produced by trailing/double commas
+  uniq
+);
+
+// #262 (renanlido): expand an SQS event definition into one definition per target queue, so an
+// array / comma-separated `queueName` (event-level or via the --queueName override) becomes one
+// independent SQSEventDefinition + poll loop per queue instead of a single malformed listener.
+// Pure + non-mutating: returns a fresh array of definitions (one per resolved queue name).
+//   - Override precedence and the #211 arn-strip contract are preserved: when options.queueName is
+//     set it WINS and `arn`/`queueName` are stripped so SQSEventDefinition rebuilds the ARN from
+//     the override.
+//   - With NO override and NO literal event-level queueName (an ARN/intrinsic string or {arn}
+//     object), the input is passed straight through as a single-element array so the existing
+//     extractQueueNameFromARN/resolveCfnValue path (#74/#200) keeps owning name derivation.
+const expandSqsEventDefinitions = (options, rawSqsEventDefinition) => {
+  const overrideNames = normalizeQueueNames(get('queueName', options));
+
+  if (!isEmpty(overrideNames)) {
+    const base = isString(rawSqsEventDefinition)
+      ? {}
+      : omit(['arn', 'queueName'], rawSqsEventDefinition);
+    return overrideNames.map(queueName => ({...base, queueName}));
+  }
+
+  // No override: only fan out a *literal* array/comma event-level queueName. An ARN string or an
+  // {arn}/intrinsic object (no literal queueName) is passed straight through (single listener).
+  const eventNames = isString(rawSqsEventDefinition)
+    ? []
+    : normalizeQueueNames(get('queueName', rawSqsEventDefinition));
+
+  if (eventNames.length <= 1) return [rawSqsEventDefinition];
+
+  const base = omit(['queueName'], rawSqsEventDefinition);
+  return eventNames.map(queueName => ({...base, queueName}));
 };
 
 // #225 (tomusiaka): only these CloudFormation Properties are valid SQS createQueue Attributes.
@@ -226,6 +282,15 @@ class SQS {
   async create(events) {
     const {region, accountId} = this.options;
 
+    // #262 (renanlido): fan each event out into one (functionKey, def) per target queue (array /
+    // comma-separated queueName, event-level or via the --queueName override) before creating; each
+    // `def` is a fully-resolved single-queue definition.
+    const definitions = flatMap(
+      ({functionKey, sqs}) =>
+        expandSqsEventDefinitions(this.options, sqs).map(def => ({functionKey, def})),
+      events
+    );
+
     // #65/#133/#167: when autoCreate is on, create EVERY declared queue — including a dead-letter
     // queue that lives only in resources.Resources and is referenced solely via another queue's
     // RedrivePolicy — and create them DLQ-first, sequentially, so createQueue does not reject with
@@ -234,19 +299,16 @@ class SQS {
       const resourceDefs = collectQueueDefinitions(this.resources);
       const resourceNames = new Set(map('queueName', resourceDefs));
 
-      // Union in event-only queues (a string-ARN event with no resources entry) so the existing
-      // implicit-queue autoCreate keeps working; dedupe by queueName so a queue declared BOTH as a
-      // lambda event and a resource is created once, not twice.
+      // Union in event-only queues — including every queue a multi-queue event fanned out to — so
+      // the existing implicit-queue autoCreate keeps working; the defs are already fully resolved by
+      // expandSqsEventDefinitions, so read each queueName directly. Dedupe so a queue declared BOTH
+      // as a lambda event and a resource is created once, not twice.
       const eventDefs = pipe(
-        map(
-          ({sqs}) =>
-            new SQSEventDefinition(resolveQueueName(this.options, sqs), region, accountId).queueName
-        ),
+        map(({def}) => new SQSEventDefinition(def, region, accountId).queueName),
         filter(queueName => !isNil(queueName) && !resourceNames.has(queueName)),
-        // de-duplicate event names that repeat across functions
         queueNames => [...new Set(queueNames)],
         map(queueName => ({queueName, properties: {}}))
-      )(events);
+      )(definitions);
 
       const ordered = orderQueuesForCreation([...resourceDefs, ...eventDefs], region, accountId);
 
@@ -259,7 +321,7 @@ class SQS {
       );
     }
 
-    return Promise.all(events.map(({functionKey, sqs}) => this._create(functionKey, sqs)));
+    return Promise.all(definitions.map(({functionKey, def}) => this._create(functionKey, def)));
   }
 
   start() {
@@ -270,9 +332,10 @@ class SQS {
     this.queue.pause();
   }
 
-  _create(functionKey, rawSqsEventDefinition) {
-    const def = resolveQueueName(this.options, rawSqsEventDefinition);
-
+  _create(functionKey, def) {
+    // #262 (renanlido): `def` is already a fully-resolved single-queue definition produced by
+    // expandSqsEventDefinitions (override-wins + arn-strip handled there), so SQSEventDefinition
+    // only ever sees one queue at a time.
     const sqsEvent = new SQSEventDefinition(def, this.options.region, this.options.accountId);
 
     return this._sqsEvent(functionKey, sqsEvent);
@@ -395,6 +458,8 @@ class SQS {
 module.exports = SQS;
 module.exports.toDeleteEntries = toDeleteEntries;
 module.exports.resolveQueueName = resolveQueueName;
+module.exports.normalizeQueueNames = normalizeQueueNames;
+module.exports.expandSqsEventDefinitions = expandSqsEventDefinitions;
 module.exports.toCreateQueueParams = toCreateQueueParams;
 module.exports.resolveWaitTimeSeconds = resolveWaitTimeSeconds;
 module.exports.partitionBatchForDeletion = partitionBatchForDeletion;

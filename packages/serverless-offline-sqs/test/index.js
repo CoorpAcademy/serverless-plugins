@@ -11,7 +11,9 @@ const {
   partitionBatchForDeletion,
   collectQueueDefinitions,
   extractDlqTargetName,
-  orderQueuesForCreation
+  orderQueuesForCreation,
+  normalizeQueueNames,
+  expandSqsEventDefinitions
 } = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
@@ -730,4 +732,125 @@ test('#87 toCreateQueueParams forwards RedrivePolicy incl. maxReceiveCount for t
     params.Attributes.RedrivePolicy,
     '{"deadLetterTargetArn":"arn:aws:sqs:eu-west-1:000000000000:MainDlq","maxReceiveCount":5}'
   );
+});
+
+// ---------------------------------------------------------------------------
+// normalizeQueueNames / expandSqsEventDefinitions — multi-queue fan-out (#262 renanlido)
+// ---------------------------------------------------------------------------
+
+test('#262 normalizeQueueNames passes a single scalar name through as a one-element array', t => {
+  t.deepEqual(normalizeQueueNames('only'), ['only']);
+});
+
+test('#262 normalizeQueueNames splits a comma-separated string and trims each name', t => {
+  t.deepEqual(normalizeQueueNames('a, b ,c'), ['a', 'b', 'c']);
+});
+
+test('#262 normalizeQueueNames flattens an array (including comma-bearing members)', t => {
+  t.deepEqual(normalizeQueueNames(['a', 'b']), ['a', 'b']);
+  t.deepEqual(normalizeQueueNames(['a', 'b,c']), ['a', 'b', 'c']);
+});
+
+test('#262 normalizeQueueNames de-duplicates repeated names (array and string forms)', t => {
+  t.deepEqual(normalizeQueueNames(['a', 'a', 'b']), ['a', 'b']);
+  t.deepEqual(normalizeQueueNames('a,a,b'), ['a', 'b']);
+});
+
+test('#262 normalizeQueueNames returns [] for empty/nullish input without throwing', t => {
+  t.deepEqual(normalizeQueueNames(undefined), []);
+  t.deepEqual(normalizeQueueNames(null), []);
+  t.deepEqual(normalizeQueueNames(''), []);
+  t.deepEqual(normalizeQueueNames([]), []);
+  t.deepEqual(normalizeQueueNames('  ,  '), []);
+});
+
+test('#262 expandSqsEventDefinitions fans out an array queueName into one def per queue', t => {
+  const defs = expandSqsEventDefinitions({}, {queueName: ['a', 'b'], batchSize: 5});
+  t.deepEqual(defs, [
+    {queueName: 'a', batchSize: 5},
+    {queueName: 'b', batchSize: 5}
+  ]);
+});
+
+test('#262 expandSqsEventDefinitions fans out a comma-separated event queueName', t => {
+  const defs = expandSqsEventDefinitions({}, {queueName: 'a,b,c'});
+  t.deepEqual(defs, [{queueName: 'a'}, {queueName: 'b'}, {queueName: 'c'}]);
+});
+
+test('#262 expandSqsEventDefinitions yields a single def for a scalar queueName (no behavior change)', t => {
+  t.deepEqual(expandSqsEventDefinitions({}, {queueName: 'only'}), [{queueName: 'only'}]);
+});
+
+test('#262 expandSqsEventDefinitions: override (array) wins and fans out, stripping arn (#211 guard)', t => {
+  const event = {arn: 'arn:aws:sqs:eu-west-1:0:fromEvent', batchSize: 3};
+  const defs = expandSqsEventDefinitions({queueName: ['x', 'y']}, event);
+  t.deepEqual(defs, [
+    {queueName: 'x', batchSize: 3},
+    {queueName: 'y', batchSize: 3}
+  ]);
+  // each rebuilds its ARN downstream from the override (the #211 arn-strip contract)
+  const built = defs.map(d => new SQSEventDefinition(d, 'eu-west-1', '000000000000'));
+  t.deepEqual(
+    built.map(b => b.queueName),
+    ['x', 'y']
+  );
+  t.is(built[0].arn, 'arn:aws:sqs:eu-west-1:000000000000:x');
+});
+
+test('#262 expandSqsEventDefinitions: comma-separated override wins over event-level array', t => {
+  const defs = expandSqsEventDefinitions(
+    {queueName: 'x, y'},
+    {queueName: ['a', 'b'], batchSize: 1}
+  );
+  t.deepEqual(defs, [
+    {queueName: 'x', batchSize: 1},
+    {queueName: 'y', batchSize: 1}
+  ]);
+});
+
+test('#262 expandSqsEventDefinitions preserves all other props on every fanned-out def', t => {
+  const event = {
+    queueName: ['a', 'b'],
+    batchSize: 7,
+    enabled: false,
+    maximumBatchingWindow: 10,
+    functionResponseType: 'ReportBatchItemFailures'
+  };
+  const defs = expandSqsEventDefinitions({}, event);
+  defs.forEach(d => {
+    t.is(d.batchSize, 7);
+    t.is(d.enabled, false);
+    t.is(d.maximumBatchingWindow, 10);
+    t.is(d.functionResponseType, 'ReportBatchItemFailures');
+  });
+});
+
+test('#262 expandSqsEventDefinitions does not mutate the input event or options', t => {
+  const options = {queueName: ['x', 'y']};
+  const event = {queueName: ['a', 'b'], batchSize: 5};
+  const optionsBefore = {queueName: ['x', 'y']};
+  const eventBefore = {queueName: ['a', 'b'], batchSize: 5};
+  expandSqsEventDefinitions(options, event);
+  t.deepEqual(options, optionsBefore);
+  t.deepEqual(event, eventBefore);
+});
+
+test('#262 expandSqsEventDefinitions: string ARN event with no literal queueName stays a single listener (#74/#200 guard)', t => {
+  // No literal queueName, no override => one def, name derived by the ARN path downstream.
+  const defs = expandSqsEventDefinitions({}, 'arn:aws:sqs:eu-west-1:000000000000:Q');
+  t.is(defs.length, 1);
+  const built = new SQSEventDefinition(defs[0], 'eu-west-1', '000000000000');
+  t.is(built.queueName, 'Q');
+  t.is(built.arn, 'arn:aws:sqs:eu-west-1:000000000000:Q');
+});
+
+test('#262 expandSqsEventDefinitions: {arn} object event with no literal queueName stays a single listener', t => {
+  const defs = expandSqsEventDefinitions(
+    {},
+    {arn: 'arn:aws:sqs:eu-west-1:000000000000:Q', batchSize: 2}
+  );
+  t.is(defs.length, 1);
+  const built = new SQSEventDefinition(defs[0], 'eu-west-1', '000000000000');
+  t.is(built.queueName, 'Q');
+  t.is(built.batchSize, 2);
 });
