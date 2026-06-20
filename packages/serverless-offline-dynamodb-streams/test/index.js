@@ -7,6 +7,8 @@ const {defaultLog, normalizeLog} = require('../src/log');
 const DynamodbStreamsEvent = require('../src/dynamodb-streams-event');
 const DynamodbStreamsEventDefinition = require('../src/dynamodb-streams-event-definition');
 const {assertStreamEnabled} = require('../src/dynamodb-streams');
+const {resolveTableName} = require('../src/resolve-arn');
+const {recordMatchesFilterPatterns, filterRecords} = require('../src/filter-patterns');
 
 const LOG_LEVELS = ['debug', 'info', 'notice', 'warning', 'error', 'success'];
 
@@ -199,4 +201,148 @@ test('src/dynamodb-streams-event.js exports a DynamodbStreamsEvent class (rename
   t.true(source.includes('class DynamodbStreamsEvent'));
   t.true(source.includes('module.exports = DynamodbStreamsEvent'));
   t.false(source.includes('KinesisEvent'));
+});
+
+// --- resolveTableName (#103 cwienands1) ----------------------------------
+
+const RESOURCES = {Resources: {OrdersTable: {Properties: {TableName: 'orders'}}}};
+
+test('resolveTableName: explicit tableName key wins', t => {
+  t.is(resolveTableName({tableName: 'orders'}, RESOURCES), 'orders');
+});
+
+test('resolveTableName: string ARN derives the table name', t => {
+  t.is(
+    resolveTableName('arn:aws:dynamodb:eu-west-1:000000000000:table/orders/stream/2024', RESOURCES),
+    'orders'
+  );
+});
+
+test('resolveTableName: {arn:string} derives the table name', t => {
+  t.is(
+    resolveTableName(
+      {arn: 'arn:aws:dynamodb:eu-west-1:000000000000:table/orders/stream/2024'},
+      RESOURCES
+    ),
+    'orders'
+  );
+});
+
+test('resolveTableName: Fn::GetAtt [Table, StreamArn] -> Properties.TableName', t => {
+  t.is(resolveTableName({arn: {'Fn::GetAtt': ['OrdersTable', 'StreamArn']}}, RESOURCES), 'orders');
+});
+
+test('resolveTableName: Fn::GetAtt [Table, Arn] -> Properties.TableName (#103 issue-3)', t => {
+  t.is(resolveTableName({arn: {'Fn::GetAtt': ['OrdersTable', 'Arn']}}, RESOURCES), 'orders');
+});
+
+test('resolveTableName: Ref to a table resource -> Properties.TableName (#103 issue-3)', t => {
+  t.is(resolveTableName({arn: {Ref: 'OrdersTable'}}, RESOURCES), 'orders');
+});
+
+test('resolveTableName: unknown Fn::GetAtt logical id throws a clear error', t => {
+  const err = t.throws(() =>
+    resolveTableName({arn: {'Fn::GetAtt': ['Ghost', 'StreamArn']}}, RESOURCES)
+  );
+  t.true(/Ghost/.test(err.message));
+});
+
+test('resolveTableName: resource present but no TableName throws instead of undefined (#103 issue-2)', t => {
+  const resources = {Resources: {OrdersTable: {Properties: {}}}};
+  const err = t.throws(() =>
+    resolveTableName({arn: {'Fn::GetAtt': ['OrdersTable', 'StreamArn']}}, resources)
+  );
+  t.true(/OrdersTable/.test(err.message));
+  t.regex(err.message, /TableName/i);
+});
+
+test('resolveTableName: Fn::ImportValue (unresolvable offline) throws a descriptive error (#103 issue-3)', t => {
+  const err = t.throws(() =>
+    resolveTableName({arn: {'Fn::ImportValue': 'ExportedArn'}}, RESOURCES)
+  );
+  t.regex(err.message, /ImportValue|cannot|resolve/i);
+});
+
+test('resolveTableName does not mutate its inputs', t => {
+  const event = {arn: {'Fn::GetAtt': ['OrdersTable', 'StreamArn']}};
+  const eventBefore = JSON.parse(JSON.stringify(event));
+  const resBefore = JSON.parse(JSON.stringify(RESOURCES));
+  resolveTableName(event, RESOURCES);
+  t.deepEqual(event, eventBefore);
+  t.deepEqual(RESOURCES, resBefore);
+});
+
+// --- recordMatchesFilterPatterns / filterRecords (#242 cremoon) ----------
+
+const insertRecord = {
+  eventID: '1',
+  eventName: 'INSERT',
+  eventSource: 'aws:dynamodb',
+  dynamodb: {Keys: {Id: {S: '101'}}, NewImage: {Status: {S: 'active'}, Id: {S: '101'}}}
+};
+const modifyRecord = {
+  eventID: '2',
+  eventName: 'MODIFY',
+  eventSource: 'aws:dynamodb',
+  dynamodb: {Keys: {Id: {S: '102'}}, NewImage: {Status: {S: 'inactive'}, Id: {S: '102'}}}
+};
+
+test('recordMatchesFilterPatterns: matches on eventName', t => {
+  t.true(recordMatchesFilterPatterns([{eventName: ['INSERT']}], insertRecord));
+  t.false(recordMatchesFilterPatterns([{eventName: ['INSERT']}], modifyRecord));
+});
+
+test('recordMatchesFilterPatterns: OR across the pattern array (record matches if ANY matches)', t => {
+  t.true(
+    recordMatchesFilterPatterns([{eventName: ['REMOVE']}, {eventName: ['INSERT']}], insertRecord)
+  );
+  t.false(
+    recordMatchesFilterPatterns([{eventName: ['REMOVE']}, {eventName: ['MODIFY']}], insertRecord)
+  );
+});
+
+test('recordMatchesFilterPatterns: nested DynamoDB attribute-value path', t => {
+  const pattern = [{dynamodb: {NewImage: {Status: {S: ['active']}}}}];
+  t.true(recordMatchesFilterPatterns(pattern, insertRecord));
+  t.false(recordMatchesFilterPatterns(pattern, modifyRecord));
+});
+
+test('recordMatchesFilterPatterns: content-filter operators (prefix) reused from matchesPattern', t => {
+  t.true(
+    recordMatchesFilterPatterns([{dynamodb: {NewImage: {Id: {S: [{prefix: '10'}]}}}}], insertRecord)
+  );
+  t.false(
+    recordMatchesFilterPatterns([{dynamodb: {NewImage: {Id: {S: [{prefix: '99'}]}}}}], insertRecord)
+  );
+});
+
+test('recordMatchesFilterPatterns: absent/empty patterns let every record through (#242 default)', t => {
+  t.true(recordMatchesFilterPatterns(undefined, insertRecord));
+  t.true(recordMatchesFilterPatterns(null, insertRecord));
+  t.true(recordMatchesFilterPatterns([], insertRecord));
+});
+
+test('filterRecords: keeps only matching records of a chunk', t => {
+  t.deepEqual(filterRecords([{eventName: ['INSERT']}], [insertRecord, modifyRecord]), [
+    insertRecord
+  ]);
+});
+
+test('filterRecords: no patterns -> all records pass through unchanged', t => {
+  const chunk = [insertRecord, modifyRecord];
+  t.deepEqual(filterRecords(undefined, chunk), chunk);
+});
+
+test('filterRecords: no matches -> empty array (handler must be skipped by the caller)', t => {
+  t.deepEqual(filterRecords([{eventName: ['REMOVE']}], [insertRecord, modifyRecord]), []);
+});
+
+test('recordMatchesFilterPatterns/filterRecords do not mutate inputs', t => {
+  const patterns = [{eventName: ['INSERT']}];
+  const records = [insertRecord, modifyRecord];
+  const patternsBefore = JSON.parse(JSON.stringify(patterns));
+  const recordsBefore = JSON.parse(JSON.stringify(records));
+  filterRecords(patterns, records);
+  t.deepEqual(patterns, patternsBefore);
+  t.deepEqual(records, recordsBefore);
 });

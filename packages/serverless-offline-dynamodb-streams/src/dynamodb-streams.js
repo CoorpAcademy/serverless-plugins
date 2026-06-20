@@ -2,11 +2,12 @@ const {Writable} = require('stream');
 const DynamodbClient = require('aws-sdk/clients/dynamodb');
 const DynamodbStreamsClient = require('aws-sdk/clients/dynamodbstreams');
 const DynamodbStreamsReadable = require('dynamodb-streams-readable');
-const {assign} = require('lodash/fp');
+const {assign, isEmpty} = require('lodash/fp');
 
 const {normalizeLog} = require('./log');
 const DynamodbStreamsEventDefinition = require('./dynamodb-streams-event-definition');
 const DynamodbStreamsEvent = require('./dynamodb-streams-event');
+const {filterRecords} = require('./filter-patterns');
 
 const delay = timeout =>
   new Promise(resolve => {
@@ -73,8 +74,15 @@ class DynamodbStreams {
   }
 
   async _dynamodbStreamsEvent(functionKey, dynamodbStreamsEvent) {
-    const {enabled, tableName, arn, batchSize, startingPosition, maximumRetryAttempts} =
-      dynamodbStreamsEvent;
+    const {
+      enabled,
+      tableName,
+      arn,
+      batchSize,
+      startingPosition,
+      maximumRetryAttempts,
+      filterPatterns
+    } = dynamodbStreamsEvent;
 
     if (!enabled) return;
 
@@ -106,11 +114,17 @@ class DynamodbStreams {
       const writable = new Writable({
         objectMode: true,
         write: (chunk, _, cb) => {
+          // #242 (cremoon): honor event-source-mapping `filterPatterns`. Keep only the
+          // matching records and skip the handler entirely when none match (AWS does not
+          // invoke the function for an empty match, rather than delivering Records: []).
+          const matching = filterRecords(filterPatterns, chunk);
+          if (isEmpty(matching)) return cb();
+
           const task = async remainingAttempts => {
             try {
               const lambdaFunction = this.lambda.get(functionKey);
 
-              const event = new DynamodbStreamsEvent(chunk, this.options.region, arn);
+              const event = new DynamodbStreamsEvent(matching, this.options.region, arn);
               lambdaFunction.setEvent(event);
 
               await lambdaFunction.runHandler();

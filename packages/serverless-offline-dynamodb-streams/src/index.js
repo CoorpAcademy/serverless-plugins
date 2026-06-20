@@ -1,7 +1,8 @@
-const {assign, omitBy, isUndefined, get, startsWith, pick} = require('lodash/fp');
+const {assign, omitBy, isUndefined, get, startsWith, pick, isString} = require('lodash/fp');
 
 const {normalizeLog} = require('./log');
 const DynamodbStreams = require('./dynamodb-streams');
+const {resolveTableName} = require('./resolve-arn');
 
 const OFFLINE_OPTION = 'serverless-offline';
 const CUSTOM_OPTION = 'serverless-offline-dynamodb-streams';
@@ -172,23 +173,15 @@ class ServerlessOfflineDynamodbStreams {
     };
   }
 
+  // #103 (cwienands1): always yield a concrete tableName from any supported `stream`
+  // event form (string ARN, {arn}, {tableName}, Fn::GetAtt/Ref). resolveTableName
+  // throws a clear error rather than leaking `arn:...:undefined` when the name cannot
+  // be resolved offline (e.g. a resource without a static TableName, or Fn::ImportValue).
   _resolveFn(event) {
-    if (typeof event.tableName === 'string') return event;
+    const resources = get(['service', 'resources'], this.serverless) || {Resources: {}};
+    const tableName = resolveTableName(event, resources);
 
-    const getAtt = get(['arn', 'Fn::GetAtt'], event);
-    if (getAtt) {
-      const [resourceName] = getAtt;
-
-      const properties = get(
-        ['service', 'resources', 'Resources', resourceName, 'Properties'],
-        this.serverless
-      );
-      if (!properties) throw new Error(`No resource defined with name ${resourceName}`);
-
-      return assign(event, {tableName: properties.TableName});
-    }
-
-    return event;
+    return isString(event) ? {arn: event, tableName} : assign(event, {tableName});
   }
 }
 
