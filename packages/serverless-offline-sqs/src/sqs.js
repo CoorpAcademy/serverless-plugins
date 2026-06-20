@@ -1,13 +1,19 @@
 const SQSClient = require('aws-sdk/clients/sqs');
 
 const {
+  assign,
   chunk,
+  endsWith,
   find,
+  fromPairs,
   get,
+  isArray,
+  isEmpty,
   isPlainObject,
   mapValues,
   matches,
   omit,
+  pick,
   pipe,
   toString,
   values
@@ -41,6 +47,63 @@ const resolveQueueName = (options, rawSqsEventDefinition) => {
       : rawSqsEventDefinition;
 
   return {...omit(['arn'], base), queueName: options.queueName};
+};
+
+// #225 (tomusiaka): only these CloudFormation Properties are valid SQS createQueue Attributes.
+// Everything else (notably QueueName, and Tags which goes through the separate `tags` param) must
+// NOT be sent as an Attribute, or AWS/sqslite reject the request with
+// `InvalidAttributeName: Unknown Attribute QueueName`.
+const SQS_ATTRIBUTE_KEYS = [
+  'DelaySeconds',
+  'MaximumMessageSize',
+  'MessageRetentionPeriod',
+  'Policy',
+  'ReceiveMessageWaitTimeSeconds',
+  'VisibilityTimeout',
+  'RedrivePolicy',
+  'RedriveAllowPolicy',
+  'KmsMasterKeyId',
+  'KmsDataKeyReusePeriodSeconds',
+  'SqsManagedSseEnabled',
+  'FifoQueue',
+  'ContentBasedDeduplication',
+  'DeduplicationScope',
+  'FifoThroughputLimit'
+];
+
+const stringifyAttribute = value =>
+  isPlainObject(value) ? JSON.stringify(value) : toString(value);
+
+// #189/#159: a `.fifo`-suffixed queue is FIFO on AWS regardless of the CloudFormation flag, so infer
+// FifoQueue from the name too (a resource that omits FifoQueue would otherwise be created standard
+// and reject MessageGroupId).
+const isFifoQueue = (queueName, properties) =>
+  endsWith('.fifo', queueName) || properties.FifoQueue === true || properties.FifoQueue === 'true';
+
+// CloudFormation `Tags` is a list of `{Key, Value}` pairs, but the SQS createQueue `tags` param is a
+// flat `{key: value}` map — normalize the list form (a plain map is passed through unchanged).
+const normalizeTags = tags => {
+  if (isEmpty(tags)) return undefined;
+  if (isArray(tags)) return fromPairs(tags.map(({Key, Value}) => [Key, Value]));
+  return tags;
+};
+
+// toCreateQueueParams(queueName, properties) -> {QueueName, Attributes, tags?}
+// Pure + non-mutating: builds the SQS createQueue params from a CloudFormation Queue Properties
+// object, keeping only valid SQS attribute keys (stringified), routing Tags to the `tags` param,
+// and forcing FifoQueue for `.fifo` names.
+const toCreateQueueParams = (queueName, properties = {}) => {
+  const picked = pick(SQS_ATTRIBUTE_KEYS, properties);
+  const attributes = isFifoQueue(queueName, properties)
+    ? assign(picked, {FifoQueue: true})
+    : picked;
+  const tags = normalizeTags(get('Tags', properties));
+
+  return {
+    ...(tags ? {tags} : {}),
+    QueueName: queueName,
+    Attributes: mapValues(stringifyAttribute, attributes)
+  };
 };
 
 class SQS {
@@ -173,15 +236,7 @@ class SQS {
   async _createQueue({queueName}, remainingTry = 5) {
     try {
       const properties = this._getResourceProperties(queueName);
-      await this.client
-        .createQueue({
-          QueueName: queueName,
-          Attributes: mapValues(
-            value => (isPlainObject(value) ? JSON.stringify(value) : toString(value)),
-            properties
-          )
-        })
-        .promise();
+      await this.client.createQueue(toCreateQueueParams(queueName, properties)).promise();
     } catch (err) {
       if (remainingTry > 0 && err.name === 'AWS.SimpleQueueService.NonExistentQueue')
         return this._createQueue({queueName}, remainingTry - 1);
@@ -193,3 +248,4 @@ class SQS {
 module.exports = SQS;
 module.exports.toDeleteEntries = toDeleteEntries;
 module.exports.resolveQueueName = resolveQueueName;
+module.exports.toCreateQueueParams = toCreateQueueParams;

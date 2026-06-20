@@ -3,7 +3,7 @@ const path = require('path');
 const test = require('ava');
 
 const {defaultLog, normalizeLog} = require('../src/log');
-const {toDeleteEntries, resolveQueueName} = require('../src/sqs');
+const {toDeleteEntries, resolveQueueName, toCreateQueueParams} = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
 const {defaultOptions, isPluginEnabled} = require('../src');
@@ -365,4 +365,85 @@ test('#222 isPluginEnabled is a pure read with no side effects on its input', t 
 test('#222 defaultOptions carries no plugin-level enabled (absence means enabled)', t => {
   // the plugin-wide toggle is opt-out only and must not collide with the per-event enabled property
   t.false('enabled' in defaultOptions);
+});
+
+// ---------------------------------------------------------------------------
+// toCreateQueueParams — explicit-queue creation hardening (#225 tomusiaka)
+// + FIFO inference (#159 / #189)
+// ---------------------------------------------------------------------------
+
+test('#225 toCreateQueueParams never puts QueueName into Attributes', t => {
+  const params = toCreateQueueParams('MyQueue', {QueueName: 'MyQueue', VisibilityTimeout: 30});
+  t.is(params.QueueName, 'MyQueue');
+  t.false('QueueName' in params.Attributes);
+  t.is(params.Attributes.VisibilityTimeout, '30');
+});
+
+test('#225 toCreateQueueParams keeps only valid SQS attribute keys, stringified', t => {
+  const params = toCreateQueueParams('MyQueue', {
+    QueueName: 'MyQueue',
+    VisibilityTimeout: 30,
+    RedrivePolicy: {deadLetterTargetArn: 'arn:aws:sqs:eu-west-1:0:dlq', maxReceiveCount: 5},
+    BogusKey: 'nope'
+  });
+  t.deepEqual(params.Attributes, {
+    VisibilityTimeout: '30',
+    RedrivePolicy: '{"deadLetterTargetArn":"arn:aws:sqs:eu-west-1:0:dlq","maxReceiveCount":5}'
+  });
+  t.is(params.Attributes.BogusKey, undefined); // unknown keys dropped, not forwarded
+});
+
+test('#225 toCreateQueueParams routes CloudFormation Tags to the tags param, not Attributes', t => {
+  const params = toCreateQueueParams('MyQueue', {QueueName: 'MyQueue', Tags: {team: 'core'}});
+  t.is(params.Attributes.Tags, undefined);
+  t.deepEqual(params.tags, {team: 'core'});
+});
+
+test('#225 toCreateQueueParams normalizes CloudFormation list-form Tags to a map', t => {
+  // CloudFormation AWS::SQS::Queue Tags is a list of {Key, Value}; the SQS `tags` param is a map.
+  const params = toCreateQueueParams('MyQueue', {
+    QueueName: 'MyQueue',
+    Tags: [
+      {Key: 'team', Value: 'core'},
+      {Key: 'env', Value: 'dev'}
+    ]
+  });
+  t.deepEqual(params.tags, {team: 'core', env: 'dev'});
+  t.is(params.Attributes.Tags, undefined);
+});
+
+test('#225 toCreateQueueParams omits the tags param when no Tags are present', t => {
+  const params = toCreateQueueParams('MyQueue', {QueueName: 'MyQueue'});
+  t.false('tags' in params);
+  t.deepEqual(params.Attributes, {});
+});
+
+test('#225 toCreateQueueParams tolerates missing/empty properties (implicit autoCreate queue)', t => {
+  t.deepEqual(toCreateQueueParams('Implicit', undefined), {QueueName: 'Implicit', Attributes: {}});
+  t.deepEqual(toCreateQueueParams('Implicit', {}), {QueueName: 'Implicit', Attributes: {}});
+});
+
+test('#225 toCreateQueueParams does not mutate the input properties', t => {
+  const properties = {QueueName: 'MyQueue', VisibilityTimeout: 30, Tags: {a: 'b'}};
+  const before = JSON.parse(JSON.stringify(properties));
+  toCreateQueueParams('MyQueue', properties);
+  t.deepEqual(properties, before);
+});
+
+test('#159 toCreateQueueParams keeps FifoQueue for a FIFO resource (FifoQueue: true)', t => {
+  const {Attributes} = toCreateQueueParams('p-queue.fifo', {
+    QueueName: 'p-queue.fifo',
+    FifoQueue: true,
+    ContentBasedDeduplication: true
+  });
+  t.is(Attributes.FifoQueue, 'true');
+  t.is(Attributes.ContentBasedDeduplication, 'true');
+});
+
+test('#189 toCreateQueueParams infers FIFO from a .fifo name even without the FifoQueue flag', t => {
+  t.is(toCreateQueueParams('orders.fifo', {}).Attributes.FifoQueue, 'true');
+});
+
+test('toCreateQueueParams leaves a standard queue without a FifoQueue attribute', t => {
+  t.false('FifoQueue' in toCreateQueueParams('plain-queue', {QueueName: 'plain-queue'}).Attributes);
 });
