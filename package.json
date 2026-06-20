@@ -22,7 +22,10 @@
   },
   "dependencies": {
     "lerna": "^7.4.2",
-    "serverless": "^3.36.0"
+    "serverless": "npm:osls@^3.76.0"
+  },
+  "overrides": {
+    "serverless-offline": "13.10.1"
   },
   "devDependencies": {
     "@coorpacademy/eslint-plugin-coorpacademy": "^11.0.0",

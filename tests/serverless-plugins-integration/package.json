@@ -24,12 +24,10 @@
     "aws-sdk": "^2.1234.0",
     "lodash": "^4.17.21",
     "minio": "^7.0.32",
-    "pump": "^3.0.0",
-    "serverless": "^3.36.0",
+    "serverless": "npm:osls@^3.76.0",
     "serverless-offline": "^13",
     "serverless-offline-dynamodb-streams": "^7.0.0",
     "serverless-offline-kinesis": "^7.0.0",
-    "serverless-offline-sqs": "^8.0.0",
-    "signal-exit": "^3.0.7"
+    "serverless-offline-sqs": "^8.0.0"
   }
 }
