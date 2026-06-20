@@ -90,6 +90,13 @@ resources:
         ContentBasedDeduplication: true
 ```
 
+The `arn` of an `sqs` event may be a plain string or a CloudFormation intrinsic — `Fn::GetAtt`,
+`Fn::Join`, `Fn::Sub`, and `Ref` to the `AWS::Region` / `AWS::AccountId` pseudo-parameters are
+resolved locally. The `#{AWS::AccountId}` syntax from
+[`serverless-pseudo-parameters`](https://www.npmjs.com/package/serverless-pseudo-parameters) is
+supported too (#74, #200). The queue name is taken from the last `:`-delimited segment of the
+resolved ARN, so a `.fifo` suffix is preserved.
+
 ### SQS
 
 The configuration of [`aws.SQS`'s client](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SQS.html#constructor-property) of the plugin is done by defining a `custom: serverless-offline-sqs` object in your `serverless.yml` with your specific configuration.
