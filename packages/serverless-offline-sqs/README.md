@@ -149,6 +149,7 @@ custom:
     skipCacheInvalidation: false
     queueName: my-local-queue        # optional: override every sqs event's queue name locally
     enabled: true                    # optional: set false to skip the SQS emulator locally (#222)
+    waitTimeSeconds: 5               # optional: default ReceiveMessage long-poll wait, 0-20s (#123)
 ```
 
 #### Disabling the plugin locally (#222)
@@ -163,3 +164,18 @@ enabled by default when the flag is absent.
 Setting `custom.serverless-offline-sqs.queueName` overrides the queue name resolved from each `sqs`
 event definition. This is handy when your local ElasticMQ queue is named differently from the one
 declared in your `serverless.yml` events, without having to edit the function event configuration.
+
+#### `waitTimeSeconds` long-poll default (#123)
+
+By default the plugin polls each queue with a `ReceiveMessage` `WaitTimeSeconds` of **5s** (SQS long
+polling). Set `custom.serverless-offline-sqs.waitTimeSeconds` (or pass `--waitTimeSeconds <n>`) to
+change that default — e.g. `0` for an instant short-poll, or up to `20` for the maximum long poll.
+The value is coerced from a string (YAML/CLI may deliver it as text) and clamped to the SQS-supported
+range `[0, 20]`. A function event that sets its own `maximumBatchingWindow` still wins over this
+default for that queue.
+
+```yml
+custom:
+  serverless-offline-sqs:
+    waitTimeSeconds: 0   # instant short-poll locally; or up to 20 for full long polling
+```

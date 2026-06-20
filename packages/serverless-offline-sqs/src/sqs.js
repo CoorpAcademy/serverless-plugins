@@ -178,13 +178,31 @@ const toCreateQueueParams = (queueName, properties = {}) => {
 // maximumBatchingWindow property accepts 0-300.
 const SQS_MAX_WAIT_TIME_SECONDS = 20;
 
-// #227 (tomusiaka): honor the event-level `maximumBatchingWindow` as the receiveMessage
-// WaitTimeSeconds instead of a hard-coded 5. Clamp to the SQS long-poll range [0, 20]; fall back to
-// the previous default when the option is absent or not a finite number (0 is honored, not falsy).
+// #227: the historical hard-coded receiveMessage long-poll wait, also the fallback when a configured
+// value is missing or unusable.
+const DEFAULT_WAIT_TIME_SECONDS = 5;
+
+// #123: the configurable long-poll default (custom.serverless-offline-sqs.waitTimeSeconds or the
+// --waitTimeSeconds CLI flag) may arrive as a number OR — via YAML/CLI — as a string, exactly like
+// the `enabled` flag (#222). Coerce a bare string with Number() (mirroring isPluginEnabled rather
+// than silently ignoring it), reject NaN/nil by falling back to `fallback`, then clamp to the SQS
+// long-poll range [0, 20]. Pure + total: never returns NaN. 0 is honored (instant short-poll).
+const coerceWaitTimeSeconds = (value, fallback = DEFAULT_WAIT_TIME_SECONDS) => {
+  // An empty/whitespace-only string is "unset", not a deliberate 0 (Number('') === 0), so fall back.
+  if (isString(value) && trim(value) === '') return fallback;
+  const coerced = isString(value) ? Number(value) : value;
+  if (!isFinite(coerced)) return fallback;
+  return clamp(0, SQS_MAX_WAIT_TIME_SECONDS, coerced);
+};
+
+// #227 (tomusiaka) + #123: resolve the receiveMessage WaitTimeSeconds for one queue. The event-level
+// `maximumBatchingWindow` still WINS when present (clamped to [0, 20]); otherwise fall back to the
+// configured options default (`defaultWaitTimeSeconds`, itself coerced/clamped — string-safe). 0 is
+// honored (not treated as falsy); a non-finite per-event window defers to the default.
 const resolveWaitTimeSeconds = (sqsEvent, defaultWaitTimeSeconds) =>
   isFinite(get('maximumBatchingWindow', sqsEvent))
     ? clamp(0, SQS_MAX_WAIT_TIME_SECONDS, sqsEvent.maximumBatchingWindow)
-    : defaultWaitTimeSeconds;
+    : coerceWaitTimeSeconds(defaultWaitTimeSeconds);
 
 // #221 (successkrisz): support SQS partial batch failure reporting. When the event mapping sets
 // `functionResponseType: ReportBatchItemFailures`, the handler returns
@@ -375,8 +393,10 @@ class SQS {
       (await this.client.getQueueUrl({QueueName: queueName}).promise()).QueueUrl
     );
 
-    // #227 (tomusiaka): use maximumBatchingWindow as the long-poll wait (default 5s) per queue.
-    const WaitTimeSeconds = resolveWaitTimeSeconds(sqsEvent, 5);
+    // #227 (tomusiaka) + #123: use the event-level maximumBatchingWindow as the long-poll wait when
+    // present; otherwise the configurable default (custom.serverless-offline-sqs.waitTimeSeconds /
+    // --waitTimeSeconds, default 5s). resolveWaitTimeSeconds coerces a string option and clamps both.
+    const WaitTimeSeconds = resolveWaitTimeSeconds(sqsEvent, this.options.waitTimeSeconds);
     // #221 (successkrisz): only honor partial-batch-failure when the mapping opts in.
     const reportBatchItemFailures = functionResponseType === 'ReportBatchItemFailures';
 
@@ -462,6 +482,7 @@ module.exports.normalizeQueueNames = normalizeQueueNames;
 module.exports.expandSqsEventDefinitions = expandSqsEventDefinitions;
 module.exports.toCreateQueueParams = toCreateQueueParams;
 module.exports.resolveWaitTimeSeconds = resolveWaitTimeSeconds;
+module.exports.coerceWaitTimeSeconds = coerceWaitTimeSeconds;
 module.exports.partitionBatchForDeletion = partitionBatchForDeletion;
 module.exports.collectQueueDefinitions = collectQueueDefinitions;
 module.exports.extractDlqTargetName = extractDlqTargetName;

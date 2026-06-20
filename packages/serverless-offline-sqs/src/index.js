@@ -26,6 +26,13 @@ const defaultOptions = {
   startingPosition: 'TRIM_HORIZON',
   autoCreate: false,
 
+  // #123: default receiveMessage long-poll WaitTimeSeconds. Overridable per service via
+  // custom.serverless-offline-sqs.waitTimeSeconds or the --waitTimeSeconds CLI flag (both threaded
+  // through _mergeOptions over this default); a per-event `maximumBatchingWindow` still wins. Kept at
+  // the historical 5s — do NOT raise it (a higher default slows local short-poll dev loops). Coerced
+  // and clamped to [0, 20] at use in resolveWaitTimeSeconds, so a string from YAML/CLI is honored.
+  waitTimeSeconds: 5,
+
   // #158 (raymond-w-ko): serverless-offline's LambdaFunctionPool schedules its idle-cleanup timer
   // as setTimeout(fn, options.<idleOption> * 1000). The plugin builds its own pool options, so when
   // the option is missing the product is NaN and the timer busy-loops at ~50% CPU on idle. The key
