@@ -13,7 +13,11 @@ const {
   ensureArray,
   DEFAULT_REGION
 } = require('../src/client-config');
-const {toCallbackMethod, buildCallbackClient} = require('../src/callback-adapter');
+const {
+  toCallbackMethod,
+  buildCallbackClient,
+  ensureRecordsResponse
+} = require('../src/callback-adapter');
 
 // ---------------------------------------------------------------------------
 // buildClientConfig (#248/#252 aws-sdk v3 migration)
@@ -89,6 +93,68 @@ test('buildCallbackClient exposes a callback method per command plus a passthrou
   t.is(typeof wrapped.getRecords, 'function');
   t.is(typeof wrapped.describeStream, 'function');
   t.is(typeof wrapped.send, 'function');
+});
+
+// ---------------------------------------------------------------------------
+// EARS3 parity: kinesis-readable reads `data.Records.length` UNGUARDED, but a v3
+// GetRecords response OMITS `Records` when the batch is empty. The callback adapter
+// must default `Records` to [] before the data reaches kinesis-readable (mirrors the
+// dynamodb-streams-readable guard).
+// ---------------------------------------------------------------------------
+
+test('ensureRecordsResponse defaults an omitted Records to [] (EARS3)', t => {
+  // The exact shape v3 GetRecords returns on an empty poll: no `Records` key at all.
+  const v3EmptyResponse = {NextShardIterator: 'AAAA', MillisBehindLatest: 0};
+  const normalized = ensureRecordsResponse(v3EmptyResponse);
+  t.deepEqual(normalized.Records, []);
+  // pinning the exact bug: `.length` must be readable (this is what kinesis-readable does)
+  t.is(normalized.Records.length, 0);
+  // other fields are preserved, input is not mutated
+  t.is(normalized.NextShardIterator, 'AAAA');
+  t.false('Records' in v3EmptyResponse);
+});
+
+test('ensureRecordsResponse also coalesces an explicit null Records to []', t => {
+  const normalized = ensureRecordsResponse({Records: null, NextShardIterator: 'BBBB'});
+  t.deepEqual(normalized.Records, []);
+  t.is(normalized.Records.length, 0);
+});
+
+test('ensureRecordsResponse leaves a populated Records array untouched', t => {
+  const records = [{SequenceNumber: '1'}, {SequenceNumber: '2'}];
+  const normalized = ensureRecordsResponse({Records: records, NextShardIterator: 'CCCC'});
+  t.deepEqual(normalized.Records, records);
+  t.is(normalized.NextShardIterator, 'CCCC');
+});
+
+test('buildCallbackClient guards getRecords so an omitted Records reaches the cb as [] (EARS3)', async t => {
+  // The v3 client resolves a GetRecords response with NO `Records` key.
+  const client = {send: () => Promise.resolve({NextShardIterator: 'next'})};
+  const wrapped = buildCallbackClient(client, {getRecords: FakeCommand});
+
+  const data = await new Promise((resolve, reject) => {
+    wrapped.getRecords({ShardIterator: 'it', Limit: 10}, (err, d) =>
+      err ? reject(err) : resolve(d)
+    );
+  });
+
+  // This is exactly what kinesis-readable does next — it must not throw on undefined.
+  t.notThrows(() => data.Records.length);
+  t.deepEqual(data.Records, []);
+  t.is(data.NextShardIterator, 'next');
+});
+
+test('buildCallbackClient does NOT inject Records into non-getRecords methods', async t => {
+  // describeStream/getShardIterator responses must pass through untouched (identity normalizer).
+  const client = {send: () => Promise.resolve({ShardIterator: 'shard-it'})};
+  const wrapped = buildCallbackClient(client, {getShardIterator: FakeCommand});
+
+  const data = await new Promise((resolve, reject) => {
+    wrapped.getShardIterator({}, (err, d) => (err ? reject(err) : resolve(d)));
+  });
+
+  t.is(data.ShardIterator, 'shard-it');
+  t.false('Records' in data);
 });
 
 // ---------------------------------------------------------------------------
