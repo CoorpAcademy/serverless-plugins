@@ -1,0 +1,44 @@
+{
+  "name": "serverless-offline-eventbridge",
+  "version": "1.0.0",
+  "description": "Emulate AWS λ and EventBridge locally when developing your Serverless project",
+  "main": "src",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:CoorpAcademy/serverless-plugins.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CoorpAcademy/serverless-plugins/issues"
+  },
+  "homepage": "https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-eventbridge#readme",
+  "files": [
+    "src/index.js",
+    "src/log.js",
+    "src/eventbridge.js",
+    "src/eventbridge-event.js",
+    "src/eventbridge-event-definition.js",
+    "NOTICE"
+  ],
+  "author": "Arthur Weber @godu",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "serverless-offline": ">=11"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1234.0",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "serverless-offline": "^13"
+  },
+  "keywords": [
+    "eventbridge",
+    "event-bridge",
+    "serverless",
+    "serverless-offline",
+    "lambda"
+  ]
+}
