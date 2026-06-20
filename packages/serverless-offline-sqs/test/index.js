@@ -3,11 +3,13 @@ const path = require('path');
 const test = require('ava');
 
 const {defaultLog, normalizeLog} = require('../src/log');
+const SQS = require('../src/sqs');
 const {
   toDeleteEntries,
   resolveQueueName,
   toCreateQueueParams,
   resolveWaitTimeSeconds,
+  coerceWaitTimeSeconds,
   partitionBatchForDeletion,
   collectQueueDefinitions,
   extractDlqTargetName,
@@ -485,6 +487,119 @@ test('#227 resolveWaitTimeSeconds clamps to the SQS long-poll max of 20s', t => 
 
 test('#227 resolveWaitTimeSeconds clamps negatives to 0', t => {
   t.is(resolveWaitTimeSeconds({maximumBatchingWindow: -3}, 5), 0);
+});
+
+// ---------------------------------------------------------------------------
+// coerceWaitTimeSeconds + configurable options default (#123 sqs-waittime-config)
+// ---------------------------------------------------------------------------
+
+test('#123 coerceWaitTimeSeconds passes a numeric value through', t => {
+  t.is(coerceWaitTimeSeconds(10), 10);
+  t.is(coerceWaitTimeSeconds(0), 0);
+});
+
+test('#123 coerceWaitTimeSeconds coerces a numeric string via Number()', t => {
+  // YAML/CLI may deliver the value as a string; mirror isPluginEnabled's string handling — do NOT
+  // silently ignore a bare string.
+  t.is(coerceWaitTimeSeconds('10'), 10);
+  t.is(coerceWaitTimeSeconds('0'), 0);
+});
+
+test('#123 coerceWaitTimeSeconds clamps to the SQS long-poll range [0, 20]', t => {
+  t.is(coerceWaitTimeSeconds(300), 20);
+  t.is(coerceWaitTimeSeconds('300'), 20);
+  t.is(coerceWaitTimeSeconds(-3), 0);
+  t.is(coerceWaitTimeSeconds('-3'), 0);
+});
+
+test('#123 coerceWaitTimeSeconds falls back to 5 for non-numeric / nil input', t => {
+  // a non-numeric string is NaN under Number() and must NOT be honored: fall back to the default 5.
+  t.is(coerceWaitTimeSeconds('oops'), 5);
+  t.is(coerceWaitTimeSeconds(undefined), 5);
+  t.is(coerceWaitTimeSeconds(null), 5);
+  t.is(coerceWaitTimeSeconds(''), 5);
+});
+
+test('#123 coerceWaitTimeSeconds honors an explicit override fallback', t => {
+  t.is(coerceWaitTimeSeconds('oops', 7), 7);
+  t.is(coerceWaitTimeSeconds(undefined, 7), 7);
+});
+
+test('#123 resolveWaitTimeSeconds uses the options default (numeric or string) when no per-event window', t => {
+  t.is(resolveWaitTimeSeconds({}, 15), 15);
+  t.is(resolveWaitTimeSeconds({}, '15'), 15);
+  // clamps the options default too
+  t.is(resolveWaitTimeSeconds({}, 300), 20);
+  t.is(resolveWaitTimeSeconds({}, '300'), 20);
+  // bad options default falls back to 5, never NaN
+  t.is(resolveWaitTimeSeconds({}, 'oops'), 5);
+});
+
+test('#123 resolveWaitTimeSeconds: per-event maximumBatchingWindow still wins over the options default', t => {
+  t.is(resolveWaitTimeSeconds({maximumBatchingWindow: 8}, 15), 8);
+  t.is(resolveWaitTimeSeconds({maximumBatchingWindow: 8}, '15'), 8);
+  // and is itself clamped
+  t.is(resolveWaitTimeSeconds({maximumBatchingWindow: 300}, '15'), 20);
+});
+
+test('#123 defaultOptions.waitTimeSeconds defaults to 5 (NOT raised)', t => {
+  t.is(defaultOptions.waitTimeSeconds, 5);
+});
+
+// ---------------------------------------------------------------------------
+// #123 merge test: the configured waitTimeSeconds reaches the receiveMessage params.
+// Instantiate the real SQS class with a mocked client + lambda and capture the long-poll
+// WaitTimeSeconds passed to receiveMessage.
+// ---------------------------------------------------------------------------
+
+const captureReceiveMessage = async (options, rawDefinition) => {
+  const captured = [];
+  const sqs = new SQS(null, {}, {...options, region: 'eu-west-1', accountId: '0'}, undefined);
+
+  // replace the real AWS client with a capturing mock; pause the poll queue after the first poll so
+  // the recursive job does not loop forever.
+  sqs.client = {
+    getQueueUrl: () => ({promise: () => Promise.resolve({QueueUrl: 'http://local/q'})}),
+    receiveMessage: params => {
+      captured.push(params);
+      sqs.queue.pause();
+      return {promise: () => Promise.resolve({Messages: []})};
+    }
+  };
+
+  const sqsEvent = new SQSEventDefinition(rawDefinition || {queueName: 'q'}, 'eu-west-1', '0');
+  await sqs._sqsEvent('fn', sqsEvent);
+  sqs.queue.start();
+  // let the queued job drain
+  await new Promise(resolve => {
+    setTimeout(resolve, 50);
+  });
+
+  return captured;
+};
+
+test('#123 configured waitTimeSeconds reaches the receiveMessage WaitTimeSeconds param', async t => {
+  const captured = await captureReceiveMessage({waitTimeSeconds: 15});
+  t.true(captured.length > 0);
+  t.is(captured[0].WaitTimeSeconds, 15);
+});
+
+test('#123 a string waitTimeSeconds option is coerced before reaching receiveMessage', async t => {
+  const captured = await captureReceiveMessage({waitTimeSeconds: '12'});
+  t.is(captured[0].WaitTimeSeconds, 12);
+});
+
+test('#123 receiveMessage WaitTimeSeconds defaults to 5 when no option is set', async t => {
+  const captured = await captureReceiveMessage({});
+  t.is(captured[0].WaitTimeSeconds, 5);
+});
+
+test('#123 per-event maximumBatchingWindow overrides the configured waitTimeSeconds at the receiveMessage call', async t => {
+  const captured = await captureReceiveMessage(
+    {waitTimeSeconds: 15},
+    {queueName: 'q', maximumBatchingWindow: 8}
+  );
+  t.is(captured[0].WaitTimeSeconds, 8);
 });
 
 // ---------------------------------------------------------------------------
