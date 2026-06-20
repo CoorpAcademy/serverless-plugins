@@ -13,7 +13,9 @@ const {
   extractDlqTargetName,
   orderQueuesForCreation,
   normalizeQueueNames,
-  expandSqsEventDefinitions
+  expandSqsEventDefinitions,
+  buildSqsClientConfig,
+  isNonExistentQueueError
 } = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
@@ -853,4 +855,108 @@ test('#262 expandSqsEventDefinitions: {arn} object event with no literal queueNa
   const built = new SQSEventDefinition(defs[0], 'eu-west-1', '000000000000');
   t.is(built.queueName, 'Q');
   t.is(built.batchSize, 2);
+});
+
+// ---------------------------------------------------------------------------
+// buildSqsClientConfig — #252/#260 (aws-sdk v2 -> @aws-sdk/client-sqs v3 migration)
+//
+// The v2 client accepted the plugin's full merged options bag and silently ignored unknown keys
+// AND read `accessKeyId`/`secretAccessKey` at the top level. The v3 SQSClient needs a clean
+// `{region, endpoint, credentials:{accessKeyId, secretAccessKey}}` shape and would otherwise pick up
+// node's default credential chain. buildSqsClientConfig maps the flat options to that v3 shape.
+// ---------------------------------------------------------------------------
+
+test('#260 buildSqsClientConfig maps endpoint/region + flat creds into the v3 client shape', t => {
+  const config = buildSqsClientConfig({
+    endpoint: 'http://localhost:9324',
+    region: 'eu-west-1',
+    accessKeyId: 'local',
+    secretAccessKey: 'local'
+  });
+  t.deepEqual(config, {
+    endpoint: 'http://localhost:9324',
+    region: 'eu-west-1',
+    credentials: {accessKeyId: 'local', secretAccessKey: 'local'}
+  });
+});
+
+test('#260 buildSqsClientConfig forwards sessionToken into credentials when present', t => {
+  const config = buildSqsClientConfig({
+    region: 'us-east-1',
+    accessKeyId: 'AK',
+    secretAccessKey: 'SK',
+    sessionToken: 'TOKEN'
+  });
+  t.deepEqual(config.credentials, {
+    accessKeyId: 'AK',
+    secretAccessKey: 'SK',
+    sessionToken: 'TOKEN'
+  });
+});
+
+test('#260 buildSqsClientConfig omits credentials entirely when no accessKeyId is provided', t => {
+  // Falling back to the default credential provider chain must NOT be shadowed by a half-empty
+  // credentials object (v3 throws on credentials with an undefined accessKeyId).
+  const config = buildSqsClientConfig({region: 'eu-west-1', endpoint: 'http://localhost:9324'});
+  t.false('credentials' in config);
+  t.deepEqual(config, {region: 'eu-west-1', endpoint: 'http://localhost:9324'});
+});
+
+test('#260 buildSqsClientConfig drops unrelated plugin options (stage, batchSize, autoCreate, ...)', t => {
+  const config = buildSqsClientConfig({
+    region: 'eu-west-1',
+    endpoint: 'http://localhost:9324',
+    accessKeyId: 'a',
+    secretAccessKey: 'b',
+    stage: 'dev',
+    batchSize: 100,
+    autoCreate: true,
+    accountId: '000000000000',
+    queueName: 'orders'
+  });
+  t.deepEqual(Object.keys(config).sort(), ['credentials', 'endpoint', 'region']);
+});
+
+test('#260 buildSqsClientConfig omits endpoint when unset (AWS default resolution)', t => {
+  const config = buildSqsClientConfig({
+    region: 'eu-west-1',
+    accessKeyId: 'a',
+    secretAccessKey: 'b'
+  });
+  t.false('endpoint' in config);
+  t.is(config.region, 'eu-west-1');
+});
+
+test('#260 buildSqsClientConfig is pure (does not mutate its input)', t => {
+  const options = {region: 'eu-west-1', accessKeyId: 'a', secretAccessKey: 'b', stage: 'dev'};
+  const before = {...options};
+  buildSqsClientConfig(options);
+  t.deepEqual(options, before);
+});
+
+test('#252 sqs.js no longer depends on the end-of-support aws-sdk v2 client', t => {
+  // #260 surfaced the v2-client + modern-protocol mismatch as `SyntaxError: Unexpected token <`.
+  // Guard the regression: the module source must not require the deprecated v2 SQS client and must
+  // use the v3 `@aws-sdk/client-sqs` package instead.
+  const source = fs.readFileSync(path.join(__dirname, '../src/sqs.js'), 'utf8');
+  t.false(source.includes("require('aws-sdk/clients/sqs')"));
+  t.true(source.includes('@aws-sdk/client-sqs'));
+});
+
+// ---------------------------------------------------------------------------
+// isNonExistentQueueError — #133/#167 DLQ-first retry, name-agnostic across SDK v2/v3 (#252/#260)
+// ---------------------------------------------------------------------------
+
+test('#252 isNonExistentQueueError matches the v3 QueueDoesNotExist error name', t => {
+  t.true(isNonExistentQueueError({name: 'QueueDoesNotExist'}));
+});
+
+test('#252 isNonExistentQueueError still matches the legacy v2 error name', t => {
+  t.true(isNonExistentQueueError({name: 'AWS.SimpleQueueService.NonExistentQueue'}));
+});
+
+test('#252 isNonExistentQueueError is false for unrelated/missing errors (no throw)', t => {
+  t.false(isNonExistentQueueError({name: 'AccessDenied'}));
+  t.false(isNonExistentQueueError({}));
+  t.false(isNonExistentQueueError(undefined));
 });

@@ -1,4 +1,14 @@
-const SQSClient = require('aws-sdk/clients/sqs');
+// #252/#260 (silou): migrated off the end-of-support aws-sdk v2 SQS client (the old
+// aws-sdk/clients/sqs default import), which paired a maintenance-mode client with the modern
+// service and surfaced #260's `SyntaxError: Unexpected token < in JSON` / `UnknownError`. Use the v3
+// modular client + command objects (mirrors the @aws-sdk/client-eventbridge approach in the tree).
+const {
+  SQSClient,
+  GetQueueUrlCommand,
+  CreateQueueCommand,
+  ReceiveMessageCommand,
+  DeleteMessageBatchCommand
+} = require('@aws-sdk/client-sqs');
 
 const {
   assign,
@@ -45,6 +55,39 @@ const delay = timeout =>
   new Promise(resolve => {
     setTimeout(resolve, timeout);
   });
+
+// #252/#260 (silou): the plugin merges provider + custom + CLI options into one flat bag (region,
+// endpoint, accessKeyId, secretAccessKey, plus many unrelated keys like stage/batchSize/autoCreate).
+// The v2 client read top-level accessKeyId/secretAccessKey and silently ignored the rest; the v3
+// SQSClient instead expects `{region, endpoint, credentials:{accessKeyId, secretAccessKey,
+// sessionToken?}}`. Map the flat options into that v3 client config. Pure + non-mutating:
+//   - omit `endpoint` when absent so the AWS endpoint resolver runs (real-AWS / non-ElasticMQ use)
+//   - omit `credentials` entirely when no accessKeyId is set, so the default credential provider
+//     chain is used (a half-empty credentials object makes the v3 client throw on first send)
+//   - forward an optional sessionToken for STS/temporary credentials
+const buildSqsClientConfig = options => {
+  const {region, endpoint, accessKeyId, secretAccessKey, sessionToken} = options || {};
+  const credentials = accessKeyId
+    ? {...(sessionToken ? {sessionToken} : {}), accessKeyId, secretAccessKey}
+    : undefined;
+
+  return {
+    ...(region ? {region} : {}),
+    ...(endpoint ? {endpoint} : {}),
+    ...(credentials ? {credentials} : {})
+  };
+};
+
+// #133/#167 + #252/#260 (silou): the DLQ-first createQueue retry keys off the "queue does not exist
+// yet" error (a RedrivePolicy referencing a not-yet-created dead-letter queue). aws-sdk v2 reported
+// this as `AWS.SimpleQueueService.NonExistentQueue`; the v3 @aws-sdk/client-sqs modeled error is
+// `QueueDoesNotExist`. Accept both so the retry survives the migration (and any v2-shaped mock).
+const NON_EXISTENT_QUEUE_ERROR_NAMES = [
+  'QueueDoesNotExist',
+  'AWS.SimpleQueueService.NonExistentQueue'
+];
+
+const isNonExistentQueueError = err => includes(get('name', err), NON_EXISTENT_QUEUE_ERROR_NAMES);
 
 // #253 (flipscholtz): MessageId is not guaranteed unique within a batch and can exceed the 80-char
 // `Id` limit. Derive the batch-entry Id from the array index so it is unique and short.
@@ -274,7 +317,9 @@ class SQS {
     this.options = options;
     this.log = normalizeLog(log);
 
-    this.client = new SQSClient(this.options);
+    // #252/#260 (silou): build the clean v3 client config (region/endpoint/credentials) instead of
+    // handing the whole option bag to the constructor.
+    this.client = new SQSClient(buildSqsClientConfig(this.options));
 
     this.queue = new PQueue({autoStart: false});
   }
@@ -357,7 +402,8 @@ class SQS {
 
   async _getQueueUrl(queueName) {
     try {
-      return await this.client.getQueueUrl({QueueName: queueName}).promise();
+      // #252/#260 (silou): v3 command-object form (was `.getQueueUrl({...}).promise()`).
+      return await this.client.send(new GetQueueUrlCommand({QueueName: queueName}));
     } catch (err) {
       await delay(10000);
       return this._getQueueUrl(queueName);
@@ -372,7 +418,7 @@ class SQS {
     if (this.options.autoCreate) await this._createQueue(sqsEvent);
 
     const QueueUrl = this._rewriteQueueUrl(
-      (await this.client.getQueueUrl({QueueName: queueName}).promise()).QueueUrl
+      (await this.client.send(new GetQueueUrlCommand({QueueName: queueName}))).QueueUrl
     );
 
     // #227 (tomusiaka): use maximumBatchingWindow as the long-poll wait (default 5s) per queue.
@@ -383,15 +429,15 @@ class SQS {
     const getMessages = async (size, messages = []) => {
       if (size <= 0) return messages;
 
-      const {Messages} = await this.client
-        .receiveMessage({
+      const {Messages} = await this.client.send(
+        new ReceiveMessageCommand({
           QueueUrl,
           MaxNumberOfMessages: size > 10 ? 10 : size,
           AttributeNames: ['All'],
           MessageAttributeNames: ['All'],
           WaitTimeSeconds
         })
-        .promise();
+      );
 
       if (!Messages || Messages.length === 0) return messages;
       return getMessages(size - Messages.length, [...messages, ...Messages]);
@@ -416,12 +462,12 @@ class SQS {
           if (toDelete.length > 0) {
             await Promise.all(
               chunk(10, toDeleteEntries(toDelete)).map(Entries =>
-                this.client
-                  .deleteMessageBatch({
+                this.client.send(
+                  new DeleteMessageBatchCommand({
                     Entries,
                     QueueUrl
                   })
-                  .promise()
+                )
               )
             );
           }
@@ -446,9 +492,9 @@ class SQS {
   async _createQueue({queueName}, remainingTry = 5) {
     try {
       const properties = this._getResourceProperties(queueName);
-      await this.client.createQueue(toCreateQueueParams(queueName, properties)).promise();
+      await this.client.send(new CreateQueueCommand(toCreateQueueParams(queueName, properties)));
     } catch (err) {
-      if (remainingTry > 0 && err.name === 'AWS.SimpleQueueService.NonExistentQueue')
+      if (remainingTry > 0 && isNonExistentQueueError(err))
         return this._createQueue({queueName}, remainingTry - 1);
       this.log.warning(err.stack);
     }
@@ -466,3 +512,5 @@ module.exports.partitionBatchForDeletion = partitionBatchForDeletion;
 module.exports.collectQueueDefinitions = collectQueueDefinitions;
 module.exports.extractDlqTargetName = extractDlqTargetName;
 module.exports.orderQueuesForCreation = orderQueuesForCreation;
+module.exports.buildSqsClientConfig = buildSqsClientConfig;
+module.exports.isNonExistentQueueError = isNonExistentQueueError;

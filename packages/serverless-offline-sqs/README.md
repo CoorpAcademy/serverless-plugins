@@ -133,7 +133,15 @@ resolved ARN, so a `.fifo` suffix is preserved.
 
 ### SQS
 
-The configuration of [`aws.SQS`'s client](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SQS.html#constructor-property) of the plugin is done by defining a `custom: serverless-offline-sqs` object in your `serverless.yml` with your specific configuration.
+The SQS client is the AWS SDK for JavaScript **v3**
+([`@aws-sdk/client-sqs`](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/sqs/)) instead
+of the end-of-support `aws-sdk` v2. This fixes the `SyntaxError: Unexpected token < in JSON` /
+`UnknownError` failures reported against modern endpoints (#260) and removes the SDK-v2
+maintenance-mode warning (#252). The plugin maps your `endpoint`, `region`, `accessKeyId` and
+`secretAccessKey` (plus an optional `sessionToken`) into the v3 `{endpoint, region, credentials}`
+client config; when no `accessKeyId` is set it falls back to the default AWS credential provider
+chain. Configuration is done by defining a `custom: serverless-offline-sqs` object in your
+`serverless.yml`.
 
 You could use [ElasticMQ](https://github.com/adamw/elasticmq) with the following configuration:
 
@@ -141,15 +149,16 @@ You could use [ElasticMQ](https://github.com/adamw/elasticmq) with the following
 custom:
   serverless-offline-sqs:
     autoCreate: true                 # create queue if not exists
-    apiVersion: '2012-11-05'
     endpoint: http://0.0.0.0:9324
     region: eu-west-1
     accessKeyId: root
     secretAccessKey: root
-    skipCacheInvalidation: false
     queueName: my-local-queue        # optional: override every sqs event's queue name locally
     enabled: true                    # optional: set false to skip the SQS emulator locally (#222)
 ```
+
+> The v2-only `apiVersion` / `skipCacheInvalidation` keys are no longer used by the v3 client and can
+> be removed; any extra keys are ignored.
 
 #### Disabling the plugin locally (#222)
 
