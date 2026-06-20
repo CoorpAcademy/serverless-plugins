@@ -5,6 +5,7 @@ This Serverless-offline-dynamodb-streams plugin emulates AWS λ and DynamoDBStre
 *Features*:
 - [Serverless Webpack](https://github.com/serverless-heaven/serverless-webpack/) support.
 - DynamoDBStreams configurations: batchsize and startingPosition.
+- Checkpointing: read progress is persisted across `serverless offline` restarts, so previously processed records are not replayed (see [Checkpointing](#checkpointing)).
 
 ## Serverless Framework v4
 
@@ -79,3 +80,25 @@ functions:
           type: dynamodb
           tableName: myTable
 ```
+
+## Checkpointing
+
+<!-- #178 (jjohnson1994): persist read progress across offline restarts -->
+
+A local DynamoDB stream keeps its records for ~24h. Previously, every `serverless offline start` re-derived a `TRIM_HORIZON`/`LATEST` iterator and re-read every record the stream still retained, replaying already-processed events on each restart (and exhausting memory through unbounded re-reads — see [#178](https://github.com/CoorpAcademy/serverless-plugins/issues/178)).
+
+The plugin now persists the last processed sequence number per `(streamArn, shardId)` to a small JSON state file (default `.serverless-offline-dynamodb-streams` in the working directory) and, on the next start, resumes polling **after** that sequence number (`AFTER_SEQUENCE_NUMBER`) instead of replaying. The file is written best-effort: a read/write failure degrades gracefully to a cold start.
+
+Configure it under `custom.serverless-offline-dynamodb-streams`:
+
+```yml
+custom:
+  serverless-offline-dynamodb-streams:
+    checkpoint: true # default. `false` disables persistence (always start from startingPosition).
+    # checkpoint: .my-checkpoints.json # or a custom path for the state file
+```
+
+- `checkpoint: false` — opt out entirely; every start behaves as before, from the configured `startingPosition`.
+- `checkpoint: '<path>'` — use a custom state-file path (relative to the offline `location`, or absolute).
+
+> Add the state file to your `.gitignore` (e.g. `.serverless-offline-dynamodb-streams`).

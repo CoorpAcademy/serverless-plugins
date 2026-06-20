@@ -6,7 +6,7 @@ const test = require('ava');
 const {defaultLog, normalizeLog} = require('../src/log');
 const DynamodbStreamsEvent = require('../src/dynamodb-streams-event');
 const DynamodbStreamsEventDefinition = require('../src/dynamodb-streams-event-definition');
-const {assertStreamEnabled} = require('../src/dynamodb-streams');
+const {assertStreamEnabled, resolveIteratorOptions} = require('../src/dynamodb-streams');
 const {resolveTableName} = require('../src/resolve-arn');
 const {recordMatchesFilterPatterns, filterRecords} = require('../src/filter-patterns');
 
@@ -123,6 +123,58 @@ test('assertStreamEnabled throws a clear error when LatestStreamArn is null/empt
     t.throws(() => assertStreamEnabled('orders', '')).message,
     'Table orders does not have streams enabled'
   );
+});
+
+// --- resolveIteratorOptions (#178 jjohnson1994) -------------------------------
+
+const STREAM_ARN = 'arn:aws:dynamodb:eu-west-1:000000000000:table/myTable/stream/2024';
+
+test('resolveIteratorOptions resumes startAfter the saved sequence number, omitting iterator (#178)', t => {
+  const state = {[STREAM_ARN]: {'shard-0': '111'}};
+  t.deepEqual(
+    resolveIteratorOptions(state, {
+      streamArn: STREAM_ARN,
+      shardId: 'shard-0',
+      startingPosition: 'LATEST'
+    }),
+    {shardId: 'shard-0', startAfter: '111'}
+  );
+});
+
+test('resolveIteratorOptions falls back to the configured iterator on a cold start (#178)', t => {
+  t.deepEqual(
+    resolveIteratorOptions(
+      {},
+      {streamArn: STREAM_ARN, shardId: 'shard-0', startingPosition: 'TRIM_HORIZON'}
+    ),
+    {shardId: 'shard-0', iterator: 'TRIM_HORIZON'}
+  );
+});
+
+test('resolveIteratorOptions falls back per-shard when only a sibling shard was checkpointed (#178)', t => {
+  const state = {[STREAM_ARN]: {'shard-0': '111'}};
+  t.deepEqual(
+    resolveIteratorOptions(state, {
+      streamArn: STREAM_ARN,
+      shardId: 'shard-1',
+      startingPosition: 'LATEST'
+    }),
+    {shardId: 'shard-1', iterator: 'LATEST'}
+  );
+});
+
+test('resolveIteratorOptions never sets both iterator and startAfter (readable prefers iterator)', t => {
+  const resumed = resolveIteratorOptions(
+    {[STREAM_ARN]: {'shard-0': '111'}},
+    {streamArn: STREAM_ARN, shardId: 'shard-0', startingPosition: 'LATEST'}
+  );
+  const cold = resolveIteratorOptions(
+    {},
+    {streamArn: STREAM_ARN, shardId: 'shard-0', startingPosition: 'LATEST'}
+  );
+
+  t.is(resumed.iterator, undefined);
+  t.is(cold.startAfter, undefined);
 });
 
 // --- DynamodbStreamsEventDefinition normalizer --------------------------
