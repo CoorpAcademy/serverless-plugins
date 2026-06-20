@@ -9,6 +9,9 @@ logs/
 .serverless
 *.log
 
+# serverless-offline-dynamodb-streams restart checkpoint (#178)
+.serverless-offline-dynamodb-streams.json
+
 # Webpack directories
 .webpack
 

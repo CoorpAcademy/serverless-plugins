@@ -5,6 +5,7 @@ This Serverless-offline-dynamodb-streams plugin emulates AWS λ and DynamoDBStre
 *Features*:
 - [Serverless Webpack](https://github.com/serverless-heaven/serverless-webpack/) support.
 - DynamoDBStreams configurations: batchsize and startingPosition.
+- Restart checkpoint: records already processed before a restart are not re-delivered (#178).
 
 ## Serverless Framework v4
 
@@ -79,3 +80,34 @@ functions:
           type: dynamodb
           tableName: myTable
 ```
+
+## Restart checkpoint (#178)
+
+To match production DynamoDB-stream semantics, the plugin persists a per-shard restart
+checkpoint. After each handler invocation **resolves**, the sequence number of the last
+record in that batch is written to a small state file. On the next start the plugin
+resumes **after** the saved sequence number (`AFTER_SEQUENCE_NUMBER`) for each shard, so
+records already processed before a restart are **not** re-delivered — even with
+`startingPosition: TRIM_HORIZON`. With no saved checkpoint (cold start) the configured
+`startingPosition` (`LATEST` / `TRIM_HORIZON`) is honored as before.
+
+The state file defaults to `.serverless-offline-dynamodb-streams.json` in the working
+directory and is gitignored. Override its path with the `checkpointFile` custom option
+(absolute, or relative to the working directory):
+
+```yml
+custom:
+  serverless-offline-dynamodb-streams:
+    checkpointFile: .cache/ddb-streams-checkpoint.json
+```
+
+A missing parent directory is created automatically, and a missing or malformed state
+file is treated as a clean cold start (no error).
+
+**Delivery boundary (at-most-once across a restart).** The checkpoint advances *only
+after* the handler resolves, so a record is never marked done before it has been
+processed. The trade-off is at-most-once **for the in-flight batch across a hard crash**:
+if the process is killed *after* the handler ran but *before* its checkpoint reached
+disk, that batch is re-delivered on restart (at-least-once); if it is killed *while* the
+handler is running, that batch is also re-delivered. Handlers should therefore be
+idempotent, exactly as AWS recommends for real stream consumers.
