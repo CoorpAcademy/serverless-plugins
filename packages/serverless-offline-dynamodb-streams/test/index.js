@@ -1,4 +1,5 @@
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const test = require('ava');
@@ -6,9 +7,19 @@ const test = require('ava');
 const {defaultLog, normalizeLog} = require('../src/log');
 const DynamodbStreamsEvent = require('../src/dynamodb-streams-event');
 const DynamodbStreamsEventDefinition = require('../src/dynamodb-streams-event-definition');
-const {assertStreamEnabled} = require('../src/dynamodb-streams');
+const {assertStreamEnabled, chunkSequenceNumber} = require('../src/dynamodb-streams');
 const {resolveTableName} = require('../src/resolve-arn');
 const {recordMatchesFilterPatterns, filterRecords} = require('../src/filter-patterns');
+const {
+  DEFAULT_STATE_FILE,
+  checkpointKey,
+  getCheckpoint,
+  setCheckpoint,
+  resolveIteratorOptions,
+  resolveStateFilePath,
+  loadState,
+  saveState
+} = require('../src/checkpoint-store');
 
 const LOG_LEVELS = ['debug', 'info', 'notice', 'warning', 'error', 'success'];
 
@@ -345,4 +356,188 @@ test('recordMatchesFilterPatterns/filterRecords do not mutate inputs', t => {
   filterRecords(patterns, records);
   t.deepEqual(patterns, patternsBefore);
   t.deepEqual(records, recordsBefore);
+});
+
+// ---------------------------------------------------------------------------
+// checkpoint-store (#178 ddb-streams-checkpoint)
+//
+// Deterministic, docker-free unit coverage of the restart checkpoint. The
+// TRIM_HORIZON no-replay guarantee (EARS1) is asserted here as a pure decision
+// on the iterator options, so the regression runs in CI behind pretest:unit
+// (EARS2) without needing DynamoDB Local.
+// ---------------------------------------------------------------------------
+
+const STREAM_ARN = 'arn:aws:dynamodb:eu-west-1:000000000000:table/orders/stream/2024';
+const OTHER_STREAM_ARN = 'arn:aws:dynamodb:eu-west-1:000000000000:table/users/stream/2024';
+
+test('checkpointKey namespaces the sequence number by stream arn + shard', t => {
+  t.is(checkpointKey(STREAM_ARN, 'shardId-1'), `${STREAM_ARN}::shardId-1`);
+  t.not(checkpointKey(STREAM_ARN, 'shardId-1'), checkpointKey(OTHER_STREAM_ARN, 'shardId-1'));
+});
+
+test('getCheckpoint returns the saved sequence number for a (stream, shard)', t => {
+  const state = {[checkpointKey(STREAM_ARN, 'shardId-1')]: '111'};
+  t.is(getCheckpoint(state, STREAM_ARN, 'shardId-1'), '111');
+});
+
+test('getCheckpoint returns undefined when nothing is recorded (incl. null state)', t => {
+  t.is(getCheckpoint({}, STREAM_ARN, 'shardId-1'), undefined);
+  t.is(getCheckpoint(null, STREAM_ARN, 'shardId-1'), undefined);
+  t.is(getCheckpoint(undefined, STREAM_ARN, 'shardId-1'), undefined);
+});
+
+test('getCheckpoint does not cross streams (per-stream isolation)', t => {
+  const state = {[checkpointKey(STREAM_ARN, 'shardId-1')]: '111'};
+  t.is(getCheckpoint(state, OTHER_STREAM_ARN, 'shardId-1'), undefined);
+});
+
+test('setCheckpoint advances a shard without mutating the input state', t => {
+  const state = {};
+  const next = setCheckpoint(state, STREAM_ARN, 'shardId-1', '222');
+  t.is(getCheckpoint(next, STREAM_ARN, 'shardId-1'), '222');
+  t.deepEqual(state, {}, 'original state untouched');
+  t.not(next, state, 'returns a new object');
+});
+
+test('setCheckpoint overwrites an earlier checkpoint for the same shard', t => {
+  const state = setCheckpoint({}, STREAM_ARN, 'shardId-1', '100');
+  const next = setCheckpoint(state, STREAM_ARN, 'shardId-1', '200');
+  t.is(getCheckpoint(next, STREAM_ARN, 'shardId-1'), '200');
+});
+
+test('setCheckpoint ignores a nil/empty/non-string sequence number (no clobber)', t => {
+  const state = setCheckpoint({}, STREAM_ARN, 'shardId-1', '100');
+  t.is(
+    getCheckpoint(
+      setCheckpoint(state, STREAM_ARN, 'shardId-1', undefined),
+      STREAM_ARN,
+      'shardId-1'
+    ),
+    '100'
+  );
+  t.is(
+    getCheckpoint(setCheckpoint(state, STREAM_ARN, 'shardId-1', null), STREAM_ARN, 'shardId-1'),
+    '100'
+  );
+  t.is(
+    getCheckpoint(setCheckpoint(state, STREAM_ARN, 'shardId-1', ''), STREAM_ARN, 'shardId-1'),
+    '100'
+  );
+});
+
+// EARS1: a TRIM_HORIZON restart with a saved checkpoint must resume AFTER the
+// processed sequence number, NOT replay from the horizon.
+test('resolveIteratorOptions: TRIM_HORIZON with a saved checkpoint resumes AFTER it, no replay (#178 EARS1)', t => {
+  const state = setCheckpoint({}, STREAM_ARN, 'shardId-1', '111');
+  const options = resolveIteratorOptions(state, STREAM_ARN, 'shardId-1', 'TRIM_HORIZON');
+
+  t.deepEqual(options, {startAfter: '111'});
+  t.is(options.iterator, undefined, 'iterator must be omitted so startAfter wins in the readable');
+});
+
+test('resolveIteratorOptions: LATEST with a saved checkpoint also resumes AFTER it (#178)', t => {
+  const state = setCheckpoint({}, STREAM_ARN, 'shardId-1', '999');
+  t.deepEqual(resolveIteratorOptions(state, STREAM_ARN, 'shardId-1', 'LATEST'), {
+    startAfter: '999'
+  });
+});
+
+test('resolveIteratorOptions: no checkpoint -> honor the configured startingPosition (cold start)', t => {
+  t.deepEqual(resolveIteratorOptions({}, STREAM_ARN, 'shardId-1', 'TRIM_HORIZON'), {
+    iterator: 'TRIM_HORIZON'
+  });
+  t.deepEqual(resolveIteratorOptions({}, STREAM_ARN, 'shardId-1', 'LATEST'), {iterator: 'LATEST'});
+});
+
+test('resolveStateFilePath defaults to the gitignored state file anchored at cwd', t => {
+  t.is(resolveStateFilePath(undefined, '/srv/app'), path.join('/srv/app', DEFAULT_STATE_FILE));
+  t.is(DEFAULT_STATE_FILE, '.serverless-offline-dynamodb-streams.json');
+});
+
+test('resolveStateFilePath honors an absolute configured path as-is', t => {
+  t.is(resolveStateFilePath('/var/lib/cp.json', '/srv/app'), '/var/lib/cp.json');
+});
+
+test('resolveStateFilePath resolves a relative configured path against cwd', t => {
+  t.is(resolveStateFilePath('.cache/cp.json', '/srv/app'), path.join('/srv/app', '.cache/cp.json'));
+});
+
+// EARS4: loading a missing file is a clean cold start (no throw, no ENOENT spam).
+test('loadState returns an empty map for a missing file (no throw, EARS4)', t => {
+  const missing = path.join(os.tmpdir(), `ddb-cp-missing-${Date.now()}.json`);
+  t.notThrows(() => loadState(missing));
+  t.deepEqual(loadState(missing), {});
+});
+
+test('loadState returns an empty map for malformed JSON (cold start, never crash)', t => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ddb-cp-')), 'corrupt.json');
+  fs.writeFileSync(file, '{not json', 'utf8');
+  t.deepEqual(loadState(file), {});
+});
+
+// EARS4: saving into a not-yet-existing directory creates it (no ENOENT).
+test('saveState creates a missing checkpoint dir and round-trips the state (EARS4)', t => {
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ddb-cp-')), 'nested', 'deeper');
+  const file = path.join(dir, DEFAULT_STATE_FILE);
+  const state = setCheckpoint({}, STREAM_ARN, 'shardId-1', '111');
+
+  t.false(fs.existsSync(dir), 'precondition: dir does not exist yet');
+  t.notThrows(() => saveState(file, state));
+  t.true(fs.existsSync(dir), 'missing dir was created');
+  t.deepEqual(loadState(file), state, 'persisted state round-trips');
+});
+
+// chunkSequenceNumber: the high-water mark advanced after the handler resolves.
+test('chunkSequenceNumber returns the SequenceNumber of the last record of a chunk', t => {
+  const chunk = [
+    {dynamodb: {SequenceNumber: '100'}},
+    {dynamodb: {SequenceNumber: '101'}},
+    {dynamodb: {SequenceNumber: '111'}}
+  ];
+  t.is(chunkSequenceNumber(chunk), '111');
+});
+
+test('chunkSequenceNumber is undefined for an empty/nil chunk (no checkpoint advance)', t => {
+  t.is(chunkSequenceNumber([]), undefined);
+  t.is(chunkSequenceNumber(undefined), undefined);
+  t.is(chunkSequenceNumber(null), undefined);
+});
+
+// EARS1 source guard: the readable must NOT be wired with an unconditional
+// `iterator: startingPosition` (that ignored any saved checkpoint and replayed
+// from TRIM_HORIZON). It must route through resolveIteratorOptions.
+test('src/dynamodb-streams.js resumes via the checkpoint store, not an unconditional iterator (#178 EARS1)', t => {
+  const source = readSource('dynamodb-streams.js');
+
+  t.false(
+    /iterator:\s*startingPosition/.test(source),
+    'must not hard-wire iterator: startingPosition (that replays from TRIM_HORIZON)'
+  );
+  t.true(source.includes('resolveIteratorOptions'));
+  t.true(source.includes('_advanceCheckpoint'));
+});
+
+// EARS3 source guard: the checkpoint advances only inside the post-resolve `.then`,
+// never before the handler runs.
+test('src/dynamodb-streams.js advances the checkpoint only after the handler resolves (#178 EARS3)', t => {
+  const source = readSource('dynamodb-streams.js');
+  const thenIdx = source.indexOf('.then(() => {');
+  const advanceIdx = source.indexOf('this._advanceCheckpoint(streamArn, shardId');
+
+  t.true(advanceIdx > -1 && thenIdx > -1);
+  t.true(advanceIdx > thenIdx, 'the advance call lives inside the post-handler .then');
+});
+
+// End-to-end of the pure store: process records, restart, and assert no replay.
+test('checkpoint round-trip: a restart resumes AFTER the last processed record (#178 EARS1+EARS3)', t => {
+  // First run processes up to sequence 111 and persists it.
+  const afterFirstRun = setCheckpoint({}, STREAM_ARN, 'shardId-1', '111');
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ddb-cp-')), DEFAULT_STATE_FILE);
+  saveState(file, afterFirstRun);
+
+  // Restart: reload state and decide the iterator for TRIM_HORIZON.
+  const reloaded = loadState(file);
+  const options = resolveIteratorOptions(reloaded, STREAM_ARN, 'shardId-1', 'TRIM_HORIZON');
+
+  t.deepEqual(options, {startAfter: '111'}, 'resumes after 111, does not replay 0..111');
 });

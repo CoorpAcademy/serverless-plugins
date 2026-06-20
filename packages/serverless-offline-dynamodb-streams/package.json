@@ -19,6 +19,7 @@
     "src/dynamodb-streams-event-definition.js",
     "src/resolve-arn.js",
     "src/filter-patterns.js",
+    "src/checkpoint-store.js",
     "NOTICE"
   ],
   "author": "Arthur Weber @godu",
