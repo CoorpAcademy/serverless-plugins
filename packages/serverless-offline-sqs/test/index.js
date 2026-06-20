@@ -7,6 +7,7 @@ const {toDeleteEntries, resolveQueueName} = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
 const {defaultOptions, isPluginEnabled} = require('../src');
+const {extractQueueNameFromARN, resolveCfnValue} = require('../src/sqs-event-definition');
 
 // ---------------------------------------------------------------------------
 // normalizeLog
@@ -197,6 +198,109 @@ test('SQSEventDefinition builds the ARN from the resolved queueName', t => {
   const sqsEvent = new SQSEventDefinition(def, 'eu-west-1', '000000000000');
   t.is(sqsEvent.queueName, 'override');
   t.is(sqsEvent.arn, 'arn:aws:sqs:eu-west-1:000000000000:override');
+});
+
+// ---------------------------------------------------------------------------
+// ARN -> queueName resolution: intrinsics (#200) & pseudo-parameters (#74)
+// ---------------------------------------------------------------------------
+
+test('extractQueueNameFromARN extracts the last segment of a plain string ARN', t => {
+  t.is(
+    extractQueueNameFromARN('arn:aws:sqs:eu-west-1:000000000000:MyQueue', 'eu-west-1', '0'),
+    'MyQueue'
+  );
+});
+
+test('#74 extractQueueNameFromARN resolves the #{AWS::AccountId} pseudo-parameter', t => {
+  // serverless-pseudo-parameters leaves `#{AWS::AccountId}` in the ARN; the extra `::` it
+  // injects used to push split(':')[5] onto an empty segment => empty QueueName.
+  t.is(
+    extractQueueNameFromARN(
+      'arn:aws:sqs:eu-west-1:#{AWS::AccountId}:MyQueue',
+      'eu-west-1',
+      '000000000000'
+    ),
+    'MyQueue'
+  );
+});
+
+test('#74 extractQueueNameFromARN resolves #{AWS::Region} and #{AWS::AccountId} together', t => {
+  t.is(
+    extractQueueNameFromARN(
+      'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:OrdersQueue',
+      'eu-west-1',
+      '123456789012'
+    ),
+    'OrdersQueue'
+  );
+});
+
+test('#200 extractQueueNameFromARN resolves a Fn::Join ARN with a nested Ref AWS::AccountId', t => {
+  const arn = {
+    'Fn::Join': [
+      ':',
+      ['arn:aws:sqs:eu-west-1', {Ref: 'AWS::AccountId'}, 'local-salesforce-customers-update']
+    ]
+  };
+  t.is(
+    extractQueueNameFromARN(arn, 'eu-west-1', '000000000000'),
+    'local-salesforce-customers-update'
+  );
+});
+
+test('#200 SQSEventDefinition resolves a Fn::Join {arn} object to a clean queueName + ARN', t => {
+  // Exact repro from the issue: an `arn` given as Fn::Join used to yield `:undefined`.
+  const def = {
+    arn: {
+      'Fn::Join': [
+        ':',
+        ['arn:aws:sqs:eu-west-1', {Ref: 'AWS::AccountId'}, 'local-salesforce-customers-update']
+      ]
+    },
+    batchSize: 1
+  };
+  const sqsEvent = new SQSEventDefinition(def, 'eu-west-1', '000000000000');
+  t.is(sqsEvent.queueName, 'local-salesforce-customers-update');
+  t.is(sqsEvent.arn, 'arn:aws:sqs:eu-west-1:000000000000:local-salesforce-customers-update');
+  t.is(sqsEvent.batchSize, 1); // other props preserved
+});
+
+test('#74 SQSEventDefinition resolves a pseudo-parameter string ARN to a clean queueName', t => {
+  const sqsEvent = new SQSEventDefinition(
+    'arn:aws:sqs:eu-west-1:#{AWS::AccountId}:MyQueue',
+    'eu-west-1',
+    '000000000000'
+  );
+  t.is(sqsEvent.queueName, 'MyQueue');
+  t.is(sqsEvent.arn, 'arn:aws:sqs:eu-west-1:000000000000:MyQueue');
+});
+
+test('resolveCfnValue resolves Ref / Fn::Sub / Fn::Join / pseudo-param strings', t => {
+  const ctx = {'AWS::Region': 'eu-west-1', 'AWS::AccountId': '000000000000'};
+  // Assemble the Fn::Sub token so the literal `${...}` never appears in source (keeps the
+  // no-template-curly-in-string lint clean); the value passed in still reads `q-${AWS::Region}`.
+  const subTemplate = `q-$${'{AWS::Region}'}`;
+  t.is(resolveCfnValue({Ref: 'AWS::AccountId'}, ctx), '000000000000');
+  t.is(resolveCfnValue({'Fn::Sub': subTemplate}, ctx), 'q-eu-west-1');
+  t.is(resolveCfnValue('plain-string', ctx), 'plain-string');
+  t.is(resolveCfnValue('p-#{AWS::AccountId}', ctx), 'p-000000000000');
+  t.is(
+    resolveCfnValue({'Fn::Join': ['-', ['a', {Ref: 'AWS::Region'}, 'b']]}, ctx),
+    'a-eu-west-1-b'
+  );
+});
+
+test('extractQueueNameFromARN returns undefined for an unresolvable ARN (no throw)', t => {
+  t.is(extractQueueNameFromARN(undefined, 'eu-west-1', '0'), undefined);
+  t.is(extractQueueNameFromARN({'Fn::ImportValue': 'x'}, 'eu-west-1', '0'), undefined);
+  t.notThrows(() => extractQueueNameFromARN({Ref: 'SomeQueue'}, 'eu-west-1', '0'));
+});
+
+test('extractQueueNameFromARN keeps a .fifo suffix intact (#189 belongs to the FIFO theme)', t => {
+  t.is(
+    extractQueueNameFromARN('arn:aws:sqs:eu-west-1:000000000000:Orders.fifo', 'eu-west-1', '0'),
+    'Orders.fifo'
+  );
 });
 
 // ---------------------------------------------------------------------------
