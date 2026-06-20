@@ -2,9 +2,11 @@ dist: jammy
 sudo: required
 language: node_js
 
+# The integration suite runs on `osls` (the maintained, license-free Serverless Framework v3 fork),
+# which supports modern Node. The published plugins still declare engines >=18 for backward compat.
 node_js:
-  - "20"
-  - "18"
+  - "24"
+  - "22"
 
 services:
   - docker

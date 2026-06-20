@@ -1,6 +1,6 @@
 const {assign} = require('lodash/fp');
 
-class KinesisEvent {
+class DynamodbStreamsEvent {
   constructor(Records, region, streamArn) {
     this.Records = Records.map(
       assign({
@@ -11,4 +11,4 @@ class KinesisEvent {
   }
 }
 
-module.exports = KinesisEvent;
+module.exports = DynamodbStreamsEvent;

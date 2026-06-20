@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-kinesis",
-  "version": "7.0.0",
+  "version": "7.1.0",
   "description": "Emulate AWS λ and Kinesis locally when developing your Serverless project",
   "main": "src",
   "repository": {
@@ -13,6 +13,7 @@
   "homepage": "https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-kinesis#readme",
   "files": [
     "src/index.js",
+    "src/log.js",
     "src/kinesis.js",
     "src/kinesis-event.js",
     "src/kinesis-event-definition.js"

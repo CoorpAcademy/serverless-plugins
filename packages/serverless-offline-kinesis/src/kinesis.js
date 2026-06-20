@@ -2,6 +2,8 @@ const {Writable} = require('stream');
 const KinesisClient = require('aws-sdk/clients/kinesis');
 const KinesisReadable = require('kinesis-readable');
 const {assign} = require('lodash/fp');
+
+const {normalizeLog} = require('./log');
 const KinesisEventDefinition = require('./kinesis-event-definition');
 const KinesisEvent = require('./kinesis-event');
 
@@ -10,13 +12,19 @@ const delay = timeout =>
     setTimeout(resolve, timeout);
   });
 
+// #100 (dolsem): bounded retry (mirrors dynamodb-streams) — stops after N attempts
+// instead of recursing forever. Pure attempt-counter: another retry is allowed
+// only while attempts remain.
+const shouldRetry = remainingAttempts => remainingAttempts > 0;
+
 class Kinesis {
-  constructor(lambda, options) {
+  constructor(lambda, options, log) {
     this.lambda = null;
     this.options = null;
 
     this.lambda = lambda;
     this.options = options;
+    this.log = normalizeLog(log);
     this.client = new KinesisClient(this.options);
 
     this.readables = [];
@@ -34,9 +42,9 @@ class Kinesis {
     this.readables.forEach(readable => readable.pause());
   }
 
-  _create(functionKey, rawSqsEventDefinition) {
+  _create(functionKey, rawKinesisEventDefinition) {
     const kinesisEvent = new KinesisEventDefinition(
-      rawSqsEventDefinition,
+      rawKinesisEventDefinition,
       this.options.region,
       this.options.accountId
     );
@@ -58,7 +66,8 @@ class Kinesis {
   }
 
   async _kinesisEvent(functionKey, kinesisEvent) {
-    const {enabled, streamName, arn, batchSize, startingPosition} = kinesisEvent;
+    const {enabled, streamName, arn, batchSize, startingPosition, maximumRetryAttempts} =
+      kinesisEvent;
 
     if (!enabled) return;
 
@@ -80,21 +89,27 @@ class Kinesis {
       const writable = new Writable({
         objectMode: true,
         write: (chunk, _, cb) => {
-          const task = async () => {
+          const task = async remainingAttempts => {
             try {
               const lambdaFunction = this.lambda.get(functionKey);
 
-              const event = new KinesisEvent(chunk, this.region, arn, shardId);
+              const event = new KinesisEvent(chunk, this.options.region, arn, shardId);
               lambdaFunction.setEvent(event);
 
               await lambdaFunction.runHandler();
             } catch (err) {
-              await delay(500);
-              return task();
+              const attempt = maximumRetryAttempts - remainingAttempts;
+              this.log.warning(
+                `Kinesis handler for ${functionKey} failed (attempt ${attempt}/${maximumRetryAttempts}): ${err.stack}`
+              );
+              if (shouldRetry(remainingAttempts)) {
+                await delay(500);
+                return task(remainingAttempts - 1);
+              }
             }
           };
 
-          task()
+          task(maximumRetryAttempts - 1)
             .then(() => cb())
             .catch(cb);
         }
@@ -109,3 +124,4 @@ class Kinesis {
 }
 
 module.exports = Kinesis;
+module.exports.shouldRetry = shouldRetry;

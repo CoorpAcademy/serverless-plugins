@@ -12,8 +12,7 @@ const {
   toPairs
 } = require('lodash/fp');
 
-const log = require('@serverless/utils/log').log;
-
+const {normalizeLog} = require('./log');
 const SQS = require('./sqs');
 
 const OFFLINE_OPTION = 'serverless-offline';
@@ -32,15 +31,10 @@ const defaultOptions = {
 const omitUndefined = omitBy(isUndefined);
 
 class ServerlessOfflineSQS {
-  constructor(serverless, cliOptions) {
-    this.cliOptions = null;
-    this.options = null;
-    this.sqs = null;
-    this.lambda = null;
-    this.serverless = null;
-
+  constructor(serverless, cliOptions, {log} = {}) {
     this.cliOptions = cliOptions;
     this.serverless = serverless;
+    this.log = normalizeLog(log);
 
     this.hooks = {
       'offline:start:init': this.start.bind(this),
@@ -67,9 +61,7 @@ class ServerlessOfflineSQS {
 
     await Promise.all(eventModules);
 
-    this.serverless.cli.log(
-      `Starting Offline SQS at stage ${this.options.stage} (${this.options.region})`
-    );
+    this.log.notice(`Starting Offline SQS at stage ${this.options.stage} (${this.options.region})`);
   }
 
   ready() {
@@ -83,7 +75,7 @@ class ServerlessOfflineSQS {
 
     signals.map(signal =>
       process.on(signal, async () => {
-        this.serverless.cli.log(`Got ${signal} signal. Offline Halting...`);
+        this.log.notice(`Got ${signal} signal. Offline Halting...`);
 
         await this.end();
       })
@@ -100,7 +92,7 @@ class ServerlessOfflineSQS {
       return;
     }
 
-    this.serverless.cli.log('Halting offline server');
+    this.log.notice('Halting offline server');
 
     const eventModules = [];
 
@@ -129,7 +121,7 @@ class ServerlessOfflineSQS {
   async _createSqs(events, skipStart) {
     const resources = this._getResources();
 
-    this.sqs = new SQS(this.lambda, resources, this.options);
+    this.sqs = new SQS(this.lambda, resources, this.options, this.log);
 
     await this.sqs.create(events);
 
@@ -155,7 +147,7 @@ class ServerlessOfflineSQS {
       omitUndefined(this.cliOptions)
     );
 
-    log.debug('options:', this.options);
+    this.log.debug('sqs options:', this.options);
   }
 
   _getEvents() {

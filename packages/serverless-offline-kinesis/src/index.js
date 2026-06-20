@@ -1,7 +1,6 @@
 const {assign, omitBy, isUndefined, get, startsWith, pick} = require('lodash/fp');
 
-const log = require('@serverless/utils/log').log;
-
+const {normalizeLog} = require('./log');
 const Kinesis = require('./kinesis');
 
 const OFFLINE_OPTION = 'serverless-offline';
@@ -16,15 +15,10 @@ const defaultOptions = {
 const omitUndefined = omitBy(isUndefined);
 
 class ServerlessOfflineKinesis {
-  constructor(serverless, cliOptions) {
-    this.cliOptions = null;
-    this.options = null;
-    this.kinesis = null;
-    this.lambda = null;
-    this.serverless = null;
-
+  constructor(serverless, cliOptions, {log} = {}) {
     this.cliOptions = cliOptions;
     this.serverless = serverless;
+    this.log = normalizeLog(log);
 
     this.hooks = {
       'offline:start:init': this.start.bind(this),
@@ -51,7 +45,7 @@ class ServerlessOfflineKinesis {
 
     await Promise.all(eventModules);
 
-    this.serverless.cli.log(
+    this.log.notice(
       `Starting Offline Kinesis at stage ${this.options.stage} (${this.options.region})`
     );
   }
@@ -67,7 +61,7 @@ class ServerlessOfflineKinesis {
 
     signals.map(signal =>
       process.on(signal, async () => {
-        this.serverless.cli.log(`Got ${signal} signal. Offline Halting...`);
+        this.log.notice(`Got ${signal} signal. Offline Halting...`);
 
         await this.end();
       })
@@ -84,7 +78,7 @@ class ServerlessOfflineKinesis {
       return;
     }
 
-    this.serverless.cli.log('Halting offline server');
+    this.log.notice('Halting offline server');
 
     const eventModules = [];
 
@@ -107,11 +101,11 @@ class ServerlessOfflineKinesis {
     const {default: Lambda} = await import('serverless-offline/lambda');
     this.lambda = new Lambda(this.serverless, this.options);
 
-    this.lambda.create(lambdas);
+    await this.lambda.create(lambdas);
   }
 
   async _createKinesis(events, skipStart) {
-    this.kinesis = new Kinesis(this.lambda, this.options);
+    this.kinesis = new Kinesis(this.lambda, this.options, this.log);
 
     await this.kinesis.create(events);
 
@@ -137,7 +131,7 @@ class ServerlessOfflineKinesis {
       omitUndefined(this.cliOptions)
     );
 
-    log.debug('options:', this.options);
+    this.log.debug('kinesis options:', this.options);
   }
 
   _getEvents() {

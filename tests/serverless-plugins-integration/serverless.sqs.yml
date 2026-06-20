@@ -35,9 +35,8 @@ functions:
             Fn::GetAtt:
               - MyLargestBatchSizeQueue
               - Arn
-  myPythonHandler:
-    runtime: python3.7
-    handler: lambda/handler.handler
+  mySecondCallbackHandler:
+    handler: lambda/handler.callback
     events:
       - sqs:
           arn:
@@ -58,5 +57,6 @@ resources:
 
 custom:
   serverless-offline:
-    httpPort: 3333
+    httpPort: 3334
+    lambdaPort: 3032
   serverless-offline-sqs: ${file(./custom.yml):serverless-offline-sqs}

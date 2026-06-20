@@ -38,19 +38,17 @@ resources:
       Properties:
         QueueName: AutocreatedFifoQueue.fifo
         FifoQueue: true
-        RedrivePolicy:
-          deadLetterTargetArn:
-            Fn::GetAtt:
-              - AutocreatedQueue
-              - Arn
-          maxReceiveCount: 12
         MessageRetentionPeriod: 1209600
         ContentBasedDeduplication: true
-        Policy: {Ref: "whatever the policy, i'll ignore it"}
+        # NOTE: a RedrivePolicy (DLQ) + Policy with CloudFormation intrinsics (Fn::GetAtt/Ref) used
+        # to live here, but autoCreate does not implement DLQ-from-RedrivePolicy against ElasticMQ
+        # (the resolved deadLetterTargetArn region never matches ElasticMQ's). That is the deferred
+        # community feature #183 — its fixture belongs with that implementation, not here.
 
 custom:
   serverless-offline:
-    httpPort: 3223
+    httpPort: 3424
+    lambdaPort: 3042
   serverless-offline-sqs:
     endpoint: http://localhost:9324
     accessKeyId: local

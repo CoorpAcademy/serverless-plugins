@@ -1,10 +1,6 @@
-const {Writable} = require('stream');
-const {spawn} = require('child_process');
-const onExit = require('signal-exit');
-const {SQS} = require('aws-sdk');
 const {chunk} = require('lodash/fp');
-const pump = require('pump');
-const {getSplitLinesTransform} = require('./utils');
+const {SQS} = require('aws-sdk');
+const {delay, runOfflineTest} = require('./utils');
 
 const client = new SQS({
   region: 'eu-west-1',
@@ -13,15 +9,30 @@ const client = new SQS({
   endpoint: 'http://localhost:9324'
 });
 
-const sendMessages = () => {
-  return Promise.all([
+// MyFirstQueue + MySecondQueue (myPromiseHandler), MyThirdQueue (myCallbackHandler),
+// MyFourthQueue (mySecondCallbackHandler), MyLargestBatchSizeQueue (myLargestBatchSizeHandler).
+const S = 'serverless-offline-sqs-dev';
+const EXPECTED_KEYS = [
+  `${S}-myPromiseHandler sqs:MyFirstQueue`,
+  `${S}-myPromiseHandler sqs:MySecondQueue`,
+  `${S}-myCallbackHandler sqs:MyThirdQueue`,
+  `${S}-mySecondCallbackHandler sqs:MyFourthQueue`,
+  `${S}-myLargestBatchSizeHandler sqs:MyLargestBatchSizeQueue`
+];
+// 70 messages are sent to MyLargestBatchSizeQueue with batchSize 70 — assert they are actually
+// delivered batched (a single invocation of many records), not one record per invocation.
+const EXPECT_BATCH = {
+  [`${S}-myLargestBatchSizeHandler sqs:MyLargestBatchSizeQueue`]: 10
+};
+
+const sendMessages = async () => {
+  await delay(1000);
+  await Promise.all([
     client
       .sendMessage({
         QueueUrl: 'http://localhost:9324/queue/MyFirstQueue',
         MessageBody: 'MyFirstMessage',
-        MessageAttributes: {
-          myAttribute: {DataType: 'String', StringValue: 'myAttribute'}
-        }
+        MessageAttributes: {myAttribute: {DataType: 'String', StringValue: 'myAttribute'}}
       })
       .promise(),
     client
@@ -59,36 +70,11 @@ const sendMessages = () => {
   ]);
 };
 
-const serverless = spawn('sls', ['offline', 'start', '--config', 'serverless.sqs.yml'], {
-  stdio: ['pipe', 'pipe', 'pipe'],
-  cwd: __dirname
-});
-
-pump(
-  serverless.stderr,
-  getSplitLinesTransform(),
-  new Writable({
-    objectMode: true,
-    write(line, enc, cb) {
-      if (/Starting Offline SQS/.test(line)) {
-        sendMessages();
-      }
-
-      this.count =
-        (this.count || 0) +
-        (line.match(/\(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g) || [])
-          .length;
-
-      if (this.count === 5) serverless.kill();
-      cb();
-    }
-  })
-);
-
-serverless.on('close', code => {
-  process.exit(code);
-});
-
-onExit((code, signal) => {
-  if (signal) serverless.kill(signal);
+runOfflineTest({
+  config: 'serverless.sqs.yml',
+  label: 'test-sqs',
+  expectedKeys: EXPECTED_KEYS,
+  expectBatch: EXPECT_BATCH,
+  readyPattern: /Starting Offline SQS/,
+  onReady: sendMessages
 });

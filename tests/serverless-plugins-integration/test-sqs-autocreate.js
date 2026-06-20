@@ -1,9 +1,5 @@
-const {Writable} = require('stream');
-const {spawn} = require('child_process');
-const onExit = require('signal-exit');
 const {SQS} = require('aws-sdk');
-const pump = require('pump');
-const {getSplitLinesTransform} = require('./utils');
+const {delay, runOfflineTest} = require('./utils');
 
 const client = new SQS({
   region: 'eu-west-1',
@@ -12,8 +8,17 @@ const client = new SQS({
   endpoint: 'http://localhost:9324'
 });
 
-const sendMessages = () => {
-  return Promise.all([
+// AutocreatedImplicitQueue, AutocreatedQueue, AutocreatedFifoQueue.fifo -> autoCreatedHandler.
+const S = 'serverless-offline-sqs-dev';
+const EXPECTED_KEYS = [
+  `${S}-autoCreatedHandler sqs:AutocreatedImplicitQueue`,
+  `${S}-autoCreatedHandler sqs:AutocreatedQueue`,
+  `${S}-autoCreatedHandler sqs:AutocreatedFifoQueue.fifo`
+];
+
+const sendMessages = async () => {
+  await delay(1000);
+  await Promise.all([
     client
       .sendMessage({
         QueueUrl: 'http://localhost:9324/queue/AutocreatedImplicitQueue',
@@ -36,66 +41,10 @@ const sendMessages = () => {
   ]);
 };
 
-const serverless = spawn('sls', ['offline', 'start', '--config', 'serverless.sqs.autocreate.yml'], {
-  stdio: ['pipe', 'pipe', 'pipe'],
-  cwd: __dirname
-});
-
-pump(
-  serverless.stderr,
-  getSplitLinesTransform(),
-  new Writable({
-    objectMode: true,
-    write(line, enc, cb) {
-      console.log(line.toString());
-      if (/Starting Offline SQS/.test(line)) {
-        sendMessages()
-          .then(() => console.log('sucessfully send messages'))
-          .catch(err => {
-            console.log('Some issue sending message:s', err.message);
-          });
-      }
-
-      this.count =
-        (this.count || 0) +
-        (line.match(/\(λ: .*\) RequestId: .* Duration: .* ms {2}Billed Duration: .* ms/g) || [])
-          .length;
-      if (this.count === 3) serverless.kill();
-      cb();
-    }
-  })
-);
-
-async function pruneQueue(QueueName) {
-  const {QueueUrl} = await client
-    .getQueueUrl({QueueName})
-    .promise()
-    .catch(err => {
-      console.log(`Ignore issue that occured pruning ${QueueName}: ${err.message}`);
-      return {QueueUrl: null};
-    });
-  if (QueueUrl) await client.deleteQueue({QueueUrl}).promise();
-}
-
-async function cleanUp() {
-  await Promise.all([
-    pruneQueue('AutocreatedImplicitQueue'),
-    pruneQueue('AutocreatedQueue'),
-    pruneQueue('AutocreatedFifoQueue.fifo')
-  ]);
-}
-
-serverless.on('close', code => {
-  cleanUp()
-    .then(() => {
-      return process.exit(code);
-    })
-    .catch(err => {
-      console.error(`Queue deletion failed: ${err.message}`);
-      process.exit(code || 12);
-    });
-});
-
-onExit((code, signal) => {
-  if (signal) serverless.kill(signal);
+runOfflineTest({
+  config: 'serverless.sqs.autocreate.yml',
+  label: 'test-sqs-autocreate',
+  expectedKeys: EXPECTED_KEYS,
+  readyPattern: /Starting Offline SQS/,
+  onReady: sendMessages
 });

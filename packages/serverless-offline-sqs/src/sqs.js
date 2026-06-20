@@ -7,12 +7,13 @@ const {
   isPlainObject,
   mapValues,
   matches,
+  omit,
   pipe,
   toString,
   values
 } = require('lodash/fp');
-const log = require('@serverless/utils/log').log;
 const {default: PQueue} = require('p-queue');
+const {normalizeLog} = require('./log');
 const SQSEventDefinition = require('./sqs-event-definition');
 const SQSEvent = require('./sqs-event');
 
@@ -21,8 +22,29 @@ const delay = timeout =>
     setTimeout(resolve, timeout);
   });
 
+// #253 (flipscholtz): MessageId is not guaranteed unique within a batch and can exceed the 80-char
+// `Id` limit. Derive the batch-entry Id from the array index so it is unique and short.
+const toDeleteEntries = messages =>
+  (messages || []).map(({ReceiptHandle}, index) => ({Id: String(index), ReceiptHandle}));
+
+// #211 (mfamilia): allow custom.serverless-offline-sqs.queueName to override the event's queue name.
+// Non-mutating: returns a new definition when the override is set, otherwise the input unchanged.
+// `arn` is stripped so SQSEventDefinition's switch falls through to the queueName branch (it prefers
+// `arn` over `queueName`) and rebuilds the ARN from the override — otherwise the override is ignored
+// for every arn-bearing event shape. A string definition is first normalised to an object.
+const resolveQueueName = (options, rawSqsEventDefinition) => {
+  if (!(options && options.queueName)) return rawSqsEventDefinition;
+
+  const base =
+    typeof rawSqsEventDefinition === 'string'
+      ? {arn: rawSqsEventDefinition}
+      : rawSqsEventDefinition;
+
+  return {...omit(['arn'], base), queueName: options.queueName};
+};
+
 class SQS {
-  constructor(lambda, resources, options) {
+  constructor(lambda, resources, options, log) {
     this.lambda = null;
     this.resources = null;
     this.options = null;
@@ -30,6 +52,7 @@ class SQS {
     this.lambda = lambda;
     this.resources = resources;
     this.options = options;
+    this.log = normalizeLog(log);
 
     this.client = new SQSClient(this.options);
 
@@ -49,11 +72,9 @@ class SQS {
   }
 
   _create(functionKey, rawSqsEventDefinition) {
-    const sqsEvent = new SQSEventDefinition(
-      rawSqsEventDefinition,
-      this.options.region,
-      this.options.accountId
-    );
+    const def = resolveQueueName(this.options, rawSqsEventDefinition);
+
+    const sqsEvent = new SQSEventDefinition(def, this.options.region, this.options.accountId);
 
     return this._sqsEvent(functionKey, sqsEvent);
   }
@@ -116,19 +137,13 @@ class SQS {
         try {
           const lambdaFunction = this.lambda.get(functionKey);
 
-          const event = new SQSEvent(messages, this.region, arn);
+          const event = new SQSEvent(messages, this.options.region, arn);
           lambdaFunction.setEvent(event);
 
           await lambdaFunction.runHandler();
 
           await Promise.all(
-            chunk(
-              10,
-              (messages || []).map(({MessageId: Id, ReceiptHandle}) => ({
-                Id,
-                ReceiptHandle
-              }))
-            ).map(Entries =>
+            chunk(10, toDeleteEntries(messages)).map(Entries =>
               this.client
                 .deleteMessageBatch({
                   Entries,
@@ -138,7 +153,7 @@ class SQS {
             )
           );
         } catch (err) {
-          log.warning(err.stack);
+          this.log.warning(err.stack);
         }
       }
 
@@ -170,9 +185,11 @@ class SQS {
     } catch (err) {
       if (remainingTry > 0 && err.name === 'AWS.SimpleQueueService.NonExistentQueue')
         return this._createQueue({queueName}, remainingTry - 1);
-      log.warning(err.stack);
+      this.log.warning(err.stack);
     }
   }
 }
 
 module.exports = SQS;
+module.exports.toDeleteEntries = toDeleteEntries;
+module.exports.resolveQueueName = resolveQueueName;
