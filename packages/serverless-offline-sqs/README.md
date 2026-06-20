@@ -107,7 +107,15 @@ custom:
     secretAccessKey: root
     skipCacheInvalidation: false
     queueName: my-local-queue        # optional: override every sqs event's queue name locally
+    enabled: true                    # optional: set false to skip the SQS emulator locally (#222)
 ```
+
+#### Disabling the plugin locally (#222)
+
+Set `custom.serverless-offline-sqs.enabled: false` (or pass `--enabled false`) to skip the SQS
+emulator entirely while still running your HTTP lambdas under `serverless-offline`. This is handy when
+you only want to test a few HTTP functions and don't want to start ElasticMQ/Docker. The plugin is
+enabled by default when the flag is absent.
 
 #### `queueName` override
 

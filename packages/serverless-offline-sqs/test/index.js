@@ -6,7 +6,7 @@ const {defaultLog, normalizeLog} = require('../src/log');
 const {toDeleteEntries, resolveQueueName} = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
-const {defaultOptions} = require('../src');
+const {defaultOptions, isPluginEnabled} = require('../src');
 
 // ---------------------------------------------------------------------------
 // normalizeLog
@@ -229,4 +229,36 @@ test('#158 defaultOptions sets a finite idle-cleanup time so the pool timer is n
 test('#158 the idle-cleanup defaults match serverless-offline default of 60 seconds', t => {
   t.is(defaultOptions.terminateIdleLambdaTime, 60);
   t.is(defaultOptions.functionCleanupIdleTimeSeconds, 60);
+});
+
+// ---------------------------------------------------------------------------
+// isPluginEnabled — local disable toggle (#222 gndelia)
+// ---------------------------------------------------------------------------
+
+test('#222 isPluginEnabled defaults to true when the flag is absent', t => {
+  t.true(isPluginEnabled({}));
+  t.true(isPluginEnabled(undefined));
+  t.true(isPluginEnabled({region: 'eu-west-1', autoCreate: true}));
+});
+
+test('#222 isPluginEnabled honors an explicit enabled:false (boolean or string)', t => {
+  t.false(isPluginEnabled({enabled: false}));
+  t.false(isPluginEnabled({enabled: 'false'}));
+});
+
+test('#222 isPluginEnabled stays enabled for truthy/explicit-true values', t => {
+  t.true(isPluginEnabled({enabled: true}));
+  t.true(isPluginEnabled({enabled: 'true'}));
+});
+
+test('#222 isPluginEnabled is a pure read with no side effects on its input', t => {
+  const opts = {enabled: false, region: 'eu-west-1'};
+  const before = {...opts};
+  isPluginEnabled(opts);
+  t.deepEqual(opts, before);
+});
+
+test('#222 defaultOptions carries no plugin-level enabled (absence means enabled)', t => {
+  // the plugin-wide toggle is opt-out only and must not collide with the per-event enabled property
+  t.false('enabled' in defaultOptions);
 });
