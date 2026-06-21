@@ -9,7 +9,13 @@ const DynamodbStreamsEvent = require('../src/dynamodb-streams-event');
 const DynamodbStreamsEventDefinition = require('../src/dynamodb-streams-event-definition');
 const DynamodbStreams = require('../src/dynamodb-streams');
 
-const {assertStreamEnabled, chunkSequenceNumber} = DynamodbStreams;
+const {
+  assertStreamEnabled,
+  chunkSequenceNumber,
+  shouldContinueOnMissingResource,
+  missingResourceWarning,
+  TABLE_DESCRIBE_MAX_ATTEMPTS
+} = DynamodbStreams;
 const {resolveTableName} = require('../src/resolve-arn');
 const {recordMatchesFilterPatterns, filterRecords} = require('../src/filter-patterns');
 const {
@@ -749,4 +755,135 @@ test('write: a partially-matching batch runs the handler and advances to the FUL
   // ... but the checkpoint still advances to the FULL chunk high-water mark (111),
   // not just the matched subset (100), so the filtered MODIFY is not re-scanned.
   t.is(getCheckpoint(streams.checkpointState, HARNESS_STREAM_ARN, SHARD_ID), '111');
+});
+
+// ---------------------------------------------------------------------------
+// missing table / missing stream (#241 lqueryvg)
+//
+// The reporter's table/stream may be absent when Localstack is not fully up. The
+// plugin must NOT hang forever (the old catch re-waited unconditionally) and must
+// NOT silently abort serverless-offline. Default: fail fast with a CLEAR error
+// naming the table. Opt-in `continueOnMissingResource`: log a warning and skip
+// that event source so the rest of serverless-offline still starts.
+// ---------------------------------------------------------------------------
+
+// EARS3: the opt-in decision is a pure read of the custom option (default false).
+test('shouldContinueOnMissingResource defaults to false (#241)', t => {
+  t.false(shouldContinueOnMissingResource({}));
+  t.false(shouldContinueOnMissingResource(undefined));
+  t.false(shouldContinueOnMissingResource({continueOnMissingResource: false}));
+});
+
+test('shouldContinueOnMissingResource is true only when the opt-in flag is set (#241)', t => {
+  t.true(shouldContinueOnMissingResource({continueOnMissingResource: true}));
+});
+
+// EARS2: the warning names the table and the underlying cause (pure, no side effect).
+test('missingResourceWarning names the table and the cause (#241)', t => {
+  const message = missingResourceWarning('orders', new Error('table not found'));
+  t.regex(message, /orders/);
+  t.regex(message, /table not found/);
+  t.regex(message, /skip/i);
+});
+
+test('missingResourceWarning is pure and tolerates a non-Error cause (#241)', t => {
+  t.regex(missingResourceWarning('orders', undefined), /orders/);
+});
+
+// EARS1: a genuinely-missing table must fail fast after a BOUNDED number of attempts
+// with a clear error naming the table — never an unbounded re-wait loop.
+test('TABLE_DESCRIBE_MAX_ATTEMPTS is a finite positive bound (#241)', t => {
+  t.true(Number.isInteger(TABLE_DESCRIBE_MAX_ATTEMPTS));
+  t.true(TABLE_DESCRIBE_MAX_ATTEMPTS >= 1);
+  t.true(Number.isFinite(TABLE_DESCRIBE_MAX_ATTEMPTS));
+});
+
+const buildMissingTableStreams = (options = {}) => {
+  const warnings = [];
+  const streams = new DynamodbStreams(
+    {get: () => ({setEvent: () => {}, runHandler: () => Promise.resolve()})},
+    {...options, region: 'eu-west-1', accountId: '000000000000'},
+    {warning: message => warnings.push(message)}
+  );
+  return {streams, warnings};
+};
+
+const missingTableEvent = () =>
+  new DynamodbStreamsEventDefinition({tableName: 'ghostTable'}, 'eu-west-1', '000000000000');
+
+// EARS1: _describeTable must throw a CLEAR error naming the table after the bound,
+// rather than recursing forever (the old `catch { return this._describeTable() }`).
+test('_describeTable fails fast with a clear error naming the table when it never appears (#241)', async t => {
+  const {streams} = buildMissingTableStreams();
+  let attempts = 0;
+  // Stub the AWS waiter edge so the table is always "missing".
+  streams.client = {
+    send: () => {
+      attempts += 1;
+      return Promise.reject(new Error('ResourceNotFoundException'));
+    }
+  };
+  // Make the bounded waiter resolve to a rejection immediately (no real 120s wait).
+  streams._waitUntilTableExists = () => Promise.reject(new Error('ResourceNotFoundException'));
+
+  const error = await t.throwsAsync(() => streams._describeTable('ghostTable'));
+  t.regex(error.message, /ghostTable/, 'the error names the missing table');
+  t.true(attempts <= TABLE_DESCRIBE_MAX_ATTEMPTS + 1, 'the retry is bounded, not infinite');
+});
+
+// EARS1 (default): with no opt-in, a missing resource aborts start with a clear error.
+test('_dynamodbStreamsEvent rejects with a clear error when the table is missing and no opt-in (#241)', async t => {
+  const {streams} = buildMissingTableStreams();
+  streams._describeTable = () => Promise.reject(new Error('Table ghostTable not found'));
+
+  const error = await t.throwsAsync(() =>
+    streams._dynamodbStreamsEvent('fnKey', missingTableEvent())
+  );
+  t.regex(error.message, /ghostTable/);
+  t.is(streams.readables.length, 0, 'no readable was wired for the missing resource');
+});
+
+// EARS2: with the opt-in flag, a missing resource is WARNED and SKIPPED so the rest
+// of serverless-offline still starts (the reporter's actual ask).
+test('_dynamodbStreamsEvent warns and skips a missing table when continueOnMissingResource is set (#241)', async t => {
+  const {streams, warnings} = buildMissingTableStreams({continueOnMissingResource: true});
+  streams._describeTable = () => Promise.reject(new Error('Table ghostTable not found'));
+
+  await t.notThrowsAsync(() => streams._dynamodbStreamsEvent('fnKey', missingTableEvent()));
+  t.is(streams.readables.length, 0, 'the missing event source is skipped');
+  t.is(warnings.length, 1, 'a single warning was logged');
+  t.regex(warnings[0], /ghostTable/, 'the warning names the table');
+});
+
+// EARS2: a table that exists but has no stream is also a "missing resource" — same
+// opt-in warn-and-skip path (assertStreamEnabled throws).
+test('_dynamodbStreamsEvent warns and skips a table without streams when continueOnMissingResource is set (#241)', async t => {
+  const {streams, warnings} = buildMissingTableStreams({continueOnMissingResource: true});
+  // Table exists, but LatestStreamArn is absent -> assertStreamEnabled throws.
+  streams._describeTable = () => Promise.resolve({Table: {LatestStreamArn: undefined}});
+
+  await t.notThrowsAsync(() => streams._dynamodbStreamsEvent('fnKey', missingTableEvent()));
+  t.is(streams.readables.length, 0);
+  t.is(warnings.length, 1);
+  t.regex(warnings[0], /ghostTable/);
+});
+
+// EARS1 (default, no stream): without the opt-in, a stream-less table still aborts.
+test('_dynamodbStreamsEvent rejects for a table without streams when no opt-in (#241)', async t => {
+  const {streams} = buildMissingTableStreams();
+  streams._describeTable = () => Promise.resolve({Table: {LatestStreamArn: undefined}});
+
+  const error = await t.throwsAsync(() =>
+    streams._dynamodbStreamsEvent('fnKey', missingTableEvent())
+  );
+  t.regex(error.message, /streams/i);
+});
+
+// EARS1 source guard: the old unconditional self-recursion is gone.
+test('src/dynamodb-streams.js no longer re-waits unconditionally in _describeTable (#241)', t => {
+  const source = readSource('dynamodb-streams.js');
+  t.false(
+    /catch\s*\([^)]*\)\s*{\s*return this\._describeTable\(tableName\);?\s*}/.test(source),
+    'the unbounded `catch { return this._describeTable(tableName) }` must be removed'
+  );
 });
