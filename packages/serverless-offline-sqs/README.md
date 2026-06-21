@@ -101,6 +101,50 @@ Start it with `docker compose up elasticmq`, then run `serverless offline` on th
 `http://localhost:9324` (see the [SQS](#sqs) config below). If you'd rather not write a config file,
 the bare `docker run -p 9324:9324 -p 9325:9325 softwaremill/elasticmq-native` works too.
 
+### Zero-setup local SQS with `autoStart` (#146)
+
+If you don't want to manage the container yourself, set `autoStart: true` and the plugin starts an
+ElasticMQ container for you during `serverless offline`, points the SQS client at it, and tears it
+down when the session ends (or on `Ctrl-C`). Combined with `autoCreate: true`, every declared/event
+queue is created inside that container before the listeners attach — so `npm install` plus the
+config below is all you need, **nothing else to run**:
+
+```yml
+custom:
+  serverless-offline-sqs:
+    autoStart: true # spawn + manage an ElasticMQ container for this session
+    autoCreate: true # create the declared/event queues inside it
+    region: eu-west-1
+    accountId: '000000000000'
+```
+
+> **Self-contained _given Docker_, not zero-runtime.** `autoStart` runs the real
+> `softwaremill/elasticmq-native` engine in a container (the same engine the manual setup above uses,
+> so FIFO/DLQ behaviour is identical), driven through the Docker **CLI** — so **Docker must be
+> installed and running**. If it isn't, the plugin fails fast with a clear error and you can fall back
+> to the manual docker-compose setup above. autoStart does not bundle a JVM or a pure-JS emulator.
+
+**Precedence & defaults.** `autoStart` is **opt-in** — unset, the plugin behaves exactly as before.
+If you also set an explicit `endpoint`, `autoStart` is skipped in favour of your endpoint (with a
+warning). When `autoStart` starts a container and you configured no credentials, harmless local
+placeholders are injected (ElasticMQ ignores credential values). Tune the container with the object
+form:
+
+```yml
+custom:
+  serverless-offline-sqs:
+    autoStart:
+      image: softwaremill/elasticmq-native:1.6.11 # default (pinned, not :latest)
+      port: 9324 # host port -> container 9324 (default 9324)
+      pullPolicy: missing # 'missing' (default) pulls only if absent; 'always' always pulls
+      readinessTimeout: 30000 # ms to wait for the port to answer before giving up (default 30000)
+    autoCreate: true
+```
+
+A leaked container from a hard crash (`SIGKILL`) is reclaimed automatically on the next start: the
+container runs `--rm` under a fixed `--name`, and the next `autoStart` force-removes any pre-existing
+container of that name before re-creating it.
+
 ### Dead-letter queues & redrive (`#167`, `#133`, `#65`, `#87`)
 
 When `autoCreate: true`, the plugin now creates **every** `AWS::SQS::Queue` declared in

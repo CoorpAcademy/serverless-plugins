@@ -15,6 +15,12 @@ const {
 
 const {normalizeLog} = require('./log');
 const SQS = require('./sqs');
+const {
+  startElasticMq,
+  isAutoStartEnabled,
+  resolveAutoStartOptions,
+  ensureLocalCredentials
+} = require('./elasticmq');
 
 const OFFLINE_OPTION = 'serverless-offline';
 const CUSTOM_OPTION = 'serverless-offline-sqs';
@@ -90,21 +96,57 @@ class ServerlessOfflineSQS {
 
     this._mergeOptions();
 
-    const {sqsEvents, lambdas} = this._getEvents();
+    // #146 (tstackhouse, tristan-mastrodicasa): opt-in autoStart — spawn an ElasticMQ container and
+    // point the SQS client at it BEFORE any queue is created or polled. Setting this.options.endpoint
+    // is enough: buildClientConfig passes it through and sqs._rewriteQueueUrl rewrites every queue URL
+    // to it (AC2/AC3/AC10). If the user ALSO set an explicit endpoint, autoStart is skipped in its
+    // favour with a warning (AC5). Default-off path is untouched (AC1).
+    await this._startAutoStartElasticMq();
 
-    await this._createLambda(lambdas);
+    try {
+      const {sqsEvents, lambdas} = this._getEvents();
 
-    const eventModules = [];
+      await this._createLambda(lambdas);
 
-    // #222 (gndelia): skip SQS setup entirely when disabled, but still create the lambdas so plain
-    // HTTP functions keep working under serverless-offline.
-    if (isPluginEnabled(this.options) && sqsEvents.length > 0) {
-      eventModules.push(this._createSqs(sqsEvents));
+      const eventModules = [];
+
+      // #222 (gndelia): skip SQS setup entirely when disabled, but still create the lambdas so plain
+      // HTTP functions keep working under serverless-offline.
+      if (isPluginEnabled(this.options) && sqsEvents.length > 0) {
+        eventModules.push(this._createSqs(sqsEvents));
+      }
+
+      await Promise.all(eventModules);
+
+      this.log.notice(
+        `Starting Offline SQS at stage ${this.options.stage} (${this.options.region})`
+      );
+    } catch (err) {
+      // #146: if a later start step fails after autoStart spun up a container, tear it down so a
+      // failed boot never leaks the container (belt-and-suspenders to the --rm + reclaim-on-next-start net).
+      if (this.elasticmq) await this.elasticmq.stop();
+      throw err;
+    }
+  }
+
+  // #146: thin orchestration only — all Docker logic lives in the pure/side-effect elasticmq module.
+  async _startAutoStartElasticMq() {
+    if (!isAutoStartEnabled(this.options)) return;
+
+    // AC5: an explicit user endpoint wins; do NOT start a container, just warn.
+    if (this.options.endpoint) {
+      this.log.warning(
+        `serverless-offline-sqs: autoStart is enabled but an explicit endpoint (${this.options.endpoint}) ` +
+          'is set — skipping autoStart and using the configured endpoint.'
+      );
+      return;
     }
 
-    await Promise.all(eventModules);
-
-    this.log.notice(`Starting Offline SQS at stage ${this.options.stage} (${this.options.region})`);
+    this.elasticmq = await startElasticMq(resolveAutoStartOptions(this.options), this.log);
+    this.options.endpoint = this.elasticmq.endpoint;
+    // Zero-setup: ElasticMQ ignores credential values, but the v3 SQS client needs SOME credentials
+    // to sign. Inject local placeholders unless the user already configured a pair (#146).
+    this.options = ensureLocalCredentials(this.options);
   }
 
   ready() {
@@ -145,6 +187,13 @@ class ServerlessOfflineSQS {
 
     if (this.sqs) {
       eventModules.push(this.sqs.stop(SERVER_SHUTDOWN_TIMEOUT));
+    }
+
+    // #146 (AC4): tear down the autostarted ElasticMQ container before the process exits. SIGINT/
+    // SIGTERM already route through end() via _listenForTermination, and elasticmq.stop() is
+    // guarded-idempotent, so a SIGINT followed by offline:start:end is a harmless no-op the 2nd time.
+    if (this.elasticmq) {
+      eventModules.push(this.elasticmq.stop());
     }
 
     await Promise.all(eventModules);

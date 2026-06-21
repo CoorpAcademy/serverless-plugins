@@ -15,6 +15,7 @@
     "src/index.js",
     "src/log.js",
     "src/client-config.js",
+    "src/elasticmq.js",
     "src/sqs.js",
     "src/sqs-event.js",
     "src/sqs-event-definition.js"
