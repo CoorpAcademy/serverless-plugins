@@ -1,6 +1,6 @@
 const http = require('http');
 const {randomUUID} = require('crypto');
-const {SQSClient, GetQueueUrlCommand, SendMessageCommand} = require('@aws-sdk/client-sqs');
+const {SQSClient} = require('@aws-sdk/client-sqs');
 
 const {
   castArray,
@@ -16,6 +16,7 @@ const {
 
 const {normalizeLog} = require('./log');
 const {buildClientConfig} = require('./client-config');
+const {pseudoParams, runDestinations} = require('./destinations');
 const EventBridgeEventDefinition = require('./eventbridge-event-definition');
 const EventBridgeEvent = require('./eventbridge-event');
 const {buildEventBridgeEvent} = require('./eventbridge-event');
@@ -371,7 +372,8 @@ class EventBridge {
       try {
         const lambdaFunction = this.lambda.get(functionKey);
         lambdaFunction.setEvent(new EventBridgeEvent(event, this.options.region));
-        await lambdaFunction.runHandler();
+        const result = await lambdaFunction.runHandler();
+        await this._onSuccess(destinations, event, result);
       } catch (err) {
         this.log.warning(err.stack);
         if (remainingAttempts > 0) {
@@ -385,32 +387,49 @@ class EventBridge {
     return task(maximumRetryAttempts - 1);
   }
 
+  // Lazily build (and memoize) the SQS client used for destination dispatch, so no client is ever
+  // constructed when no function declares a destination / simulateDestinations is off.
+  _sqsClient() {
+    if (!this.sqsClient) this.sqsClient = new SQSClient(buildClientConfig(this.options));
+    return this.sqsClient;
+  }
+
   // onFailure (async-invoke DLQ): best-effort push of a failure record to the function's
   // `destinations.onFailure` SQS ARN. Gated behind `simulateDestinations` (default true), never
-  // throws.
+  // throws. Delegates to the shared destinations helper (spec B2).
   async _onFailure(destinations, event, err) {
-    if (this.options.simulateDestinations === false) return;
+    await runDestinations({
+      simulateDestinations: this.options.simulateDestinations,
+      destinations,
+      ctx: pseudoParams(
+        this.options.region,
+        this.options.accountId,
+        getOr({}, ['resources', 'Resources'], this.options)
+      ),
+      makeClient: () => this._sqsClient(),
+      log: this.log,
+      requestPayload: event,
+      error: err
+    });
+  }
 
-    const onFailure = getOr(undefined, ['onFailure'], destinations);
-    const arn = isPlainObject(onFailure) ? getOr(undefined, 'arn', onFailure) : onFailure;
-    if (isNil(arn)) return;
-
-    try {
-      if (!this.sqsClient) this.sqsClient = new SQSClient(buildClientConfig(this.options));
-      const queueName = String(arn).split(':').pop();
-      const {QueueUrl} = await this.sqsClient.send(new GetQueueUrlCommand({QueueName: queueName}));
-      await this.sqsClient.send(
-        new SendMessageCommand({
-          QueueUrl,
-          MessageBody: JSON.stringify({
-            requestPayload: event,
-            responsePayload: {errorMessage: err.message, errorType: err.name}
-          })
-        })
-      );
-    } catch (dlqErr) {
-      this.log.warning(dlqErr.stack);
-    }
+  // onSuccess (async-invoke destination): best-effort push of `{requestPayload, responsePayload}` to
+  // the function's `destinations.onSuccess` SQS ARN after a clean handler run. Same gate, same
+  // swallow-and-warn semantics as onFailure.
+  async _onSuccess(destinations, event, result) {
+    await runDestinations({
+      simulateDestinations: this.options.simulateDestinations,
+      destinations,
+      ctx: pseudoParams(
+        this.options.region,
+        this.options.accountId,
+        getOr({}, ['resources', 'Resources'], this.options)
+      ),
+      makeClient: () => this._sqsClient(),
+      log: this.log,
+      requestPayload: event,
+      result
+    });
   }
 
   // Opt-in LocalStack poll loop placeholder: when `subscribe` is set, teams running a real `events`

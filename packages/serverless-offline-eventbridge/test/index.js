@@ -14,6 +14,15 @@ const {
 const EventBridgeEvent = require('../src/eventbridge-event');
 const EventBridgeEventDefinition = require('../src/eventbridge-event-definition');
 const {
+  pseudoParams,
+  resolveDestinationArn,
+  queueNameFromArn,
+  buildFailurePayload,
+  buildSuccessPayload,
+  dispatchDestination,
+  runDestinations
+} = require('../src/destinations');
+const {
   buildClientConfig,
   buildCredentials,
   resolveRegion,
@@ -481,4 +490,288 @@ test('src/eventbridge.js builds the event with this.options.region, not a bare t
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'eventbridge.js'), 'utf8');
   t.true(source.includes('this.options.region'));
   t.false(/new EventBridgeEvent\(event, this\.region\b/.test(source));
+});
+
+// ---------------------------------------------------------------------------
+// Group H — Lambda async destinations (onFailure / onSuccess) — spec B2
+// ---------------------------------------------------------------------------
+
+// A fake SQS client recording every command it is `.send()` a — no SDK transport, no docker.
+const fakeSqsClient = (impl = {}) => {
+  const calls = [];
+  return {
+    calls,
+    send: command => {
+      const name = command.constructor.name;
+      calls.push({name, input: command.input});
+      if (name === 'GetQueueUrlCommand') {
+        if (impl.getQueueUrlError) throw impl.getQueueUrlError;
+        return Promise.resolve({QueueUrl: impl.queueUrl || 'http://localhost:9324/000/q'});
+      }
+      if (name === 'SendMessageCommand') {
+        if (impl.sendMessageError) throw impl.sendMessageError;
+        return Promise.resolve({MessageId: 'm-1'});
+      }
+      return Promise.resolve({});
+    }
+  };
+};
+
+const collectLog = () => {
+  const warnings = [];
+  return {log: {...normalizeLog(), warning: msg => warnings.push(msg)}, warnings};
+};
+
+const CTX = {'AWS::Region': 'eu-west-1', 'AWS::AccountId': '000000000000'};
+
+// EARS8: the failure payload shape is preserved byte-for-byte.
+test('buildFailurePayload returns the eventbridge {requestPayload, responsePayload} shape (EARS8)', t => {
+  const err = Object.assign(new Error('boom'), {name: 'BoomError'});
+  t.deepEqual(buildFailurePayload({a: 1}, err), {
+    requestPayload: {a: 1},
+    responsePayload: {errorMessage: 'boom', errorType: 'BoomError'}
+  });
+});
+
+// EARS5: onSuccess payload carries the handler result.
+test('buildSuccessPayload returns {requestPayload, responsePayload: result} (EARS5)', t => {
+  t.deepEqual(buildSuccessPayload({a: 1}, {ok: true}), {
+    requestPayload: {a: 1},
+    responsePayload: {ok: true}
+  });
+});
+
+// EARS6 / edge 2: resolve literal, {arn}, intrinsic, pseudo-param; undefined when unresolvable.
+test('resolveDestinationArn resolves every supported target shape (EARS6)', t => {
+  t.is(resolveDestinationArn('arn:aws:sqs:eu-west-1:0:dlq', CTX), 'arn:aws:sqs:eu-west-1:0:dlq');
+  t.is(
+    resolveDestinationArn({arn: 'arn:aws:sqs:eu-west-1:0:dlq'}, CTX),
+    'arn:aws:sqs:eu-west-1:0:dlq'
+  );
+  t.is(resolveDestinationArn({Ref: 'AWS::AccountId'}, CTX), '000000000000');
+  t.is(
+    // eslint-disable-next-line no-template-curly-in-string -- deliberate CloudFormation Fn::Sub token
+    resolveDestinationArn({arn: {'Fn::Sub': 'arn:aws:sqs:${AWS::Region}:0:dlq'}}, CTX),
+    'arn:aws:sqs:eu-west-1:0:dlq'
+  );
+  t.is(
+    resolveDestinationArn({'Fn::Join': [':', ['arn', 'aws', 'sqs', 'eu-west-1', '0', 'dlq']]}, CTX),
+    'arn:aws:sqs:eu-west-1:0:dlq'
+  );
+  t.is(
+    resolveDestinationArn('arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:dlq', CTX),
+    'arn:aws:sqs:eu-west-1:000000000000:dlq'
+  );
+});
+
+test('resolveDestinationArn returns undefined for an unresolvable intrinsic (edge 2)', t => {
+  t.is(resolveDestinationArn({arn: {'Fn::ImportValue': 'Exported'}}, CTX), undefined);
+  t.is(resolveDestinationArn({Ref: 'SomeStackResource'}, CTX), undefined);
+  t.is(resolveDestinationArn(undefined, CTX), undefined);
+});
+
+// EARS6: a Ref / Fn::GetAtt destination pointing at an AWS::SQS::Queue declared in the stack resolves
+// to that queue's real ARN — through the SAME CFN resolution the event-source ARNs use.
+const CTX_WITH_QUEUE = pseudoParams('eu-west-1', '000000000000', {
+  MyDlq: {Type: 'AWS::SQS::Queue', Properties: {QueueName: 'my-dlq'}},
+  AutoNamedDlq: {Type: 'AWS::SQS::Queue'},
+  NotAQueue: {Type: 'AWS::S3::Bucket'}
+});
+
+test('resolveDestinationArn resolves a {Ref: <Queue>} destination to the queue ARN (EARS6)', t => {
+  t.is(
+    resolveDestinationArn({Ref: 'MyDlq'}, CTX_WITH_QUEUE),
+    'arn:aws:sqs:eu-west-1:000000000000:my-dlq'
+  );
+  t.is(
+    resolveDestinationArn({arn: {Ref: 'MyDlq'}}, CTX_WITH_QUEUE),
+    'arn:aws:sqs:eu-west-1:000000000000:my-dlq'
+  );
+  // A queue with no explicit QueueName falls back to its logical id (serverless' local auto-name).
+  t.is(
+    resolveDestinationArn({Ref: 'AutoNamedDlq'}, CTX_WITH_QUEUE),
+    'arn:aws:sqs:eu-west-1:000000000000:AutoNamedDlq'
+  );
+});
+
+test('resolveDestinationArn resolves a {Fn::GetAtt: [<Queue>, Arn]} destination to the queue ARN (EARS6)', t => {
+  t.is(
+    resolveDestinationArn({'Fn::GetAtt': ['MyDlq', 'Arn']}, CTX_WITH_QUEUE),
+    'arn:aws:sqs:eu-west-1:000000000000:my-dlq'
+  );
+  t.is(
+    resolveDestinationArn({arn: {'Fn::GetAtt': ['AutoNamedDlq', 'Arn']}}, CTX_WITH_QUEUE),
+    'arn:aws:sqs:eu-west-1:000000000000:AutoNamedDlq'
+  );
+});
+
+test('resolveDestinationArn returns undefined for a Ref/Fn::GetAtt to a non-queue or absent resource (EARS6, edge 2)', t => {
+  t.is(resolveDestinationArn({Ref: 'NotAQueue'}, CTX_WITH_QUEUE), undefined);
+  t.is(resolveDestinationArn({Ref: 'Missing'}, CTX_WITH_QUEUE), undefined);
+  t.is(resolveDestinationArn({'Fn::GetAtt': ['NotAQueue', 'Arn']}, CTX_WITH_QUEUE), undefined);
+  // Only the Arn attribute is resolvable offline; QueueName/QueueUrl etc. are not.
+  t.is(resolveDestinationArn({'Fn::GetAtt': ['MyDlq', 'QueueName']}, CTX_WITH_QUEUE), undefined);
+});
+
+// EARS6 end-to-end: a {Fn::GetAtt} onFailure destination dispatches to the resolved queue.
+test('runDestinations dispatches onFailure to a Fn::GetAtt-resolved queue (EARS6)', async t => {
+  const client = fakeSqsClient();
+  const {log} = collectLog();
+  await runDestinations({
+    simulateDestinations: true,
+    destinations: {onFailure: {'Fn::GetAtt': ['MyDlq', 'Arn']}},
+    ctx: CTX_WITH_QUEUE,
+    makeClient: () => client,
+    log,
+    requestPayload: {detail: 'x'},
+    error: Object.assign(new Error('boom'), {name: 'BoomError'})
+  });
+  t.is(client.calls[0].input.QueueName, 'my-dlq');
+});
+
+// EARS1: queue name = final ':'-segment.
+test('queueNameFromArn returns the final segment, undefined for garbage (EARS1)', t => {
+  t.is(queueNameFromArn('arn:aws:sqs:eu-west-1:0:my-dlq'), 'my-dlq');
+  t.is(queueNameFromArn(''), undefined);
+  t.is(queueNameFromArn(undefined), undefined);
+});
+
+// Edge 1: nil target is a no-op — no client call at all.
+test('dispatchDestination is a no-op for a nil target (edge 1)', async t => {
+  const client = fakeSqsClient();
+  const {log} = collectLog();
+  await dispatchDestination({client, target: undefined, ctx: CTX, payload: {}, log});
+  t.deepEqual(client.calls, []);
+});
+
+// Edge 2: unresolvable ARN warns and skips, never calls GetQueueUrl.
+test('dispatchDestination warns and skips an unresolvable ARN (edge 2)', async t => {
+  const client = fakeSqsClient();
+  const {log, warnings} = collectLog();
+  await dispatchDestination({
+    client,
+    target: {arn: {'Fn::ImportValue': 'X'}},
+    ctx: CTX,
+    payload: {},
+    log
+  });
+  t.deepEqual(client.calls, []);
+  t.is(warnings.length, 1);
+});
+
+// EARS1: a resolvable target -> GetQueueUrl(queueName) then SendMessage(payload).
+test('dispatchDestination sends the payload to the resolved queue (EARS1)', async t => {
+  const client = fakeSqsClient({queueUrl: 'http://localhost:9324/000/my-dlq'});
+  const {log} = collectLog();
+  await dispatchDestination({
+    client,
+    target: 'arn:aws:sqs:eu-west-1:0:my-dlq',
+    ctx: CTX,
+    payload: {requestPayload: {a: 1}, responsePayload: {errorMessage: 'x', errorType: 'E'}},
+    log
+  });
+  t.deepEqual(client.calls[0], {name: 'GetQueueUrlCommand', input: {QueueName: 'my-dlq'}});
+  t.is(client.calls[1].name, 'SendMessageCommand');
+  t.is(client.calls[1].input.QueueUrl, 'http://localhost:9324/000/my-dlq');
+  t.deepEqual(JSON.parse(client.calls[1].input.MessageBody), {
+    requestPayload: {a: 1},
+    responsePayload: {errorMessage: 'x', errorType: 'E'}
+  });
+});
+
+// EARS7 / edge 3: any client error is warning-logged and swallowed.
+test('dispatchDestination swallows a GetQueueUrl failure and warns (EARS7, edge 3)', async t => {
+  const client = fakeSqsClient({getQueueUrlError: new Error('queue gone')});
+  const {log, warnings} = collectLog();
+  await t.notThrowsAsync(
+    dispatchDestination({client, target: 'arn:aws:sqs:eu-west-1:0:dlq', ctx: CTX, payload: {}, log})
+  );
+  t.is(warnings.length, 1);
+});
+
+test('dispatchDestination swallows a SendMessage failure and warns (EARS7)', async t => {
+  const client = fakeSqsClient({sendMessageError: new Error('send failed')});
+  const {log, warnings} = collectLog();
+  await t.notThrowsAsync(
+    dispatchDestination({client, target: 'arn:aws:sqs:eu-west-1:0:dlq', ctx: CTX, payload: {}, log})
+  );
+  t.is(warnings.length, 1);
+});
+
+// EARS2: simulateDestinations === false is a no-op AND never builds a client (lazy).
+test('runDestinations is a no-op and never builds a client when simulateDestinations is false (EARS2)', async t => {
+  let built = false;
+  const {log} = collectLog();
+  await runDestinations({
+    simulateDestinations: false,
+    destinations: {onFailure: 'arn:aws:sqs:eu-west-1:0:dlq'},
+    ctx: CTX,
+    makeClient: () => {
+      built = true;
+      return fakeSqsClient();
+    },
+    log,
+    requestPayload: {a: 1},
+    error: new Error('boom')
+  });
+  t.false(built);
+});
+
+// Edge 1: no matching destination -> never builds a client.
+test('runDestinations never builds a client when there is no matching destination (edge 1)', async t => {
+  let built = false;
+  const {log} = collectLog();
+  await runDestinations({
+    simulateDestinations: true,
+    destinations: {onSuccess: 'arn:aws:sqs:eu-west-1:0:ok'},
+    ctx: CTX,
+    makeClient: () => {
+      built = true;
+      return fakeSqsClient();
+    },
+    log,
+    requestPayload: {a: 1},
+    error: new Error('boom') // error path -> looks for onFailure, which is absent
+  });
+  t.false(built);
+});
+
+// EARS1/8: end-to-end onFailure through runDestinations dispatches the failure payload.
+test('runDestinations dispatches onFailure with the failure payload (EARS1, EARS8)', async t => {
+  const client = fakeSqsClient();
+  const {log} = collectLog();
+  await runDestinations({
+    simulateDestinations: true,
+    destinations: {onFailure: 'arn:aws:sqs:eu-west-1:0:my-dlq'},
+    ctx: CTX,
+    makeClient: () => client,
+    log,
+    requestPayload: {detail: 'x'},
+    error: Object.assign(new Error('boom'), {name: 'BoomError'})
+  });
+  t.is(client.calls[0].input.QueueName, 'my-dlq');
+  t.deepEqual(JSON.parse(client.calls[1].input.MessageBody), {
+    requestPayload: {detail: 'x'},
+    responsePayload: {errorMessage: 'boom', errorType: 'BoomError'}
+  });
+});
+
+// EARS5: end-to-end onSuccess through runDestinations dispatches the success payload.
+test('runDestinations dispatches onSuccess with the result payload (EARS5)', async t => {
+  const client = fakeSqsClient();
+  const {log} = collectLog();
+  await runDestinations({
+    simulateDestinations: true,
+    destinations: {onSuccess: 'arn:aws:sqs:eu-west-1:0:ok-queue'},
+    ctx: CTX,
+    makeClient: () => client,
+    log,
+    requestPayload: {detail: 'x'},
+    result: {statusCode: 200}
+  });
+  t.is(client.calls[0].input.QueueName, 'ok-queue');
+  t.deepEqual(JSON.parse(client.calls[1].input.MessageBody), {
+    requestPayload: {detail: 'x'},
+    responsePayload: {statusCode: 200}
+  });
 });
