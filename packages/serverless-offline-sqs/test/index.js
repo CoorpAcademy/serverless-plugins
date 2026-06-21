@@ -16,7 +16,8 @@ const {
   orderQueuesForCreation,
   normalizeQueueNames,
   expandSqsEventDefinitions,
-  isNonExistentQueueError
+  isNonExistentQueueError,
+  enqueueLoop
 } = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
@@ -1185,4 +1186,138 @@ test('#262 expandSqsEventDefinitions: {arn} object event with no literal queueNa
   const built = new SQSEventDefinition(defs[0], 'eu-west-1', '000000000000');
   t.is(built.queueName, 'Q');
   t.is(built.batchSize, 2);
+});
+
+// ---------------------------------------------------------------------------
+// #226 (newtechfellas): a transient SQS-client / ReceiveMessage failure in the poll loop must be
+// caught + logged and the loop must re-schedule — it must NEVER surface as an unhandled promise
+// rejection that terminates the `serverless offline` process. The receive call sat OUTSIDE the
+// job()'s try/catch and `this.queue.add(job)` was a floating, never-`.catch()`ed promise, so a
+// p-queue task rejection became an uncaught error.
+// ---------------------------------------------------------------------------
+
+// settle the microtask/timer queue a few times so the recursive poll loop runs several iterations
+const drain = (ms = 60) =>
+  new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+
+// drive the REAL SQS poll loop with a mock client whose ReceiveMessage behaves per `receive`.
+// Captures every warning the loop logs and how many times ReceiveMessage was attempted, and
+// installs a one-shot process-level `unhandledRejection` guard so the test can assert the loop
+// never produces one.
+const runPollLoopWithReceive = async (receive, {stopAfter = 3} = {}) => {
+  const warnings = [];
+  const unhandled = [];
+  const onUnhandled = err => unhandled.push(err);
+  process.on('unhandledRejection', onUnhandled);
+
+  const sqs = new SQS(
+    null,
+    {},
+    {region: 'eu-west-1', accountId: '0'},
+    {warning: msg => warnings.push(msg)}
+  );
+
+  let receiveCalls = 0;
+  sqs.client = {
+    send: command => {
+      const commandName = command.constructor.name;
+      if (commandName === 'GetQueueUrlCommand')
+        return Promise.resolve({QueueUrl: 'http://local/q'});
+      if (commandName === 'ReceiveMessageCommand') {
+        receiveCalls += 1;
+        // stop the loop after a few iterations so the recursion does not spin forever
+        if (receiveCalls >= stopAfter) sqs.queue.pause();
+        return receive(receiveCalls);
+      }
+      return Promise.resolve({});
+    }
+  };
+
+  const sqsEvent = new SQSEventDefinition({queueName: 'q'}, 'eu-west-1', '0');
+  await sqs._sqsEvent('fn', sqsEvent);
+  sqs.queue.start();
+  await drain();
+  sqs.queue.pause();
+  // let any stray rejection settle before we read the guard
+  await drain(10);
+  process.removeListener('unhandledRejection', onUnhandled);
+
+  return {warnings, unhandled, receiveCalls};
+};
+
+// EARS-A: while polling, when ReceiveMessage rejects with a transient error, the loop shall NOT
+// produce an unhandled promise rejection (the process-killing failure mode from #226).
+test('#226 a rejecting ReceiveMessage in the poll loop does not produce an unhandled rejection', async t => {
+  const {unhandled} = await runPollLoopWithReceive(() =>
+    Promise.reject(Object.assign(new Error('socket hang up'), {name: 'TimeoutError'}))
+  );
+  t.deepEqual(unhandled, []);
+});
+
+// EARS-B: while polling, when ReceiveMessage rejects, the loop shall log the error via log.warning
+// and re-schedule (re-poll) rather than stopping.
+test('#226 a rejecting ReceiveMessage is logged via log.warning and the loop re-polls', async t => {
+  const {warnings, receiveCalls} = await runPollLoopWithReceive(() =>
+    Promise.reject(Object.assign(new Error('socket hang up'), {name: 'TimeoutError'}))
+  );
+  t.true(warnings.length > 0, 'the transient receive failure is logged via log.warning');
+  t.true(receiveCalls > 1, 'the loop re-schedules and polls again after the failure');
+});
+
+// EARS-C: a one-off transient failure must not be terminal — once ReceiveMessage recovers the loop
+// resumes normal delivery. The happy path is unchanged.
+test('#226 the poll loop recovers after a transient ReceiveMessage failure', async t => {
+  const {unhandled, receiveCalls} = await runPollLoopWithReceive(call =>
+    call === 1
+      ? Promise.reject(Object.assign(new Error('socket hang up'), {name: 'TimeoutError'}))
+      : Promise.resolve({Messages: []})
+  );
+  t.deepEqual(unhandled, [], 'no unhandled rejection');
+  t.true(receiveCalls >= 2, 'the loop keeps polling after the one-off failure');
+});
+
+// ---------------------------------------------------------------------------
+// enqueueLoop pure helper (#226) — unit-level: it must add the task to the queue and guard the
+// returned promise so a rejecting task is routed to log.warning instead of going unhandled.
+// ---------------------------------------------------------------------------
+
+test('#226 enqueueLoop adds the task to the queue', t => {
+  const added = [];
+  const queue = {
+    add: task => {
+      added.push(task);
+      return Promise.resolve();
+    }
+  };
+  const task = () => {};
+  enqueueLoop(queue, task, normalizeLog({warning: () => {}}));
+  t.deepEqual(added, [task]);
+});
+
+test('#226 enqueueLoop swallows a rejecting task and logs it via log.warning', async t => {
+  const warnings = [];
+  const queue = {
+    add: () => Promise.reject(Object.assign(new Error('boom'), {stack: 'STACK-boom'}))
+  };
+  await enqueueLoop(queue, () => {}, normalizeLog({warning: msg => warnings.push(msg)}));
+  t.deepEqual(warnings, ['STACK-boom']);
+});
+
+test('#226 enqueueLoop tolerates a non-Error rejection without throwing', async t => {
+  const warnings = [];
+  // eslint-disable-next-line prefer-promise-reject-errors -- deliberately a non-Error rejection
+  const queue = {add: () => Promise.reject('plain-string-error')};
+  await t.notThrowsAsync(
+    enqueueLoop(queue, () => {}, normalizeLog({warning: msg => warnings.push(msg)}))
+  );
+  t.deepEqual(warnings, ['plain-string-error']);
+});
+
+test('#226 enqueueLoop leaves a resolving task untouched (no warning)', async t => {
+  const warnings = [];
+  const queue = {add: () => Promise.resolve('ok')};
+  await enqueueLoop(queue, () => {}, normalizeLog({warning: msg => warnings.push(msg)}));
+  t.deepEqual(warnings, []);
 });
