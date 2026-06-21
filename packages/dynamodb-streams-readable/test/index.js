@@ -4,6 +4,7 @@ const {
   DynamoDBClient,
   BatchWriteItemCommand,
   CreateTableCommand,
+  ListTablesCommand,
   ScanCommand
 } = require('@aws-sdk/client-dynamodb');
 const {
@@ -26,7 +27,26 @@ const CLIENT_CONFIG = {
   endpoint: 'http://localhost:8000',
   region: 'eu-west-1',
   // #248 (aws-sdk v3): force HTTP/1.1 — DynamoDB Local does not speak the v3 client's default HTTP/2.
-  requestHandler: new NodeHttpHandler()
+  requestHandler: new NodeHttpHandler(),
+  // #248 (aws-sdk v3): the v3 client defaults to maxAttempts:3 with ~150ms total backoff and gives up
+  // (ECONNRESET "socket hang up") before the cold DynamoDB Local JVM accepts connections — aws-sdk v2
+  // tolerated this. CI runs `nyc ava` right after `docker-compose up -d`, so this test races the cold
+  // emulator. A generous maxAttempts lets the very first request ride out the JVM's cold start.
+  maxAttempts: 20
+};
+
+// #248 (aws-sdk v3): CI does `docker-compose up -d` then immediately `nyc ava`, so this suite races a
+// cold DynamoDB Local that is not yet accepting connections. Poll ListTables (a cheap, side-effect-free
+// call) until the emulator answers, so the per-test CreateTableCommand never hits a dead socket. Bounded
+// by `attempts` so a genuinely down emulator still fails fast instead of hanging the suite.
+const waitForDynamoDB = async (client, attempts = 60, intervalMs = 500) => {
+  try {
+    await client.send(new ListTablesCommand({}));
+  } catch (err) {
+    if (attempts <= 1) throw err;
+    await delay(intervalMs);
+    return waitForDynamoDB(client, attempts - 1, intervalMs);
+  }
 };
 
 // #248 (aws-sdk v3): DynamoDBStreamReadable drives the streams client through the aws-sdk v2 callback
@@ -48,13 +68,15 @@ const batchWriteItem = (dynamodb, tableName, items) =>
     })
   );
 
-test.before(t => {
+test.before(async t => {
   t.context.dynamodb = new DynamoDBClient(CLIENT_CONFIG);
   // The raw v3 streams client (used by the readable through the callback shim below).
   t.context.dynamodbstreams = buildCallbackClient(
     new DynamoDBStreamsClient(CLIENT_CONFIG),
     DDB_STREAMS_READABLE_COMMANDS
   );
+  // Tolerate a cold-started emulator: block until DynamoDB Local answers before any test runs.
+  await waitForDynamoDB(t.context.dynamodb);
 });
 
 test.beforeEach(async t => {

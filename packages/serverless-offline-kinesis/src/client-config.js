@@ -17,6 +17,13 @@ const buildRequestHandler = () => new NodeHttpHandler();
 // DynamoDB Local, kinesalite) ignore the value but the v3 SDK still requires SOME region to sign.
 const DEFAULT_REGION = 'us-east-1';
 
+// #248 (aws-sdk v3): v3 clients default to maxAttempts:3 with ~150ms total backoff and give up
+// (ECONNRESET "socket hang up") before a freshly-started local emulator (kinesalite) finishes
+// booting — aws-sdk v2 tolerated this. A generous default lets the offline plugin ride out the
+// emulator's cold start. A user-supplied `maxAttempts` still wins (it survives in `base` and is
+// spread after this default below).
+const DEFAULT_MAX_ATTEMPTS = 20;
+
 // #252 (aws-sdk v3): build a `credentials` object ONLY when BOTH keys are present. A half-empty
 // `{accessKeyId, secretAccessKey: undefined}` makes the v3 signer throw
 // "Credential is missing" / produces a broken signature, whereas v2 tolerated it. When only one (or
@@ -50,6 +57,8 @@ const buildClientConfig = (options = {}) => {
     ...base,
     ...(isNil(region) ? {} : {region}),
     ...(isNil(credentials) ? {} : {credentials}),
+    // Cold-start default; a user-supplied `maxAttempts` (kept in `base`) still wins.
+    maxAttempts: isNil(base.maxAttempts) ? DEFAULT_MAX_ATTEMPTS : base.maxAttempts,
     // Force HTTP/1.1 so the client can reach kinesalite (see buildRequestHandler above). A
     // user-supplied `requestHandler` in `options` still wins (it lands in `base` and is spread first).
     requestHandler: base.requestHandler || buildRequestHandler()
@@ -63,6 +72,7 @@ const ensureArray = value => (isNil(value) ? [] : value);
 
 module.exports = {
   DEFAULT_REGION,
+  DEFAULT_MAX_ATTEMPTS,
   buildClientConfig,
   buildCredentials,
   resolveRegion,
