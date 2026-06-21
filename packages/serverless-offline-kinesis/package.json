@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-kinesis",
-  "version": "7.1.0",
+  "version": "8.0.0",
   "description": "Emulate AWS λ and Kinesis locally when developing your Serverless project",
   "main": "src",
   "repository": {
@@ -17,6 +17,7 @@
     "src/client-config.js",
     "src/callback-adapter.js",
     "src/kinesis.js",
+    "src/kinesis-readable.js",
     "src/kinesis-event.js",
     "src/kinesis-event-definition.js"
   ],
@@ -35,7 +36,6 @@
   "dependencies": {
     "@aws-sdk/client-kinesis": "^3.0.0",
     "@smithy/node-http-handler": "^4.0.0",
-    "kinesis-readable": "^1.2.0",
     "lodash": "^4.17.21"
   },
   "devDependencies": {

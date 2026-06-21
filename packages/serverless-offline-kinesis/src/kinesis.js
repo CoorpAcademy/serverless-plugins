@@ -6,8 +6,8 @@ const {
   GetShardIteratorCommand,
   waitUntilStreamExists
 } = require('@aws-sdk/client-kinesis');
-const KinesisReadable = require('kinesis-readable');
 const {assign} = require('lodash/fp');
+const KinesisReadable = require('./kinesis-readable');
 
 const {normalizeLog} = require('./log');
 const {buildClientConfig} = require('./client-config');

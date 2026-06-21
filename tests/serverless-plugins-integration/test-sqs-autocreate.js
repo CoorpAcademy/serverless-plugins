@@ -1,10 +1,9 @@
-const {SQS} = require('aws-sdk');
+const {SQSClient, SendMessageCommand} = require('@aws-sdk/client-sqs');
 const {delay, runOfflineTest} = require('./utils');
 
-const client = new SQS({
+const client = new SQSClient({
   region: 'eu-west-1',
-  accessKeyId: 'local',
-  secretAccessKey: 'local',
+  credentials: {accessKeyId: 'local', secretAccessKey: 'local'},
   endpoint: 'http://localhost:9324'
 });
 
@@ -23,31 +22,31 @@ const EXPECTED_KEYS = [
 const sendMessages = async () => {
   await delay(1000);
   await Promise.all([
-    client
-      .sendMessage({
+    client.send(
+      new SendMessageCommand({
         QueueUrl: 'http://localhost:9324/queue/AutocreatedImplicitQueue',
         MessageBody: 'AutocreatedImplicitQueue'
       })
-      .promise(),
-    client
-      .sendMessage({
+    ),
+    client.send(
+      new SendMessageCommand({
         QueueUrl: 'http://localhost:9324/queue/AutocreatedQueue',
         MessageBody: 'AutocreatedQueue'
       })
-      .promise(),
-    client
-      .sendMessage({
+    ),
+    client.send(
+      new SendMessageCommand({
         QueueUrl: 'http://localhost:9324/queue/AutocreatedFifoQueue.fifo',
         MessageBody: 'AutocreatedFifoQueue',
         MessageGroupId: '1'
       })
-      .promise(),
-    client
-      .sendMessage({
+    ),
+    client.send(
+      new SendMessageCommand({
         QueueUrl: 'http://localhost:9324/queue/MainQueue',
         MessageBody: 'MainQueue'
       })
-      .promise()
+    )
   ]);
 };
 
