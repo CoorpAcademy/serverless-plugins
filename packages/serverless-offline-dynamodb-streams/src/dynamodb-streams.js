@@ -37,6 +37,12 @@ const DDB_STREAMS_READABLE_COMMANDS = {
 // waitUntilTableExists needs a bounded max wait; mirror the v2 waiter's generous polling budget.
 const TABLE_EXISTS_MAX_WAIT_SECONDS = 120;
 
+// #241 (lqueryvg): how many times `_describeTable` may wait-and-retry before giving up.
+// The previous code recursed UNCONDITIONALLY on any waiter failure, so a genuinely-missing
+// table (e.g. Localstack not up) hung `serverless offline` forever with no error. Bound the
+// retry so a missing table fails fast with a clear, named error instead of spinning.
+const TABLE_DESCRIBE_MAX_ATTEMPTS = 3;
+
 const delay = timeout =>
   new Promise(resolve => {
     setTimeout(resolve, timeout);
@@ -48,6 +54,21 @@ const assertStreamEnabled = (tableName, latestStreamArn) => {
   if (!latestStreamArn) throw new Error(`Table ${tableName} does not have streams enabled`);
   return latestStreamArn;
 };
+
+// #241 (lqueryvg): opt-in to a non-blocking startup. Default false preserves the current
+// fail-fast behavior; when set, a missing table/stream is warned-and-skipped so the rest of
+// serverless-offline still starts. Pure read of the merged custom options. `undefined`/missing
+// -> false.
+const shouldContinueOnMissingResource = options =>
+  Boolean(get('continueOnMissingResource', options));
+
+// #241 (lqueryvg): the warning shown when a missing table/stream is skipped (opt-in path).
+// Pure: names the table and the underlying cause so the developer knows what was skipped and
+// why. Tolerates a nil/non-Error cause.
+const missingResourceWarning = (tableName, err) =>
+  `serverless-offline-dynamodb-streams: skipping table "${tableName}" — its table or stream ` +
+  `is unavailable offline (${get('message', err) || err}). ` +
+  `Set custom.serverless-offline-dynamodb-streams.continueOnMissingResource: false to fail fast instead.`;
 
 // #178 (ddb-streams-checkpoint): the sequence number of the LAST record in a chunk —
 // the high-water mark the handler has processed up to. `undefined` for an empty/sentinel
@@ -106,15 +127,29 @@ class DynamodbStreams {
     return this._dynamodbStreamsEvent(functionKey, dynamodbStreamsEvent);
   }
 
-  async _describeTable(tableName) {
+  // #248 (aws-sdk v3): the bounded waiter, extracted as a seam so unit tests can stub the
+  // 120s poll without hitting AWS. Production wiring is unchanged.
+  _waitUntilTableExists(tableName) {
+    return waitUntilTableExists(
+      {client: this.client, maxWaitTime: TABLE_EXISTS_MAX_WAIT_SECONDS},
+      {TableName: tableName}
+    );
+  }
+
+  // #241 (lqueryvg): wait for the table, then describe it. The previous catch recursed
+  // UNCONDITIONALLY, so a genuinely-missing table looped forever and `serverless offline`
+  // hung with no error. Bound the retry to TABLE_DESCRIBE_MAX_ATTEMPTS and, on exhaustion,
+  // throw a CLEAR error naming the table (the caller decides whether to fail fast or skip).
+  async _describeTable(tableName, remainingAttempts = TABLE_DESCRIBE_MAX_ATTEMPTS) {
     try {
-      await waitUntilTableExists(
-        {client: this.client, maxWaitTime: TABLE_EXISTS_MAX_WAIT_SECONDS},
-        {TableName: tableName}
-      );
+      await this._waitUntilTableExists(tableName);
       return await this.client.send(new DescribeTableCommand({TableName: tableName}));
     } catch (err) {
-      return this._describeTable(tableName);
+      if (remainingAttempts > 1) return this._describeTable(tableName, remainingAttempts - 1);
+      throw new Error(
+        `Table ${tableName} could not be described after ${TABLE_DESCRIBE_MAX_ATTEMPTS} ` +
+          `attempts (${get('message', err) || err}). Is the table created and DynamoDB reachable?`
+      );
     }
   }
 
@@ -131,15 +166,27 @@ class DynamodbStreams {
 
     if (!enabled) return;
 
-    const {
-      Table: {LatestStreamArn}
-    } = await this._describeTable(tableName);
+    // #241 (lqueryvg): resolving the table/stream is the one startup step that can fail when
+    // the resource is absent offline (Localstack down, table/stream not created). Keep it in a
+    // single try so the default path fails fast with a clear error, while the opt-in path warns
+    // and SKIPS this event source so the rest of serverless-offline still starts.
+    let streamArn;
+    let shards;
+    try {
+      const {
+        Table: {LatestStreamArn}
+      } = await this._describeTable(tableName);
 
-    const streamArn = assertStreamEnabled(tableName, LatestStreamArn);
+      streamArn = assertStreamEnabled(tableName, LatestStreamArn);
 
-    const {
-      StreamDescription: {Shards: shards}
-    } = await this.streamsClient.send(new DescribeStreamCommand({StreamArn: streamArn}));
+      ({
+        StreamDescription: {Shards: shards}
+      } = await this.streamsClient.send(new DescribeStreamCommand({StreamArn: streamArn})));
+    } catch (err) {
+      if (!shouldContinueOnMissingResource(this.options)) throw err;
+      this.log.warning(missingResourceWarning(tableName, err));
+      return;
+    }
 
     shards.forEach(({ShardId: shardId}) => {
       // #178 (ddb-streams-checkpoint): pick the iterator from any saved checkpoint —
@@ -240,3 +287,6 @@ class DynamodbStreams {
 module.exports = DynamodbStreams;
 module.exports.assertStreamEnabled = assertStreamEnabled;
 module.exports.chunkSequenceNumber = chunkSequenceNumber;
+module.exports.shouldContinueOnMissingResource = shouldContinueOnMissingResource;
+module.exports.missingResourceWarning = missingResourceWarning;
+module.exports.TABLE_DESCRIBE_MAX_ATTEMPTS = TABLE_DESCRIBE_MAX_ATTEMPTS;

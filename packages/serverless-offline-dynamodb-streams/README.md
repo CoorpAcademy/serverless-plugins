@@ -68,6 +68,22 @@ custom:
     readInterval: 500
 ```
 
+### Missing table or stream (`continueOnMissingResource`, #241)
+
+By default, if a referenced table does not exist or has no stream enabled (e.g. your local
+DynamoDB / Localstack is not up yet), the plugin fails fast with a **clear error naming the
+table** instead of hanging the `serverless offline` startup.
+
+If you only sometimes run your stream handlers locally and want the rest of `serverless offline`
+(e.g. your HTTP API) to start regardless, opt in to a non-blocking startup. When set, a missing
+table/stream is logged as a **warning** and that event source is **skipped**:
+
+```yml
+custom:
+  serverless-offline-dynamodb-streams:
+    continueOnMissingResource: true # default: false (fail fast with a clear error)
+```
+
 > `arn` could be deduce from `tableName` if your add the key `tableName` in your function's configuration. Useful if your use dynalite and regularly recreate a new DynamoDBStreams.
 
 ```yml
