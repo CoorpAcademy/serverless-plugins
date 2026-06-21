@@ -149,7 +149,16 @@ class DynamodbStreams {
           // matching records and skip the handler entirely when none match (AWS does not
           // invoke the function for an empty match, rather than delivering Records: []).
           const matching = filterRecords(filterPatterns, chunk);
-          if (isEmpty(matching)) return cb();
+          if (isEmpty(matching)) {
+            // #178: a batch fully dropped by filterPatterns still moves the cursor
+            // forward — the handler is skipped (no record matched) but every record was
+            // seen, so advance the checkpoint to the FULL chunk's last sequence number.
+            // Without this, those already-scanned, filtered records would be re-scanned
+            // on restart. No handler ran, so there is nothing to wait on: advance and
+            // ack the batch immediately.
+            this._advanceCheckpoint(streamArn, shardId, chunkSequenceNumber(chunk));
+            return cb();
+          }
 
           const task = async remainingAttempts => {
             try {
@@ -173,8 +182,9 @@ class DynamodbStreams {
               // #178: advance the checkpoint to the LAST record of the FULL chunk only
               // AFTER the handler has resolved (at-most-once: a crash before this line
               // re-delivers the in-flight batch on restart — documented in the README).
-              // We use the full-chunk sequence number (not the filtered subset) so a
-              // batch fully dropped by filterPatterns still moves the cursor forward.
+              // We use the full-chunk sequence number (not the filtered subset) so that
+              // records filtered out within a partially-matching batch are not re-scanned
+              // on restart. A fully-dropped batch is acked in the isEmpty branch above.
               this._advanceCheckpoint(streamArn, shardId, chunkSequenceNumber(chunk));
               return cb();
             })

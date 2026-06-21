@@ -7,7 +7,9 @@ const test = require('ava');
 const {defaultLog, normalizeLog} = require('../src/log');
 const DynamodbStreamsEvent = require('../src/dynamodb-streams-event');
 const DynamodbStreamsEventDefinition = require('../src/dynamodb-streams-event-definition');
-const {assertStreamEnabled, chunkSequenceNumber} = require('../src/dynamodb-streams');
+const DynamodbStreams = require('../src/dynamodb-streams');
+
+const {assertStreamEnabled, chunkSequenceNumber} = DynamodbStreams;
 const {resolveTableName} = require('../src/resolve-arn');
 const {recordMatchesFilterPatterns, filterRecords} = require('../src/filter-patterns');
 const {
@@ -517,15 +519,17 @@ test('src/dynamodb-streams.js resumes via the checkpoint store, not an unconditi
   t.true(source.includes('_advanceCheckpoint'));
 });
 
-// EARS3 source guard: the checkpoint advances only inside the post-resolve `.then`,
-// never before the handler runs.
+// EARS3 source guard: when the handler runs, the checkpoint advances only inside the
+// post-resolve `.then`, never before the handler runs. (A fully-filtered batch that
+// skips the handler advances in the isEmpty branch — covered behaviorally below.)
 test('src/dynamodb-streams.js advances the checkpoint only after the handler resolves (#178 EARS3)', t => {
   const source = readSource('dynamodb-streams.js');
   const thenIdx = source.indexOf('.then(() => {');
-  const advanceIdx = source.indexOf('this._advanceCheckpoint(streamArn, shardId');
+  // The handler-path advance is the one that follows the post-resolve `.then`.
+  const advanceIdx = source.indexOf('this._advanceCheckpoint(streamArn, shardId', thenIdx);
 
   t.true(advanceIdx > -1 && thenIdx > -1);
-  t.true(advanceIdx > thenIdx, 'the advance call lives inside the post-handler .then');
+  t.true(advanceIdx > thenIdx, 'the handler-path advance call lives inside the post-handler .then');
 });
 
 // End-to-end of the pure store: process records, restart, and assert no replay.
@@ -540,4 +544,128 @@ test('checkpoint round-trip: a restart resumes AFTER the last processed record (
   const options = resolveIteratorOptions(reloaded, STREAM_ARN, 'shardId-1', 'TRIM_HORIZON');
 
   t.deepEqual(options, {startAfter: '111'}, 'resumes after 111, does not replay 0..111');
+});
+
+// --- writable wiring (#178 + #242): the filterPatterns / checkpoint interaction
+//
+// Drives the REAL writable built by `_dynamodbStreamsEvent` (no AWS, no docker):
+// only `_describeTable` and `streamsClient.describeStream` are stubbed so the plugin
+// builds an actual readable+writable pair. The readable is left paused (start() is
+// never called) so no polling timers fire — we push chunks through the writable
+// directly and assert the checkpoint/handler behavior.
+
+const SHARD_ID = 'shardId-00000001';
+const HARNESS_STREAM_ARN = 'arn:aws:dynamodb:eu-west-1:000000000000:table/orders/stream/2024';
+
+const buildStreamsHarness = () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ddb-cp-')), DEFAULT_STATE_FILE);
+
+  const handlerCalls = [];
+  const lambda = {
+    get: () => ({
+      setEvent: event => handlerCalls.push(event),
+      runHandler: () => Promise.resolve()
+    })
+  };
+
+  const streams = new DynamodbStreams(
+    lambda,
+    {region: 'eu-west-1', accountId: '000000000000', checkpointFile: file},
+    {}
+  );
+
+  // Stub the AWS edges so `_dynamodbStreamsEvent` resolves a single shard.
+  streams._describeTable = () => Promise.resolve({Table: {LatestStreamArn: HARNESS_STREAM_ARN}});
+  streams.streamsClient.describeStream = () => ({
+    promise: () => Promise.resolve({StreamDescription: {Shards: [{ShardId: SHARD_ID}]}})
+  });
+
+  return {streams, file, handlerCalls};
+};
+
+// Reach the actual Writable destination of the readable.pipe(writable) wiring.
+// `_readableState.pipes` is an array in modern Node and a single ref in older ones.
+const writableOf = readable => {
+  const {pipes} = readable._readableState;
+  return Array.isArray(pipes) ? pipes[0] : pipes;
+};
+
+const writeChunk = (writable, chunk) =>
+  new Promise((resolve, reject) => {
+    writable.write(chunk, err => (err ? reject(err) : resolve()));
+  });
+
+test('write: a batch fully dropped by filterPatterns still advances the checkpoint (#178/#242)', async t => {
+  // filterPatterns matches neither INSERT nor MODIFY -> the whole batch is dropped.
+  const {streams, file, handlerCalls} = buildStreamsHarness();
+
+  await streams._dynamodbStreamsEvent(
+    'fnKey',
+    new DynamodbStreamsEventDefinition(
+      {
+        arn: HARNESS_STREAM_ARN,
+        startingPosition: 'TRIM_HORIZON',
+        filterPatterns: [{eventName: ['REMOVE']}]
+      },
+      'eu-west-1',
+      '000000000000'
+    )
+  );
+
+  const writable = writableOf(streams.readables[0]);
+
+  const chunk = [
+    {...insertRecord, dynamodb: {...insertRecord.dynamodb, SequenceNumber: '100'}},
+    {...modifyRecord, dynamodb: {...modifyRecord.dynamodb, SequenceNumber: '111'}}
+  ];
+
+  await writeChunk(writable, chunk);
+
+  // The handler must NOT run (no record matched) ...
+  t.is(handlerCalls.length, 0, 'handler is skipped for a fully-filtered batch');
+  // ... yet the checkpoint must advance to the FULL chunk high-water mark, so those
+  // already-scanned records are never re-scanned on restart.
+  t.is(
+    getCheckpoint(streams.checkpointState, HARNESS_STREAM_ARN, SHARD_ID),
+    '111',
+    'checkpoint advanced to the last record of the dropped batch'
+  );
+  t.deepEqual(
+    loadState(file),
+    {[checkpointKey(HARNESS_STREAM_ARN, SHARD_ID)]: '111'},
+    'advanced checkpoint is persisted to disk'
+  );
+});
+
+test('write: a partially-matching batch runs the handler and advances to the FULL chunk seq (#178/#242)', async t => {
+  const {streams, handlerCalls} = buildStreamsHarness();
+
+  await streams._dynamodbStreamsEvent(
+    'fnKey',
+    new DynamodbStreamsEventDefinition(
+      {
+        arn: HARNESS_STREAM_ARN,
+        startingPosition: 'TRIM_HORIZON',
+        filterPatterns: [{eventName: ['INSERT']}]
+      },
+      'eu-west-1',
+      '000000000000'
+    )
+  );
+
+  const writable = writableOf(streams.readables[0]);
+  const chunk = [
+    {...insertRecord, dynamodb: {...insertRecord.dynamodb, SequenceNumber: '100'}},
+    {...modifyRecord, dynamodb: {...modifyRecord.dynamodb, SequenceNumber: '111'}}
+  ];
+
+  await writeChunk(writable, chunk);
+
+  // The handler runs with only the matching (INSERT) record ...
+  t.is(handlerCalls.length, 1, 'handler runs for a partially-matching batch');
+  t.is(handlerCalls[0].Records.length, 1);
+  t.is(handlerCalls[0].Records[0].eventName, 'INSERT');
+  // ... but the checkpoint still advances to the FULL chunk high-water mark (111),
+  // not just the matched subset (100), so the filtered MODIFY is not re-scanned.
+  t.is(getCheckpoint(streams.checkpointState, HARNESS_STREAM_ARN, SHARD_ID), '111');
 });
