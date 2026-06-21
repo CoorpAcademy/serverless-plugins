@@ -30,7 +30,19 @@ const {
   dispatchDestination,
   runDestinations
 } = require('../src/destinations');
+const ServerlessOfflineSQS = require('../src');
 const {defaultOptions, isPluginEnabled} = require('../src');
+const {
+  isAutoStartEnabled,
+  resolveAutoStartOptions,
+  buildContainerArgs,
+  buildReadinessUrl,
+  ensureLocalCredentials,
+  startElasticMq,
+  DEFAULT_AUTOSTART_IMAGE,
+  DEFAULT_AUTOSTART_PORT,
+  LOCAL_CREDENTIAL
+} = require('../src/elasticmq');
 const {extractQueueNameFromARN, resolveCfnValue} = require('../src/sqs-event-definition');
 const {
   buildClientConfig,
@@ -1573,4 +1585,324 @@ test('SQS._dispatchDestination resolves a {Ref: <Queue>} destination via this.re
   );
   // No explicit QueueName -> falls back to the logical id.
   t.is(client.calls[0].input.QueueName, 'OkQueue');
+});
+
+// ---------------------------------------------------------------------------
+// #146 (tstackhouse, tristan-mastrodicasa): opt-in autoStart ElasticMQ.
+// Pure helpers + Docker lifecycle (mocked child_process + fetch — no real Docker).
+// ---------------------------------------------------------------------------
+
+// AC8 (string coercion) + AC1 (default off): isAutoStartEnabled mirrors isPluginEnabled.
+test('#146 isAutoStartEnabled defaults to false when autoStart is absent (opt-in, AC1)', t => {
+  t.false(isAutoStartEnabled({}));
+  t.false(isAutoStartEnabled(undefined));
+  t.false(isAutoStartEnabled({region: 'eu-west-1'}));
+});
+
+test('#146 isAutoStartEnabled is true for boolean true and an object config form', t => {
+  t.true(isAutoStartEnabled({autoStart: true}));
+  t.true(isAutoStartEnabled({autoStart: {port: 9325}}));
+});
+
+test('#146 isAutoStartEnabled coerces the YAML/CLI strings "true"/"false" (AC8)', t => {
+  t.true(isAutoStartEnabled({autoStart: 'true'}));
+  t.false(isAutoStartEnabled({autoStart: 'false'}));
+});
+
+test('#146 isAutoStartEnabled honors an explicit boolean false', t => {
+  t.false(isAutoStartEnabled({autoStart: false}));
+});
+
+test('#146 isAutoStartEnabled is a pure read with no side effects', t => {
+  const opts = {autoStart: 'true', region: 'eu-west-1'};
+  const before = {...opts};
+  isAutoStartEnabled(opts);
+  t.deepEqual(opts, before);
+});
+
+// AC9: resolveAutoStartOptions — pinned defaults, user overrides honored.
+test('#146 resolveAutoStartOptions falls back to pinned defaults when nothing is set (AC9)', t => {
+  const resolved = resolveAutoStartOptions({autoStart: true});
+  t.is(resolved.image, DEFAULT_AUTOSTART_IMAGE);
+  t.is(resolved.image, 'softwaremill/elasticmq-native:1.6.11');
+  t.is(resolved.port, DEFAULT_AUTOSTART_PORT);
+  t.is(resolved.port, 9324);
+  t.is(resolved.pullPolicy, 'missing');
+  t.is(resolved.readinessTimeout, 30000);
+  t.is(typeof resolved.name, 'string');
+  t.true(resolved.name.length > 0);
+});
+
+test('#146 resolveAutoStartOptions defaults work when autoStart is the bare boolean true', t => {
+  t.is(resolveAutoStartOptions({autoStart: true}).port, 9324);
+  t.is(resolveAutoStartOptions({autoStart: 'true'}).port, 9324);
+});
+
+test('#146 resolveAutoStartOptions honors image/port/pullPolicy overrides (AC9)', t => {
+  const resolved = resolveAutoStartOptions({
+    autoStart: {
+      image: 'softwaremill/elasticmq-native:1.5.0',
+      port: 9555,
+      pullPolicy: 'always',
+      readinessTimeout: 1000,
+      name: 'my-mq'
+    }
+  });
+  t.is(resolved.image, 'softwaremill/elasticmq-native:1.5.0');
+  t.is(resolved.port, 9555);
+  t.is(resolved.pullPolicy, 'always');
+  t.is(resolved.readinessTimeout, 1000);
+  t.is(resolved.name, 'my-mq');
+});
+
+test('#146 resolveAutoStartOptions does not mutate its input', t => {
+  const opts = {autoStart: {port: 9555}};
+  const before = JSON.parse(JSON.stringify(opts));
+  resolveAutoStartOptions(opts);
+  t.deepEqual(opts, before);
+});
+
+// AC2/AC9: buildContainerArgs — the exact `docker run` argv.
+test('#146 buildContainerArgs builds the detached --rm --name -p run argv (AC2)', t => {
+  const argv = buildContainerArgs({
+    name: 'so-sqs',
+    port: 9324,
+    image: 'softwaremill/elasticmq-native:1.6.11'
+  });
+  t.deepEqual(argv, [
+    'run',
+    '-d',
+    '--rm',
+    '--name',
+    'so-sqs',
+    '-p',
+    '9324:9324',
+    'softwaremill/elasticmq-native:1.6.11',
+    '-Dnode-address.host=*'
+  ]);
+});
+
+test('#146 buildContainerArgs threads a custom port and image into the argv (AC9)', t => {
+  const argv = buildContainerArgs({
+    name: 'so-sqs',
+    port: 9555,
+    image: 'softwaremill/elasticmq-native:1.5.0'
+  });
+  t.true(argv.includes('9555:9324'));
+  t.true(argv.includes('softwaremill/elasticmq-native:1.5.0'));
+});
+
+// AC2: buildReadinessUrl — localhost on the configured port.
+test('#146 buildReadinessUrl points at http://localhost:<port> (AC2)', t => {
+  t.is(buildReadinessUrl({port: 9324}), 'http://localhost:9324');
+  t.is(buildReadinessUrl({port: 9555}), 'http://localhost:9555');
+});
+
+// Zero-setup: ensureLocalCredentials injects placeholders only when the user set neither key.
+test('#146 ensureLocalCredentials injects local placeholders when no credentials are set', t => {
+  const resolved = ensureLocalCredentials({region: 'eu-west-1'});
+  t.is(resolved.accessKeyId, LOCAL_CREDENTIAL);
+  t.is(resolved.secretAccessKey, LOCAL_CREDENTIAL);
+  t.is(resolved.region, 'eu-west-1');
+});
+
+test('#146 ensureLocalCredentials leaves a user-supplied credential pair untouched', t => {
+  const options = {accessKeyId: 'mine', secretAccessKey: 'secret'};
+  t.is(ensureLocalCredentials(options), options);
+});
+
+test('#146 ensureLocalCredentials does not override a partial user credential (only one key set)', t => {
+  // A half-set pair is the user's responsibility; we never silently fill the gap (buildCredentials
+  // already drops a half-empty pair, mirroring #252).
+  const options = {accessKeyId: 'mine'};
+  t.is(ensureLocalCredentials(options), options);
+  t.is(ensureLocalCredentials(options).secretAccessKey, undefined);
+});
+
+test('#146 ensureLocalCredentials does not mutate its input', t => {
+  const options = {region: 'eu-west-1'};
+  const before = {...options};
+  ensureLocalCredentials(options);
+  t.deepEqual(options, before);
+});
+
+// ---- startElasticMq lifecycle, with an injected (mocked) execFile + fetch ----
+
+// A recording fake of the child_process execFile contract used by elasticmq.js. `outcomes` maps a
+// matched subcommand (the first arg, e.g. 'version'/'image'/'pull'/'run'/'stop') to either a thrown
+// error or a stdout string.
+const fakeExecFile =
+  (calls, outcomes = {}) =>
+  (file, args) => {
+    calls.push({file, args});
+    const sub = args[0];
+    const outcome = outcomes[sub];
+    if (outcome instanceof Error) return Promise.reject(outcome);
+    return Promise.resolve({stdout: outcome === undefined ? '' : outcome, stderr: ''});
+  };
+
+const silentLog = {notice: () => {}, warning: () => {}, debug: () => {}};
+const isTeardownSub = sub => sub === 'stop' || sub === 'rm';
+
+test('#146 startElasticMq fails fast with a Docker-naming error when docker is absent (AC6)', async t => {
+  const calls = [];
+  const dockerAbsent = Object.assign(new Error('spawn docker ENOENT'), {code: 'ENOENT'});
+  const execFile = fakeExecFile(calls, {version: dockerAbsent});
+
+  const error = await t.throwsAsync(() =>
+    startElasticMq(
+      {name: 'so-sqs-test', port: 9324, image: 'img', pullPolicy: 'missing', readinessTimeout: 50},
+      silentLog,
+      {execFile, fetch: () => Promise.resolve({})}
+    )
+  );
+  t.regex(error.message, /[Dd]ocker/);
+  // and it must NOT have attempted to run a container (nothing to leave dangling)
+  t.false(calls.some(({args}) => args[0] === 'run'));
+});
+
+test('#146 startElasticMq tears the container down and throws on a readiness timeout (AC7)', async t => {
+  const calls = [];
+  const execFile = fakeExecFile(calls, {}); // every docker subcommand "succeeds"
+  // fetch never answers (connection refused) -> readiness never reached
+  const fetch = () =>
+    Promise.reject(Object.assign(new Error('ECONNREFUSED'), {code: 'ECONNREFUSED'}));
+
+  const error = await t.throwsAsync(() =>
+    startElasticMq(
+      {name: 'so-sqs-test', port: 9324, image: 'img', pullPolicy: 'missing', readinessTimeout: 60},
+      silentLog,
+      {execFile, fetch}
+    )
+  );
+  t.regex(error.message, /ready|timeout/i);
+  // the container that was started must have been torn down (stop/rm issued AFTER run)
+  const runIdx = calls.findIndex(({args}) => args[0] === 'run');
+  t.true(runIdx >= 0);
+  const teardown = calls.slice(runIdx + 1).some(({args}) => isTeardownSub(args[0]));
+  t.true(teardown);
+});
+
+test('#146 startElasticMq happy path resolves {endpoint, stop} and pulls only on inspect miss', async t => {
+  const calls = [];
+  // pullPolicy 'missing': `image inspect` fails -> a `pull` must follow.
+  const execFile = fakeExecFile(calls, {image: new Error('No such image')});
+  const fetch = () => Promise.resolve({ok: true, status: 200});
+
+  const handle = await startElasticMq(
+    {name: 'so-sqs-test', port: 9324, image: 'img', pullPolicy: 'missing', readinessTimeout: 1000},
+    silentLog,
+    {execFile, fetch}
+  );
+
+  t.is(handle.endpoint, 'http://localhost:9324');
+  t.is(typeof handle.stop, 'function');
+  const subs = calls.map(({args}) => args[0]);
+  t.true(subs.includes('version')); // preflight
+  t.true(subs.includes('image')); // inspect probe
+  t.true(subs.includes('pull')); // inspect failed -> pull
+  t.true(subs.includes('run')); // container started
+  // idempotent: a leaked <name> is force-removed before run
+  const rmBeforeRun = calls.findIndex(({args}) => args[0] === 'rm');
+  const runIdx = calls.findIndex(({args}) => args[0] === 'run');
+  t.true(rmBeforeRun >= 0 && rmBeforeRun < runIdx);
+});
+
+test('#146 startElasticMq with pullPolicy missing skips pull when the image is already present', async t => {
+  const calls = [];
+  const execFile = fakeExecFile(calls, {}); // `image inspect` succeeds
+  const fetch = () => Promise.resolve({ok: true, status: 200});
+
+  await startElasticMq(
+    {name: 'so-sqs-test', port: 9324, image: 'img', pullPolicy: 'missing', readinessTimeout: 1000},
+    silentLog,
+    {execFile, fetch}
+  );
+  t.false(calls.some(({args}) => args[0] === 'pull'));
+});
+
+test('#146 startElasticMq stop() is idempotent — the 2nd call is a no-op (AC4)', async t => {
+  const calls = [];
+  const execFile = fakeExecFile(calls, {});
+  const fetch = () => Promise.resolve({ok: true, status: 200});
+
+  const handle = await startElasticMq(
+    {name: 'so-sqs-test', port: 9324, image: 'img', pullPolicy: 'missing', readinessTimeout: 1000},
+    silentLog,
+    {execFile, fetch}
+  );
+
+  await handle.stop();
+  const afterFirst = calls.filter(({args}) => isTeardownSub(args[0])).length;
+  await handle.stop(); // must be a no-op
+  const afterSecond = calls.filter(({args}) => isTeardownSub(args[0])).length;
+  t.is(afterFirst, afterSecond);
+});
+
+// ---------------------------------------------------------------------------
+// #146 index.js wiring — autoStart precedence + teardown (no real Docker).
+// ---------------------------------------------------------------------------
+
+// AC1: with autoStart UNSET, start() never touches this.options.endpoint.
+test('#146 start() leaves the endpoint untouched when autoStart is unset (AC1)', async t => {
+  const serverless = {service: {custom: {}, provider: {}, getAllFunctions: () => []}};
+  const plugin = new ServerlessOfflineSQS(serverless, {}, {log: silentLog});
+  plugin._createLambda = async () => {};
+  plugin._createSqs = async () => {};
+
+  await plugin.start();
+
+  t.is(plugin.options.endpoint, undefined);
+  t.is(plugin.elasticmq, undefined);
+});
+
+// AC5: autoStart enabled AND an explicit endpoint -> skip the container, keep the user endpoint.
+test('#146 start() skips autoStart and warns when an explicit endpoint is set (AC5)', async t => {
+  const warnings = [];
+  const serverless = {
+    service: {
+      custom: {'serverless-offline-sqs': {autoStart: true, endpoint: 'http://localhost:4576'}},
+      provider: {},
+      getAllFunctions: () => []
+    }
+  };
+  const plugin = new ServerlessOfflineSQS(
+    serverless,
+    {},
+    {
+      log: {...silentLog, warning: msg => warnings.push(msg)}
+    }
+  );
+  plugin._createLambda = async () => {};
+  plugin._createSqs = async () => {};
+
+  await plugin.start();
+
+  t.is(plugin.options.endpoint, 'http://localhost:4576'); // user endpoint preserved
+  t.is(plugin.elasticmq, undefined); // no container started
+  t.true(warnings.some(msg => /autoStart/i.test(String(msg))));
+});
+
+// AC4: end() awaits elasticmq.stop() when present, and is harmless when absent.
+test('#146 end() awaits elasticmq.stop() when a container was started (AC4)', async t => {
+  let stopped = 0;
+  const serverless = {service: {custom: {}, provider: {}}};
+  const plugin = new ServerlessOfflineSQS(serverless, {}, {log: silentLog});
+  plugin.elasticmq = {
+    endpoint: 'http://localhost:9324',
+    stop: () => {
+      stopped += 1;
+      return Promise.resolve();
+    }
+  };
+
+  await plugin.end(true); // skipExit=true so the test process is not killed
+
+  t.is(stopped, 1);
+});
+
+test('#146 end() is a no-op for the container when none was started (AC1)', async t => {
+  const serverless = {service: {custom: {}, provider: {}}};
+  const plugin = new ServerlessOfflineSQS(serverless, {}, {log: silentLog});
+  await t.notThrowsAsync(() => plugin.end(true));
 });
