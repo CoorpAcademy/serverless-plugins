@@ -6,6 +6,7 @@ const {defaultLog, normalizeLog} = require('../src/log');
 const {shouldRetry} = require('../src/kinesis');
 const KinesisEvent = require('../src/kinesis-event');
 const KinesisEventDefinition = require('../src/kinesis-event-definition');
+const KinesisReadable = require('../src/kinesis-readable');
 const {
   buildClientConfig,
   buildCredentials,
@@ -375,3 +376,84 @@ test('src/kinesis.js production handler uses the bounded shouldRetry guard (#100
   t.true(kinesisSource.includes('shouldRetry(remainingAttempts)'));
   t.true(kinesisSource.includes('task(remainingAttempts - 1)'));
 });
+
+// ---------------------------------------------------------------------------
+// KinesisReadable (#248): vendored in-house v3 reader replacing the `kinesis-readable`
+// npm package, which dragged the vulnerable aws-sdk v2 tree into published runtime.
+// These pin the behavioral contract the plugin relies on so the swap is regression-free.
+// ---------------------------------------------------------------------------
+
+// A fake v2-style callback client: scripts getRecords batches, records the iterator walk.
+const fakeClient = ({shards = [{ShardId: 'shard-0'}], batches = []} = {}) => {
+  let call = 0;
+  return {
+    describeStream: (params, cb) => cb(null, {StreamDescription: {Shards: shards}}),
+    getShardIterator: (params, cb) => cb(null, {ShardIterator: 'it-0'}),
+    getRecords: (params, cb) => {
+      const batch = batches[call] || {Records: [], NextShardIterator: `it-${call + 1}`};
+      call++;
+      cb(null, batch);
+    }
+  };
+};
+
+test('KinesisReadable throws when options.iterator is not LATEST/TRIM_HORIZON', t => {
+  t.throws(() => KinesisReadable(fakeClient(), 'stream', {iterator: 'BOGUS'}), {
+    message: /must be one of LATEST or TRIM_HORIZON/
+  });
+});
+
+test('KinesisReadable surfaces an error when the requested shardId does not exist', t =>
+  new Promise(resolve => {
+    const reader = KinesisReadable(fakeClient({shards: [{ShardId: 'shard-0'}]}), 'stream', {
+      shardId: 'missing',
+      readInterval: 0
+    });
+    reader.on('error', err => {
+      t.regex(err.message, /Shard missing does not exist/);
+      resolve();
+    });
+    reader.resume();
+  }));
+
+test('KinesisReadable emits records and a checkpoint of the last SequenceNumber', t =>
+  new Promise(resolve => {
+    const records = [{SequenceNumber: '1', Data: Buffer.from('a'), PartitionKey: 'p'}];
+    const reader = KinesisReadable(
+      fakeClient({batches: [{Records: records, NextShardIterator: 'it-1'}]}),
+      'stream',
+      {readInterval: 0}
+    );
+    let checkpoint;
+    reader.on('checkpoint', seq => {
+      checkpoint = seq;
+    });
+    reader.on('data', emitted => {
+      t.deepEqual(emitted, records);
+      t.is(checkpoint, '1');
+      reader.close();
+      resolve();
+    });
+  }));
+
+test('KinesisReadable keeps polling past an empty batch (does not end on [])', t =>
+  new Promise(resolve => {
+    const records = [{SequenceNumber: '7', Data: Buffer.from('z'), PartitionKey: 'p'}];
+    // First poll returns an empty batch (v2 []), second returns real records — the reader must
+    // poll again rather than ending the stream on the empty one.
+    const reader = KinesisReadable(
+      fakeClient({
+        batches: [
+          {Records: [], NextShardIterator: 'it-1'},
+          {Records: records, NextShardIterator: 'it-2'}
+        ]
+      }),
+      'stream',
+      {readInterval: 0}
+    );
+    reader.on('data', emitted => {
+      t.deepEqual(emitted, records);
+      reader.close();
+      resolve();
+    });
+  }));

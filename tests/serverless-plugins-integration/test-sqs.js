@@ -1,11 +1,10 @@
 const {chunk} = require('lodash/fp');
-const {SQS} = require('aws-sdk');
+const {SQSClient, SendMessageCommand, SendMessageBatchCommand} = require('@aws-sdk/client-sqs');
 const {delay, runOfflineTest} = require('./utils');
 
-const client = new SQS({
+const client = new SQSClient({
   region: 'eu-west-1',
-  accessKeyId: 'local',
-  secretAccessKey: 'local',
+  credentials: {accessKeyId: 'local', secretAccessKey: 'local'},
   endpoint: 'http://localhost:9324'
 });
 
@@ -28,31 +27,31 @@ const EXPECT_BATCH = {
 const sendMessages = async () => {
   await delay(1000);
   await Promise.all([
-    client
-      .sendMessage({
+    client.send(
+      new SendMessageCommand({
         QueueUrl: 'http://localhost:9324/queue/MyFirstQueue',
         MessageBody: 'MyFirstMessage',
         MessageAttributes: {myAttribute: {DataType: 'String', StringValue: 'myAttribute'}}
       })
-      .promise(),
-    client
-      .sendMessage({
+    ),
+    client.send(
+      new SendMessageCommand({
         QueueUrl: 'http://localhost:9324/queue/MySecondQueue',
         MessageBody: 'MySecondMessage'
       })
-      .promise(),
-    client
-      .sendMessage({
+    ),
+    client.send(
+      new SendMessageCommand({
         QueueUrl: 'http://localhost:9324/queue/MyThirdQueue',
         MessageBody: 'MyThirdMessage'
       })
-      .promise(),
-    client
-      .sendMessage({
+    ),
+    client.send(
+      new SendMessageCommand({
         QueueUrl: 'http://localhost:9324/queue/MyFourthQueue',
         MessageBody: 'MyFourthMessage'
       })
-      .promise(),
+    ),
     ...chunk(
       10,
       Array.from({length: 70}).map((_, Id) => ({
@@ -60,12 +59,12 @@ const sendMessages = async () => {
         MessageBody: 'MyLargestBatchSizeQueue'
       }))
     ).map(Entries =>
-      client
-        .sendMessageBatch({
+      client.send(
+        new SendMessageBatchCommand({
           QueueUrl: 'http://localhost:9324/queue/MyLargestBatchSizeQueue',
           Entries
         })
-        .promise()
+      )
     )
   ]);
 };

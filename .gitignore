@@ -2,6 +2,9 @@ node_modules
 
 # Claude Code tooling & generated docs (local-only, not committed)
 .claude/
+.clens/
+**/*/.clens/
+specs/
 docs/
 logs/
 

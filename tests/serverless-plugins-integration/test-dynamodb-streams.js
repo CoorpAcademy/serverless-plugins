@@ -1,10 +1,9 @@
-const {DynamoDB} = require('aws-sdk');
+const {DynamoDBClient, PutItemCommand} = require('@aws-sdk/client-dynamodb');
 const {delay, runOfflineTest} = require('./utils');
 
-const client = new DynamoDB({
+const client = new DynamoDBClient({
   region: 'eu-west-1',
-  accessKeyId: 'local',
-  secretAccessKey: 'local',
+  credentials: {accessKeyId: 'local', secretAccessKey: 'local'},
   endpoint: 'http://localhost:8000'
 });
 
@@ -20,7 +19,8 @@ const EXPECTED_KEYS = [
 
 const TABLES = ['MyFirstTable', 'MySecondTable', 'MyThirdTable', 'MyFourthTable'];
 
-const putItem = (TableName, id) => client.putItem({Item: {id: {S: id}}, TableName}).promise();
+const putItem = (TableName, id) =>
+  client.send(new PutItemCommand({Item: {id: {S: id}}, TableName}));
 
 // Dynamodb-local only surfaces stream records once a table is non-empty, so seed every table,
 // let the readers attach, then write the records the handlers should receive.
