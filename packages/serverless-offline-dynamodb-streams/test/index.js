@@ -654,11 +654,12 @@ const buildStreamsHarness = () => {
     {}
   );
 
-  // Stub the AWS edges so `_dynamodbStreamsEvent` resolves a single shard.
+  // Stub the AWS edges so `_dynamodbStreamsEvent` resolves a single shard. #248 (aws-sdk v3): the
+  // production client is driven via `send(new DescribeStreamCommand(...))`, so stub `send` (which
+  // returns the response directly) rather than the v2 `describeStream().promise()` method.
   streams._describeTable = () => Promise.resolve({Table: {LatestStreamArn: HARNESS_STREAM_ARN}});
-  streams.streamsClient.describeStream = () => ({
-    promise: () => Promise.resolve({StreamDescription: {Shards: [{ShardId: SHARD_ID}]}})
-  });
+  streams.streamsClient.send = () =>
+    Promise.resolve({StreamDescription: {Shards: [{ShardId: SHARD_ID}]}});
 
   return {streams, file, handlerCalls};
 };

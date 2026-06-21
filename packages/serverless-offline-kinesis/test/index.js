@@ -49,6 +49,19 @@ test('resolveRegion keeps the provided region untouched', t => {
   t.is(resolveRegion({endpoint: 'http://x', region: 'eu-west-1'}), 'eu-west-1');
 });
 
+// #248: kinesis (unlike the other clients) defaults to NodeHttp2Handler; kinesalite only speaks
+// HTTP/1.1. buildClientConfig must force an HTTP/1.1 request handler so the offline client connects
+// (otherwise the plugin hangs on ERR_HTTP2_ERROR in _describeStream).
+test('buildClientConfig forces an HTTP/1.1 request handler for kinesalite', t => {
+  const {requestHandler} = buildClientConfig({endpoint: 'http://localhost:4567'});
+  t.is(requestHandler.constructor.name, 'NodeHttpHandler');
+});
+
+test('buildClientConfig keeps a user-supplied requestHandler', t => {
+  const custom = {marker: 'mine'};
+  t.is(buildClientConfig({requestHandler: custom}).requestHandler, custom);
+});
+
 // EARS3: an omitted response array must be treated as [] (no undefined.length crash).
 test('ensureArray returns [] for undefined/null (EARS3)', t => {
   t.deepEqual(ensureArray(undefined), []);

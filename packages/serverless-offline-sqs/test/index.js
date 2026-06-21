@@ -667,13 +667,19 @@ const captureReceiveMessage = async (options, rawDefinition) => {
   const sqs = new SQS(null, {}, {...options, region: 'eu-west-1', accountId: '0'}, undefined);
 
   // replace the real AWS client with a capturing mock; pause the poll queue after the first poll so
-  // the recursive job does not loop forever.
+  // the recursive job does not loop forever. #248 (aws-sdk v3): the production client is driven via
+  // `send(new XCommand(params))`, so dispatch on the command name and read params from `command.input`.
   sqs.client = {
-    getQueueUrl: () => ({promise: () => Promise.resolve({QueueUrl: 'http://local/q'})}),
-    receiveMessage: params => {
-      captured.push(params);
-      sqs.queue.pause();
-      return {promise: () => Promise.resolve({Messages: []})};
+    send: command => {
+      const commandName = command.constructor.name;
+      if (commandName === 'GetQueueUrlCommand')
+        return Promise.resolve({QueueUrl: 'http://local/q'});
+      if (commandName === 'ReceiveMessageCommand') {
+        captured.push(command.input);
+        sqs.queue.pause();
+        return Promise.resolve({Messages: []});
+      }
+      return Promise.resolve({});
     }
   };
 

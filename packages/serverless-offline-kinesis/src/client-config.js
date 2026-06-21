@@ -1,8 +1,17 @@
 const {isNil, omit} = require('lodash/fp');
+const {NodeHttpHandler} = require('@smithy/node-http-handler');
 
 // #248/#252 (aws-sdk v3): the v2 client silently ignored an empty/partial `credentials` object and
 // defaulted the region; the v3 client does not. These pure helpers normalize the Serverless-supplied
 // options into a clean v3 client config so the offline plugins keep working against local emulators.
+
+// #248 (aws-sdk v3): unlike the other clients, `@aws-sdk/client-kinesis` defaults its request handler
+// to `NodeHttp2Handler` (real AWS Kinesis serves HTTP/2). The local emulator (kinesalite) only speaks
+// HTTP/1.1, so the default handler fails the connection with `ERR_HTTP2_ERROR: Protocol error` and the
+// plugin hangs forever in `_describeStream`. Force the HTTP/1.1 handler so the offline client reaches
+// kinesalite — `@smithy/node-http-handler` is a direct dependency of `@aws-sdk/client-kinesis`, so it
+// is always installed alongside it.
+const buildRequestHandler = () => new NodeHttpHandler();
 
 // A region the v3 client accepts when none was provided. Local emulators (ElasticMQ, sqslite,
 // DynamoDB Local, kinesalite) ignore the value but the v3 SDK still requires SOME region to sign.
@@ -40,7 +49,10 @@ const buildClientConfig = (options = {}) => {
   return {
     ...base,
     ...(isNil(region) ? {} : {region}),
-    ...(isNil(credentials) ? {} : {credentials})
+    ...(isNil(credentials) ? {} : {credentials}),
+    // Force HTTP/1.1 so the client can reach kinesalite (see buildRequestHandler above). A
+    // user-supplied `requestHandler` in `options` still wins (it lands in `base` and is spread first).
+    requestHandler: base.requestHandler || buildRequestHandler()
   };
 };
 

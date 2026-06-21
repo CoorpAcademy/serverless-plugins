@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-kinesis": "^3.0.0",
+    "@smithy/node-http-handler": "^4.0.0",
     "kinesis-readable": "^1.2.0",
     "lodash": "^4.17.21"
   },
