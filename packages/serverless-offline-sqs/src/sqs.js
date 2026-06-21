@@ -271,6 +271,19 @@ const extractDlqTargetName = (properties, region, accountId) => {
 // `visiting` set bounds recursion so a self/cyclic reference cannot loop forever, an `emitted` set
 // guarantees every input queue is emitted exactly once, and a target absent from the set is simply
 // ignored (the referencing queue is still emitted). Stable for queues with no redrive relationship.
+// #226 (newtechfellas): a p-queue task that rejects surfaces through the promise returned by
+// `queue.add(task)`. The poll loop fires that promise and never awaits/`.catch()`es it, so an
+// SQS-client / ReceiveMessage failure becomes an UNHANDLED promise rejection that can terminate the
+// `serverless offline` process. enqueueLoop schedules the task and attaches a `.catch()` that routes
+// the failure to the injected logger, keeping the floating promise from ever going unhandled while
+// preserving happy-path delivery semantics (the resolved value, if any, is unchanged). Pure of the
+// scheduling concern: it takes the queue + logger and returns the (already-guarded) promise so the
+// loop never has to reason about rejection again.
+const enqueueLoop = (queue, task, log) =>
+  queue.add(task).catch(err => {
+    log.warning(err && err.stack ? err.stack : String(err));
+  });
+
 const orderQueuesForCreation = (queueDefs, region, accountId) => {
   const defs = queueDefs || [];
   const byName = keyBy('queueName', defs);
@@ -434,10 +447,14 @@ class SQS {
     };
 
     const job = async () => {
-      const messages = await getMessages(batchSize);
+      // #226 (newtechfellas): getMessages() (the ReceiveMessage long-poll) used to sit OUTSIDE this
+      // try/catch, so a transient SQS-client / network failure rejected the p-queue task and became
+      // an unhandled rejection. Pull it inside: a receive failure is now logged via log.warning and
+      // the loop re-schedules, exactly like a thrown handler — the offline session keeps polling.
+      try {
+        const messages = await getMessages(batchSize);
 
-      if (messages.length > 0) {
-        try {
+        if (messages.length > 0) {
           const lambdaFunction = this.lambda.get(functionKey);
 
           const event = new SQSEvent(messages, this.options.region, arn);
@@ -461,14 +478,15 @@ class SQS {
               )
             );
           }
-        } catch (err) {
-          this.log.warning(err.stack);
         }
+      } catch (err) {
+        this.log.warning(err.stack);
       }
 
-      this.queue.add(job);
+      // #226: re-enqueue through enqueueLoop so the floating task promise can never go unhandled.
+      enqueueLoop(this.queue, job, this.log);
     };
-    this.queue.add(job);
+    enqueueLoop(this.queue, job, this.log);
   }
 
   _getResourceProperties(queueName) {
@@ -504,3 +522,4 @@ module.exports.collectQueueDefinitions = collectQueueDefinitions;
 module.exports.extractDlqTargetName = extractDlqTargetName;
 module.exports.orderQueuesForCreation = orderQueuesForCreation;
 module.exports.isNonExistentQueueError = isNonExistentQueueError;
+module.exports.enqueueLoop = enqueueLoop;
