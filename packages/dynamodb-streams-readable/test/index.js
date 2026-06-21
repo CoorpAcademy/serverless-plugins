@@ -12,6 +12,7 @@ const {
   GetRecordsCommand,
   GetShardIteratorCommand
 } = require('@aws-sdk/client-dynamodb-streams');
+const {NodeHttpHandler} = require('@smithy/node-http-handler');
 const DynamoDBStreamReadable = require('..');
 const {buildCallbackClient} = require('../src/callback-adapter');
 
@@ -23,7 +24,9 @@ const delay = timeout =>
 const CLIENT_CONFIG = {
   credentials: {accessKeyId: 'local', secretAccessKey: 'local'},
   endpoint: 'http://localhost:8000',
-  region: 'eu-west-1'
+  region: 'eu-west-1',
+  // #248 (aws-sdk v3): force HTTP/1.1 — DynamoDB Local does not speak the v3 client's default HTTP/2.
+  requestHandler: new NodeHttpHandler()
 };
 
 // #248 (aws-sdk v3): DynamoDBStreamReadable drives the streams client through the aws-sdk v2 callback

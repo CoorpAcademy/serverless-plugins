@@ -1,4 +1,5 @@
 const {isNil, omit} = require('lodash/fp');
+const {NodeHttpHandler} = require('@smithy/node-http-handler');
 
 // #248/#252 (aws-sdk v3): the v2 client silently ignored an empty/partial `credentials` object and
 // defaulted the region; the v3 client does not. These pure helpers normalize the Serverless-supplied
@@ -40,7 +41,11 @@ const buildClientConfig = (options = {}) => {
   return {
     ...base,
     ...(isNil(region) ? {} : {region}),
-    ...(isNil(credentials) ? {} : {credentials})
+    ...(isNil(credentials) ? {} : {credentials}),
+    // #248 (aws-sdk v3): @aws-sdk/client-dynamodb and -dynamodb-streams default their request handler to
+    // NodeHttp2Handler (real DynamoDB serves HTTP/2). DynamoDB Local speaks only HTTP/1.1, so the default
+    // handler times out against the local emulator. Force HTTP/1.1; a user-supplied requestHandler wins.
+    requestHandler: base.requestHandler || new NodeHttpHandler()
   };
 };
 

@@ -28,6 +28,7 @@
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/client-dynamodb-streams": "^3.0.0",
+    "@smithy/node-http-handler": "^4.0.0",
     "uuid": "^9.0.0"
   },
   "keywords": [

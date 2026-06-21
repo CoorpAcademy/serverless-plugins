@@ -35,6 +35,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/client-dynamodb-streams": "^3.0.0",
+    "@smithy/node-http-handler": "^4.0.0",
     "dynamodb-streams-readable": "^3.0.0",
     "lodash": "^4.17.21",
     "serverless-offline-eventbridge": "^1.0.0"
