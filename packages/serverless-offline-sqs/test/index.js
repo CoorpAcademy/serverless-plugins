@@ -17,7 +17,8 @@ const {
   normalizeQueueNames,
   expandSqsEventDefinitions,
   isNonExistentQueueError,
-  enqueueLoop
+  enqueueLoop,
+  queueNameCandidates
 } = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
@@ -1320,4 +1321,78 @@ test('#226 enqueueLoop leaves a resolving task untouched (no warning)', async t 
   const queue = {add: () => Promise.resolve('ok')};
   await enqueueLoop(queue, () => {}, normalizeLog({warning: msg => warnings.push(msg)}));
   t.deepEqual(warnings, []);
+});
+
+// ---------------------------------------------------------------------------
+// queueNameCandidates / GetQueueUrl .fifo-suffix fallback (#189 nicolaspfernandes)
+// ---------------------------------------------------------------------------
+
+test('#189 queueNameCandidates drops the .fifo suffix as the second candidate', t => {
+  t.deepEqual(queueNameCandidates('QueueName.fifo'), ['QueueName.fifo', 'QueueName']);
+});
+
+test('#189 queueNameCandidates adds a .fifo suffix as the second candidate', t => {
+  t.deepEqual(queueNameCandidates('QueueName'), ['QueueName', 'QueueName.fifo']);
+});
+
+test('#189 queueNameCandidates keeps the original name first (it always wins when present)', t => {
+  t.is(queueNameCandidates('QueueName.fifo')[0], 'QueueName.fifo');
+  t.is(queueNameCandidates('Orders')[0], 'Orders');
+});
+
+test('#189 queueNameCandidates de-duplicates and tolerates empty/nil input', t => {
+  t.deepEqual(queueNameCandidates(''), []);
+  t.deepEqual(queueNameCandidates(undefined), []);
+  t.deepEqual(queueNameCandidates(null), []);
+  // a bare '.fifo' toggles to '' which is dropped -> single candidate
+  t.deepEqual(queueNameCandidates('.fifo'), ['.fifo']);
+});
+
+// A minimal ElasticMQ-like client mock: it only knows the queue names in `known`, and rejects any
+// other QueueName with the v3 `QueueDoesNotExist` error — exactly the missing-param/no-such-queue
+// failure #189 hits when the event ARN carries a `.fifo` suffix the emulator's id does not.
+const mkSqsWithKnownQueues = known => {
+  const sqs = new SQS(null, {}, {region: 'eu-west-1', accountId: '0'}, undefined);
+  const seen = [];
+  sqs.client = {
+    send: command => {
+      const commandName = command.constructor.name;
+      if (commandName === 'GetQueueUrlCommand') {
+        const {QueueName} = command.input;
+        seen.push(QueueName);
+        if (known.includes(QueueName))
+          return Promise.resolve({QueueUrl: `http://local/${QueueName}`});
+        const err = new Error(`The specified queue does not exist: ${QueueName}`);
+        err.name = 'QueueDoesNotExist';
+        return Promise.reject(err);
+      }
+      return Promise.resolve({});
+    }
+  };
+  return {sqs, seen};
+};
+
+test('#189 _getQueueUrl resolves a .fifo event name against a bare ElasticMQ queue id', async t => {
+  // The event ARN resolves to `QueueName.fifo`, but ElasticMQ's configured id is literally
+  // `QueueName` (it does NOT append `.fifo`). Without the fallback, GetQueueUrl({QueueName:
+  // 'QueueName.fifo'}) is rejected forever; with it, the bare-name candidate resolves the URL.
+  const {sqs, seen} = mkSqsWithKnownQueues(['QueueName']);
+  const {QueueUrl} = await sqs._getQueueUrl('QueueName.fifo');
+  t.is(QueueUrl, 'http://local/QueueName');
+  t.deepEqual(seen, ['QueueName.fifo', 'QueueName']);
+});
+
+test('#189 _getQueueUrl resolves a bare event name against a .fifo ElasticMQ queue id', async t => {
+  // The mirror case: the event omits `.fifo` but the emulator id carries it.
+  const {sqs, seen} = mkSqsWithKnownQueues(['QueueName.fifo']);
+  const {QueueUrl} = await sqs._getQueueUrl('QueueName');
+  t.is(QueueUrl, 'http://local/QueueName.fifo');
+  t.deepEqual(seen, ['QueueName', 'QueueName.fifo']);
+});
+
+test('#189 _getQueueUrl returns the URL on the first candidate without trying the variant', async t => {
+  const {sqs, seen} = mkSqsWithKnownQueues(['QueueName.fifo']);
+  const {QueueUrl} = await sqs._getQueueUrl('QueueName.fifo');
+  t.is(QueueUrl, 'http://local/QueueName.fifo');
+  t.deepEqual(seen, ['QueueName.fifo']);
 });
