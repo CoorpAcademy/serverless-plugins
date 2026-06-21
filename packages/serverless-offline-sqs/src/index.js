@@ -57,6 +57,20 @@ const isPluginEnabled = options => {
   return Boolean(enabled);
 };
 
+// #255 (10Bude10, visrut-at-handldigital): an SQS event `arn` may be a bare `{Ref: <QueueLogicalId>}`
+// pointing at a queue declared in resources.Resources — CloudFormation's Ref on an AWS::SQS::Queue
+// yields the queue URL, but offline we only need a stable ARN whose last segment is the queue name.
+// Mirror the Fn::GetAtt Arn branch: resolve a Ref to an AWS::SQS::Queue to its ARN, preferring the
+// declared Properties.QueueName and falling back to the logical id (the name serverless gives an
+// auto-named queue locally). Returns undefined for a Ref to anything that is not an SQS queue (e.g.
+// AWS::* pseudo-params, other resource types) so the caller leaves the intrinsic untouched.
+// Pure + non-throwing.
+const resolveSqsRefArn = (resources, refName, region, accountId) => {
+  if (get([refName, 'Type'], resources) !== 'AWS::SQS::Queue') return undefined;
+  const queueName = get([refName, 'Properties', 'QueueName'], resources) || refName;
+  return `arn:aws:sqs:${region}:${accountId}:${queueName}`;
+};
+
 class ServerlessOfflineSQS {
   constructor(serverless, cliOptions, {log} = {}) {
     this.cliOptions = cliOptions;
@@ -226,26 +240,33 @@ class ServerlessOfflineSQS {
 
           switch (attribute) {
             case 'Arn': {
-              const type = get([resourceName, 'Type'], Resources);
-
-              switch (type) {
-                case 'AWS::SQS::Queue': {
-                  const queueName = get([resourceName, 'Properties', 'QueueName'], Resources);
-                  return [
-                    key,
-                    `arn:aws:sqs:${this.options.region}:${this.options.accountId}:${queueName}`
-                  ];
-                }
-                default: {
-                  return null;
-                }
-              }
+              const arn = resolveSqsRefArn(
+                Resources,
+                resourceName,
+                this.options.region,
+                this.options.accountId
+              );
+              return arn ? [key, arn] : null;
             }
             default: {
               return null;
             }
           }
         }
+
+        // #255: a bare `{Ref: <QueueLogicalId>}` to an AWS::SQS::Queue resolves to that queue's ARN,
+        // mirroring the Fn::GetAtt Arn branch. A Ref to anything else (e.g. AWS pseudo-params) is left
+        // untouched for the downstream resolveCfnValue path.
+        if (has('Ref', value)) {
+          const arn = resolveSqsRefArn(
+            Resources,
+            value.Ref,
+            this.options.region,
+            this.options.accountId
+          );
+          return arn ? [key, arn] : [key, value];
+        }
+
         return [key, this._resolveFn(value)];
       }),
       compact,
@@ -262,3 +283,4 @@ class ServerlessOfflineSQS {
 module.exports = ServerlessOfflineSQS;
 module.exports.defaultOptions = defaultOptions;
 module.exports.isPluginEnabled = isPluginEnabled;
+module.exports.resolveSqsRefArn = resolveSqsRefArn;

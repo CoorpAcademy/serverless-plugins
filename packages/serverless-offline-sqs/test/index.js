@@ -427,6 +427,107 @@ test('extractQueueNameFromARN keeps a .fifo suffix intact (#189 belongs to the F
 });
 
 // ---------------------------------------------------------------------------
+// #255 (10Bude10, visrut-at-handldigital): an SQS event `arn` given as a bare
+// {Ref: <QueueLogicalId>} pointing at an AWS::SQS::Queue resource must resolve to
+// that queue's ARN so the lambda actually subscribes. Before the fix _resolveFn
+// only handled Fn::GetAtt; a bare Ref fell through unresolved, the queue name
+// became undefined, and GetQueueUrl({QueueName:'undefined'}) never matched.
+// ---------------------------------------------------------------------------
+
+const ResolvableServerlessOfflineSQS = require('../src');
+const {resolveSqsRefArn} = require('../src');
+
+test('#255 resolveSqsRefArn resolves a Ref to an AWS::SQS::Queue to its QueueName ARN', t => {
+  const resources = {
+    fetchIndustryDataQueue: {
+      Type: 'AWS::SQS::Queue',
+      Properties: {QueueName: 'fetchIndustryDataQueue'}
+    }
+  };
+  t.is(
+    resolveSqsRefArn(resources, 'fetchIndustryDataQueue', 'eu-central-1', '000000000000'),
+    'arn:aws:sqs:eu-central-1:000000000000:fetchIndustryDataQueue'
+  );
+});
+
+test('#255 resolveSqsRefArn falls back to the logical id when QueueName is absent', t => {
+  const resources = {OrdersQueue: {Type: 'AWS::SQS::Queue', Properties: {}}};
+  t.is(
+    resolveSqsRefArn(resources, 'OrdersQueue', 'eu-west-1', '0'),
+    'arn:aws:sqs:eu-west-1:0:OrdersQueue'
+  );
+});
+
+test('#255 resolveSqsRefArn returns undefined for a Ref to a non-SQS / unknown resource', t => {
+  const resources = {Bucket: {Type: 'AWS::S3::Bucket', Properties: {BucketName: 'b'}}};
+  t.is(resolveSqsRefArn(resources, 'Bucket', 'eu-west-1', '0'), undefined);
+  t.is(resolveSqsRefArn(resources, 'Missing', 'eu-west-1', '0'), undefined);
+  t.is(resolveSqsRefArn(undefined, 'AWS::Region', 'eu-west-1', '0'), undefined);
+});
+
+test('#255 _resolveFn resolves a bare {Ref: QueueLogicalId} event arn to the queue ARN', t => {
+  // Exact repro of the issue serverless.yml: event arn given as `Ref: fetchIndustryDataQueue`
+  // with the queue declared under resources.Resources and autoCreate:false.
+  const serverless = {
+    service: {
+      resources: {
+        Resources: {
+          fetchIndustryDataQueue: {
+            Type: 'AWS::SQS::Queue',
+            Properties: {QueueName: 'fetchIndustryDataQueue'}
+          }
+        }
+      }
+    }
+  };
+  const plugin = new ResolvableServerlessOfflineSQS(serverless, {}, {});
+  plugin.options = {region: 'eu-central-1', accountId: '000000000000'};
+
+  const resolved = plugin._resolveFn({arn: {Ref: 'fetchIndustryDataQueue'}});
+
+  t.is(resolved.arn, 'arn:aws:sqs:eu-central-1:000000000000:fetchIndustryDataQueue');
+
+  // and the downstream definition must derive the real queue name (not undefined)
+  const sqsEvent = new SQSEventDefinition(resolved, 'eu-central-1', '000000000000');
+  t.is(sqsEvent.queueName, 'fetchIndustryDataQueue');
+});
+
+test('#255 _resolveFn leaves a Ref to a non-SQS resource unresolved (no false ARN)', t => {
+  const serverless = {
+    service: {
+      resources: {Resources: {SomeParam: {Type: 'AWS::SSM::Parameter', Properties: {}}}}
+    }
+  };
+  const plugin = new ResolvableServerlessOfflineSQS(serverless, {}, {});
+  plugin.options = {region: 'eu-west-1', accountId: '0'};
+
+  const resolved = plugin._resolveFn({arn: {Ref: 'SomeParam'}});
+  // unchanged pass-through: still the original intrinsic, NOT a fabricated SQS ARN
+  t.deepEqual(resolved.arn, {Ref: 'SomeParam'});
+});
+
+test('#255 _resolveFn keeps the existing Fn::GetAtt and string-ARN behavior untouched', t => {
+  const serverless = {
+    service: {
+      resources: {
+        Resources: {MyQueue: {Type: 'AWS::SQS::Queue', Properties: {QueueName: 'MyQueue'}}}
+      }
+    }
+  };
+  const plugin = new ResolvableServerlessOfflineSQS(serverless, {}, {});
+  plugin.options = {region: 'eu-west-1', accountId: '000000000000'};
+
+  t.is(
+    plugin._resolveFn({arn: {'Fn::GetAtt': ['MyQueue', 'Arn']}}).arn,
+    'arn:aws:sqs:eu-west-1:000000000000:MyQueue'
+  );
+  t.is(
+    plugin._resolveFn({arn: 'arn:aws:sqs:eu-west-1:000000000000:MyQueue'}).arn,
+    'arn:aws:sqs:eu-west-1:000000000000:MyQueue'
+  );
+});
+
+// ---------------------------------------------------------------------------
 // #166 call-site guard (source-level): the live SQS poll handler must build the
 // event with this.options.region, not the undefined this.region.
 // ---------------------------------------------------------------------------
