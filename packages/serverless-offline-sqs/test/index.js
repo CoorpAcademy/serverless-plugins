@@ -1883,6 +1883,28 @@ test('#146 start() skips autoStart and warns when an explicit endpoint is set (A
   t.true(warnings.some(msg => /autoStart/i.test(String(msg))));
 });
 
+// #146 leak hardening: if a start() step AFTER autoStart fails, the container is torn down (no leak).
+test('#146 start() tears the container down if a later start step throws', async t => {
+  let stopped = 0;
+  const serverless = {service: {custom: {}, provider: {}, getAllFunctions: () => []}};
+  const plugin = new ServerlessOfflineSQS(serverless, {}, {log: silentLog});
+  // simulate autoStart having spun up a container, then fail a later boot step
+  plugin._startAutoStartElasticMq = () => {
+    plugin.elasticmq = {
+      stop: () => {
+        stopped += 1;
+        return Promise.resolve();
+      }
+    };
+    return Promise.resolve();
+  };
+  plugin._createLambda = () => Promise.reject(new Error('boom during lambda init'));
+  plugin._createSqs = () => Promise.resolve();
+
+  await t.throwsAsync(() => plugin.start(), {message: /boom/});
+  t.is(stopped, 1, 'the autostarted container was stopped on the failed boot');
+});
+
 // AC4: end() awaits elasticmq.stop() when present, and is harmless when absent.
 test('#146 end() awaits elasticmq.stop() when a container was started (AC4)', async t => {
   let stopped = 0;

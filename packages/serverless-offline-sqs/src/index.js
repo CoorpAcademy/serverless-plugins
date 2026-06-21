@@ -103,21 +103,30 @@ class ServerlessOfflineSQS {
     // favour with a warning (AC5). Default-off path is untouched (AC1).
     await this._startAutoStartElasticMq();
 
-    const {sqsEvents, lambdas} = this._getEvents();
+    try {
+      const {sqsEvents, lambdas} = this._getEvents();
 
-    await this._createLambda(lambdas);
+      await this._createLambda(lambdas);
 
-    const eventModules = [];
+      const eventModules = [];
 
-    // #222 (gndelia): skip SQS setup entirely when disabled, but still create the lambdas so plain
-    // HTTP functions keep working under serverless-offline.
-    if (isPluginEnabled(this.options) && sqsEvents.length > 0) {
-      eventModules.push(this._createSqs(sqsEvents));
+      // #222 (gndelia): skip SQS setup entirely when disabled, but still create the lambdas so plain
+      // HTTP functions keep working under serverless-offline.
+      if (isPluginEnabled(this.options) && sqsEvents.length > 0) {
+        eventModules.push(this._createSqs(sqsEvents));
+      }
+
+      await Promise.all(eventModules);
+
+      this.log.notice(
+        `Starting Offline SQS at stage ${this.options.stage} (${this.options.region})`
+      );
+    } catch (err) {
+      // #146: if a later start step fails after autoStart spun up a container, tear it down so a
+      // failed boot never leaks the container (belt-and-suspenders to the --rm + reclaim-on-next-start net).
+      if (this.elasticmq) await this.elasticmq.stop();
+      throw err;
     }
-
-    await Promise.all(eventModules);
-
-    this.log.notice(`Starting Offline SQS at stage ${this.options.stage} (${this.options.region})`);
   }
 
   // #146: thin orchestration only — all Docker logic lives in the pure/side-effect elasticmq module.
