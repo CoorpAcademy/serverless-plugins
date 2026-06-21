@@ -39,11 +39,67 @@ To be able to emulate AWS SQS queue on local machine there should be some queue 
 
 [ElasticMQ](https://github.com/adamw/elasticmq) is a standalone in-memory queue system, which implements AWS SQS compatible interface. It can be run either stand-alone or inside Docker container. See [example](../../tests/serverless-plugins-integration/serverless.sqs.yml) `sqs` service setup.
 
-We also need to setup actual queue in ElasticMQ server, we can use [AWS cli](https://aws.amazon.com/cli/) tools for that. In example, we spawn-up another container with `aws-cli` pre-installed and run initialization script, against ElasticMQ server in separate container.
+We also need to setup actual queue in ElasticMQ server, we can use [AWS cli](https://aws.amazon.com/cli/) tools for that. In example, we spawn-up another container with `aws-cli` pre-installed and run initialization script, against ElasticMQ server in separate container. A full, runnable reference lives in [`tests/serverless-plugins-integration`](../../tests/serverless-plugins-integration/README.md#sqs) ([`docker-compose.yml`](../../tests/serverless-plugins-integration/docker-compose.yml), [`serverless.sqs.yml`](../../tests/serverless-plugins-integration/serverless.sqs.yml)).
 
 Once ElasticMQ is running and initialized, we can proceed with the configuration of the plugin.
 
 Note that starting from version v3.1 of the plugin, it supports autocreation of SQS fifo queues that are specified in the cloudformation `Resources`.
+
+### ElasticMQ quickstart (#160)
+
+The fastest local setup is a single ElasticMQ container. Create these two files next to your
+`serverless.yml` and you have an SQS-compatible endpoint that runs out of the box — nothing else to
+install.
+
+`docker-compose.yml`:
+
+```yml
+services:
+  elasticmq:
+    image: softwaremill/elasticmq-native:latest
+    ports:
+      - '9324:9324' # SQS API
+      - '9325:9325' # ElasticMQ web UI (optional)
+    volumes:
+      - ./elasticmq.conf:/opt/elasticmq.conf:ro
+```
+
+`elasticmq.conf` (HOCON) — binds the node address so the host/port you point the SDK at is reachable,
+and optionally pre-declares queues so you don't even need `autoCreate`:
+
+```hocon
+include classpath("application.conf")
+
+# `*` lets the container answer on whatever host you use in the endpoint
+# (localhost from the host, or the compose service name from another container).
+node-address {
+    protocol = http
+    host = "*"
+    port = 9324
+    context-path = ""
+}
+
+rest-sqs {
+    enabled = true
+    bind-port = 9324
+    bind-hostname = "0.0.0.0"
+}
+
+# Optional: declare queues up-front (otherwise set `autoCreate: true`, see below).
+queues {
+    MyFirstQueue {}
+}
+
+# Keep these aligned with your plugin config (see the SQS section).
+aws {
+    region = eu-west-1
+    accountId = 000000000000
+}
+```
+
+Start it with `docker compose up elasticmq`, then run `serverless offline` on the host pointing at
+`http://localhost:9324` (see the [SQS](#sqs) config below). If you'd rather not write a config file,
+the bare `docker run -p 9324:9324 -p 9325:9325 softwaremill/elasticmq-native` works too.
 
 ### Dead-letter queues & redrive (`#167`, `#133`, `#65`, `#87`)
 
@@ -150,6 +206,73 @@ custom:
     queueName: my-local-queue        # optional: override every sqs event's queue name locally
     enabled: true                    # optional: set false to skip the SQS emulator locally (#222)
     waitTimeSeconds: 5               # optional: default ReceiveMessage long-poll wait, 0-20s (#123)
+```
+
+#### `endpoint` and custom ports (#161)
+
+`custom.serverless-offline-sqs.endpoint` is the **only** thing that decides where the plugin talks to
+SQS — the value is passed straight through to the AWS SDK client and is also copied onto every queue
+URL the plugin resolves (host, scheme **and** port). There is nothing special about `9324`: **any
+port is honored**, as long as the port in `endpoint` matches the port your ElasticMQ container
+actually publishes.
+
+```yml
+custom:
+  serverless-offline-sqs:
+    endpoint: http://0.0.0.0:9325   # any port works — must match the published container port
+    accessKeyId: root
+    secretAccessKey: root
+```
+
+```yml
+# docker-compose.yml — publish the SAME port you put in `endpoint`
+services:
+  elasticmq:
+    image: softwaremill/elasticmq-native:latest
+    ports:
+      - '9325:9324' # host 9325 -> container 9324; endpoint above uses 9325
+```
+
+If you see `UnknownEndpoint: Inaccessible host` on a non-default port, the port in `endpoint` and the
+port your container exposes are out of sync — align them and the plugin connects.
+
+#### Inside docker-compose: networking & the `http://` scheme (#130)
+
+When the plugin runs in its **own** container alongside ElasticMQ (rather than on the host), three
+things must hold:
+
+1. **Same network.** Both services must be on a shared compose network so they can resolve each other
+   (compose puts services on a default network automatically; don't isolate them).
+2. **Host = the service name, not `localhost`.** From inside a container, `localhost` is that
+   container itself. Use the ElasticMQ **service name** as the host — e.g. if the service is
+   `elasticmq`, the endpoint is `http://elasticmq:9324`.
+3. **The `http://` scheme is mandatory.** If you drop it (`elasticmq:9324`), the AWS SDK defaults to
+   **HTTPS** and ElasticMQ — which speaks plain HTTP — rejects the handshake with
+   _"Perhaps this was an HTTPS request sent to an HTTP endpoint?"_. Always keep the explicit
+   `http://`.
+
+```yml
+# docker-compose.yml — app and ElasticMQ on the shared compose network
+services:
+  app:
+    build: .
+    command: npm run offline
+    depends_on:
+      - elasticmq
+  elasticmq:
+    image: softwaremill/elasticmq-native:latest
+    ports:
+      - '9324:9324'
+```
+
+```yml
+# serverless.yml — host is the service name, scheme is explicit http://
+custom:
+  serverless-offline-sqs:
+    autoCreate: true
+    endpoint: http://elasticmq:9324
+    accessKeyId: root
+    secretAccessKey: root
 ```
 
 #### Disabling the plugin locally (#222)
