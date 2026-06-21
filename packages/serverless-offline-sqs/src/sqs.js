@@ -53,6 +53,32 @@ const delay = timeout =>
     setTimeout(resolve, timeout);
   });
 
+// B1 resilience-polish: _getQueueUrl used to recover from a not-yet-created queue with an INFINITE,
+// SILENT `await delay(10000); return this._getQueueUrl(queueName)` loop (no warning ever, no bound),
+// so a genuinely-absent queue was indistinguishable from a transient one and hung forever. Bound the
+// retry budget and surface a throttled warning naming the queue + the probed candidate forms. The
+// budget is overridable via custom.serverless-offline-sqs.getQueueUrlMaxAttempts; the default needs
+// no config. The inter-round wait is unchanged (10s) so a queue created moments after start is still
+// awaited within the budget.
+const GET_QUEUE_URL_MAX_ATTEMPTS = 12;
+const GET_QUEUE_URL_WARN_EVERY = 3;
+const GET_QUEUE_URL_RETRY_DELAY_MS = 10000;
+
+// Pure: the throttled "still can't find this queue" diagnostic. Names the queue, every probed
+// candidate form (#292), and the attempt count so a developer sees WHICH queue is missing and that
+// the listener is stalled — instead of an opaque, silent wait. Tolerates an empty/nil candidate list.
+const getQueueUrlExhaustionWarning = (queueName, candidates, attempt) =>
+  `serverless-offline-sqs: queue "${queueName}" not found after ${attempt} attempt(s) ` +
+  `(probed: ${(candidates || []).join(', ') || queueName}). ` +
+  `Still waiting — is the queue created and the SQS emulator reachable?`;
+
+// B1 resilience-polish: on a thrown receive/handler the poll `job` was caught + logged then
+// re-enqueued IMMEDIATELY, busy-looping against a down emulator. pollBackoffMs is the pure decision:
+// a small constant delay BEFORE the re-enqueue on failure, and ZERO on success so the happy-path poll
+// cadence is untouched (the spec's hard constraint).
+const POLL_ERROR_BACKOFF_MS = 1000;
+const pollBackoffMs = failed => (failed ? POLL_ERROR_BACKOFF_MS : 0);
+
 // #133/#167 (aws-sdk v3): the "queue does not exist yet" error that gates the createQueue retry is
 // `AWS.SimpleQueueService.NonExistentQueue` on aws-sdk v2 but `QueueDoesNotExist` on @aws-sdk v3 (and
 // some emulators keep the legacy name). Match either so the bounded retry survives the v3 migration.
@@ -417,19 +443,49 @@ class SQS {
   // #189 (nicolaspfernandes): resolve the queue URL by probing each name candidate in order — the
   // name exactly as given first, then the toggled `.fifo`-suffix variant — so a `.fifo` event name
   // still resolves against a bare ElasticMQ queue id (and vice-versa). A QueueDoesNotExist on one
-  // candidate falls through to the next; only when EVERY candidate is genuinely missing do we keep
-  // the historical wait-for-availability behavior (delay, then retry the whole candidate set) so a
-  // not-yet-created queue is still awaited. A non-existence error is never swallowed — it just
-  // advances the probe.
-  async _getQueueUrl(queueName, candidates = queueNameCandidates(queueName)) {
+  // candidate falls through to the next; only when EVERY candidate is genuinely missing do we wait
+  // and retry the whole set so a not-yet-created queue is still awaited.
+  // B1 resilience-polish: the retry used to be INFINITE and SILENT. Bound it to
+  // getQueueUrlMaxAttempts (default GET_QUEUE_URL_MAX_ATTEMPTS) and emit a throttled warning naming
+  // the queue + candidates every GET_QUEUE_URL_WARN_EVERY attempts, then throw a clear error on
+  // exhaustion — so a permanent misconfiguration surfaces instead of hanging forever. The happy path
+  // returns on the first existing candidate with no delay and no warning.
+  async _getQueueUrl(
+    queueName,
+    candidates = queueNameCandidates(queueName),
+    attempt = 1,
+    allCandidates = candidates
+  ) {
     const [candidate, ...rest] = candidates;
     try {
       return await this.client.send(new GetQueueUrlCommand({QueueName: candidate}));
     } catch (err) {
-      if (rest.length > 0) return this._getQueueUrl(queueName, rest);
-      await delay(10000);
-      return this._getQueueUrl(queueName);
+      if (rest.length > 0) return this._getQueueUrl(queueName, rest, attempt, allCandidates);
+
+      const maxAttempts = this.options.getQueueUrlMaxAttempts || GET_QUEUE_URL_MAX_ATTEMPTS;
+      if (attempt >= maxAttempts)
+        throw new Error(getQueueUrlExhaustionWarning(queueName, allCandidates, attempt));
+
+      if (attempt % GET_QUEUE_URL_WARN_EVERY === 0)
+        this.log.warning(getQueueUrlExhaustionWarning(queueName, allCandidates, attempt));
+
+      await this._getQueueUrlDelay();
+      return this._getQueueUrl(queueName, allCandidates, attempt + 1, allCandidates);
     }
+  }
+
+  // B1 resilience-polish: the inter-round wait, extracted as a seam so unit tests can bound the loop
+  // without real 10s sleeps. Overridable via custom.serverless-offline-sqs.getQueueUrlRetryDelayMs;
+  // production wiring is otherwise unchanged.
+  _getQueueUrlDelay() {
+    return delay(this.options.getQueueUrlRetryDelayMs || GET_QUEUE_URL_RETRY_DELAY_MS);
+  }
+
+  // B1 resilience-polish: the inter-poll back-off applied after a failed poll iteration, extracted as
+  // a seam so unit tests can drive the loop without a real ~1s sleep. Overridable via
+  // custom.serverless-offline-sqs.pollErrorBackoffMs; production waits the small constant.
+  _pollErrorBackoff() {
+    return delay(this.options.pollErrorBackoffMs || pollBackoffMs(true));
   }
 
   async _sqsEvent(functionKey, sqsEvent) {
@@ -471,6 +527,11 @@ class SQS {
     };
 
     const job = async () => {
+      // B1 resilience-polish: track whether this poll iteration failed so the re-enqueue can apply a
+      // small inter-poll back-off ONLY on the error path (a down emulator used to busy-loop: throw ->
+      // log -> re-enqueue immediately). The success path keeps `failed` false -> zero back-off, so the
+      // happy-path cadence is unchanged (the spec's hard constraint).
+      let failed = false;
       // #226 (newtechfellas): getMessages() (the ReceiveMessage long-poll) used to sit OUTSIDE this
       // try/catch, so a transient SQS-client / network failure rejected the p-queue task and became
       // an unhandled rejection. Pull it inside: a receive failure is now logged via log.warning and
@@ -504,8 +565,15 @@ class SQS {
           }
         }
       } catch (err) {
+        failed = true;
         this.log.warning(err.stack);
       }
+
+      // B1 resilience-polish: back off a small constant before re-enqueueing ON FAILURE so a down
+      // emulator is polled at ~1 Hz instead of a tight busy-loop; a successful poll re-enqueues
+      // immediately (pollBackoffMs(false) === 0), leaving the happy-path cadence untouched. The wait
+      // goes through the _pollErrorBackoff seam so unit tests can drive the loop without real timers.
+      if (failed) await this._pollErrorBackoff();
 
       // #226: re-enqueue through enqueueLoop so the floating task promise can never go unhandled.
       enqueueLoop(this.queue, job, this.log);
@@ -548,3 +616,7 @@ module.exports.orderQueuesForCreation = orderQueuesForCreation;
 module.exports.isNonExistentQueueError = isNonExistentQueueError;
 module.exports.enqueueLoop = enqueueLoop;
 module.exports.queueNameCandidates = queueNameCandidates;
+module.exports.getQueueUrlExhaustionWarning = getQueueUrlExhaustionWarning;
+module.exports.pollBackoffMs = pollBackoffMs;
+module.exports.GET_QUEUE_URL_MAX_ATTEMPTS = GET_QUEUE_URL_MAX_ATTEMPTS;
+module.exports.POLL_ERROR_BACKOFF_MS = POLL_ERROR_BACKOFF_MS;

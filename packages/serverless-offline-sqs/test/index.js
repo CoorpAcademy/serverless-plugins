@@ -18,7 +18,11 @@ const {
   expandSqsEventDefinitions,
   isNonExistentQueueError,
   enqueueLoop,
-  queueNameCandidates
+  queueNameCandidates,
+  pollBackoffMs,
+  getQueueUrlExhaustionWarning,
+  GET_QUEUE_URL_MAX_ATTEMPTS,
+  POLL_ERROR_BACKOFF_MS
 } = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
@@ -1235,6 +1239,9 @@ const runPollLoopWithReceive = async (receive, {stopAfter = 3} = {}) => {
       return Promise.resolve({});
     }
   };
+  // B1: neutralize the inter-poll error back-off seam so the transient-recovery assertions below run
+  // without real ~1s sleeps. The back-off DURATION is asserted separately via the pure pollBackoffMs.
+  sqs._pollErrorBackoff = () => Promise.resolve();
 
   const sqsEvent = new SQSEventDefinition({queueName: 'q'}, 'eu-west-1', '0');
   await sqs._sqsEvent('fn', sqsEvent);
@@ -1395,4 +1402,202 @@ test('#189 _getQueueUrl returns the URL on the first candidate without trying th
   const {QueueUrl} = await sqs._getQueueUrl('QueueName.fifo');
   t.is(QueueUrl, 'http://local/QueueName.fifo');
   t.deepEqual(seen, ['QueueName.fifo']);
+});
+
+// ---------------------------------------------------------------------------
+// B1 resilience-polish: _getQueueUrl bounded retry + surfaced warning.
+// After #292's candidate probing, a genuinely-absent queue still hit
+// `await delay(10000); return this._getQueueUrl(queueName)` — an INFINITE, SILENT 10s loop:
+// a permanent misconfiguration was indistinguishable from a transient one and never logged.
+// Bound the retries and emit a throttled warning naming the queue + the probed candidate forms.
+// ---------------------------------------------------------------------------
+
+test('B1 GET_QUEUE_URL_MAX_ATTEMPTS is a finite positive bound', t => {
+  t.true(Number.isInteger(GET_QUEUE_URL_MAX_ATTEMPTS));
+  t.true(GET_QUEUE_URL_MAX_ATTEMPTS >= 1);
+  t.true(Number.isFinite(GET_QUEUE_URL_MAX_ATTEMPTS));
+});
+
+test('B1 getQueueUrlExhaustionWarning names the queue, both probed candidates, and the attempt', t => {
+  const message = getQueueUrlExhaustionWarning('Orders.fifo', ['Orders.fifo', 'Orders'], 6);
+  t.regex(message, /Orders\.fifo/);
+  t.regex(message, /Orders\b/);
+  t.regex(message, /6/);
+});
+
+test('B1 getQueueUrlExhaustionWarning tolerates an empty/nil candidate list', t => {
+  t.notThrows(() => getQueueUrlExhaustionWarning('Orders', [], 1));
+  t.regex(getQueueUrlExhaustionWarning('Orders', undefined, 1), /Orders/);
+});
+
+// tiny local helper: run `fn` and return its rejection (or undefined if it resolves), so the
+// harness below stays a plain async function and we can assert on the thrown error.
+const captureRejection = async fn => {
+  try {
+    await fn();
+    return undefined;
+  } catch (err) {
+    return err;
+  }
+};
+
+// Drive the REAL _getQueueUrl against an always-missing queue with the wait stubbed out (no real
+// 10s sleeps) and assert it (a) gives up after a BOUNDED number of attempts with a clear error
+// naming the queue, and (b) emits at least one warning instead of looping silently forever.
+const runMissingQueueUrl = async (queueName, options = {}) => {
+  const warnings = [];
+  const sqs = new SQS(
+    null,
+    {},
+    {...options, region: 'eu-west-1', accountId: '0'},
+    {warning: msg => warnings.push(msg)}
+  );
+
+  let getCalls = 0;
+  sqs.client = {
+    send: command => {
+      if (command.constructor.name === 'GetQueueUrlCommand') {
+        getCalls += 1;
+        const err = new Error(`The specified queue does not exist: ${command.input.QueueName}`);
+        err.name = 'QueueDoesNotExist';
+        return Promise.reject(err);
+      }
+      return Promise.resolve({});
+    }
+  };
+  // neutralize the inter-round back-off so the bounded loop runs without real timers
+  sqs._getQueueUrlDelay = () => Promise.resolve();
+
+  const error = await captureRejection(() => sqs._getQueueUrl(queueName));
+  return {error, warnings, getCalls};
+};
+
+test('B1 _getQueueUrl gives up after a bounded number of attempts with a clear error naming the queue', async t => {
+  const {error, getCalls} = await runMissingQueueUrl('GhostQueue', {getQueueUrlMaxAttempts: 4});
+  t.truthy(error, 'a missing queue must eventually throw, not loop forever');
+  t.regex(error.message, /GhostQueue/, 'the error names the queue');
+  // 4 attempts x 2 candidates (GhostQueue, GhostQueue.fifo) = 8 GetQueueUrl probes, bounded.
+  t.true(getCalls <= 4 * 2 + 2, 'the retry budget is bounded, not infinite');
+});
+
+test('B1 _getQueueUrl emits a warning naming the queue instead of a silent wait-loop', async t => {
+  const {warnings} = await runMissingQueueUrl('GhostQueue', {getQueueUrlMaxAttempts: 6});
+  t.true(warnings.length > 0, 'the persistent miss is surfaced via log.warning');
+  t.true(
+    warnings.some(w => /GhostQueue/.test(w)),
+    'at least one warning names the missing queue'
+  );
+});
+
+// ---------------------------------------------------------------------------
+// B1 resilience-polish: poll-job inter-poll back-off. On a thrown receive/handler the job was
+// caught + logged then re-enqueued IMMEDIATELY -> a tight busy-loop against a down emulator.
+// pollBackoffMs is a pure decision: a small constant delay on failure, ZERO on success (so the
+// happy-path cadence is unchanged).
+// ---------------------------------------------------------------------------
+
+test('B1 POLL_ERROR_BACKOFF_MS is a small positive constant', t => {
+  t.true(Number.isInteger(POLL_ERROR_BACKOFF_MS));
+  t.true(POLL_ERROR_BACKOFF_MS > 0);
+  t.true(POLL_ERROR_BACKOFF_MS <= 5000);
+});
+
+test('B1 pollBackoffMs returns the back-off only on failure, zero on success', t => {
+  t.is(pollBackoffMs(true), POLL_ERROR_BACKOFF_MS);
+  t.is(pollBackoffMs(false), 0);
+});
+
+test('B1 pollBackoffMs never delays the success path (cadence unchanged)', t => {
+  // a successful poll must re-enqueue immediately — the spec forbids touching the happy-path cadence
+  t.is(pollBackoffMs(false), 0);
+});
+
+// Behavioral: the poll loop must invoke the back-off seam BEFORE re-enqueueing when a poll throws,
+// and must NOT invoke it on a clean (empty) poll. Drives the REAL job loop with a stubbed client +
+// a spy on the _pollErrorBackoff seam so no real ~1s sleep is incurred.
+const runPollLoopBackoffSpy = async receive => {
+  let backoffCalls = 0;
+  const sqs = new SQS(null, {}, {region: 'eu-west-1', accountId: '0'}, {warning: () => {}});
+
+  let receiveCalls = 0;
+  sqs.client = {
+    send: command => {
+      const commandName = command.constructor.name;
+      if (commandName === 'GetQueueUrlCommand')
+        return Promise.resolve({QueueUrl: 'http://local/q'});
+      if (commandName === 'ReceiveMessageCommand') {
+        receiveCalls += 1;
+        if (receiveCalls >= 2) sqs.queue.pause();
+        return receive(receiveCalls);
+      }
+      return Promise.resolve({});
+    }
+  };
+  sqs._pollErrorBackoff = () => {
+    backoffCalls += 1;
+    return Promise.resolve();
+  };
+
+  await sqs._sqsEvent('fn', new SQSEventDefinition({queueName: 'q'}, 'eu-west-1', '0'));
+  sqs.queue.start();
+  await drain();
+  sqs.queue.pause();
+  await drain(10);
+  return {backoffCalls};
+};
+
+test('B1 the poll loop applies the back-off seam before re-enqueue when a poll throws', async t => {
+  const {backoffCalls} = await runPollLoopBackoffSpy(() =>
+    Promise.reject(Object.assign(new Error('emulator down'), {name: 'TimeoutError'}))
+  );
+  t.true(backoffCalls > 0, 'a failed poll backs off before re-enqueueing');
+});
+
+test('B1 the poll loop does NOT back off on a clean (empty) poll — happy-path cadence unchanged', async t => {
+  const {backoffCalls} = await runPollLoopBackoffSpy(() => Promise.resolve({Messages: []}));
+  t.is(backoffCalls, 0, 'a successful poll re-enqueues immediately, no back-off');
+});
+
+// ---------------------------------------------------------------------------
+// B1 #289 regression guards — pin the CloudFormation-intrinsic redrive behavior that the #289
+// adversarial review left uncovered. These assert EXISTING behavior (no source change); they are
+// named guards so a future refactor that re-breaks #289 fails loudly.
+// ---------------------------------------------------------------------------
+
+test('B1 #289 toCreateQueueParams for a Ref/GetAtt-named .fifo queue emits QueueName top-level only, never in Attributes', t => {
+  // The #289 caseFn::GetAtt redrive yields a queue created with no explicit QueueName property; the
+  // params must still carry QueueName at the TOP level (so createQueue names the queue) and NEVER
+  // inside Attributes (sqslite/AWS reject `InvalidAttributeName: Unknown Attribute QueueName`).
+  const params = toCreateQueueParams('Orders.fifo', {
+    FifoQueue: true,
+    RedrivePolicy: {
+      deadLetterTargetArn: 'arn:aws:sqs:eu-west-1:000000000000:Orders-dlq.fifo',
+      maxReceiveCount: 5
+    }
+  });
+  t.is(params.QueueName, 'Orders.fifo', 'QueueName is set at the top level');
+  t.false('QueueName' in params.Attributes, 'QueueName must NOT leak into Attributes');
+  // .fifo is inferred even without an explicit QueueName property in the resource
+  t.is(params.Attributes.FifoQueue, 'true');
+});
+
+test('B1 #289 orderQueuesForCreation emits the DLQ before its referencing queue for a resolved-ARN RedrivePolicy', t => {
+  // Post index._resolveFn, a Ref/GetAtt deadLetterTargetArn is a resolved ARN string. The DLQ must
+  // be created first or createQueue rejects with NonExistentQueue (the #289 ordering caveat).
+  const defs = [
+    {
+      queueName: 'Orders',
+      properties: {
+        QueueName: 'Orders',
+        RedrivePolicy: {
+          deadLetterTargetArn: 'arn:aws:sqs:eu-west-1:000000000000:OrdersDlq',
+          maxReceiveCount: 5
+        }
+      }
+    },
+    {queueName: 'OrdersDlq', properties: {QueueName: 'OrdersDlq'}}
+  ];
+  const ordered = orderQueuesForCreation(defs, 'eu-west-1', '000000000000').map(d => d.queueName);
+  t.true(ordered.indexOf('OrdersDlq') < ordered.indexOf('Orders'), 'DLQ is created first');
+  t.deepEqual([...ordered].sort(), ['Orders', 'OrdersDlq'], 'no queue is dropped or duplicated');
 });

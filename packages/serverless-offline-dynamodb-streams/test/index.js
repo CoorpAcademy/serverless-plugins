@@ -14,7 +14,9 @@ const {
   chunkSequenceNumber,
   shouldContinueOnMissingResource,
   missingResourceWarning,
-  TABLE_DESCRIBE_MAX_ATTEMPTS
+  coerceBoolean,
+  TABLE_DESCRIBE_MAX_ATTEMPTS,
+  TABLE_EXISTS_MAX_WAIT_SECONDS
 } = DynamodbStreams;
 const {resolveTableName} = require('../src/resolve-arn');
 const {recordMatchesFilterPatterns, filterRecords} = require('../src/filter-patterns');
@@ -796,6 +798,56 @@ test('TABLE_DESCRIBE_MAX_ATTEMPTS is a finite positive bound (#241)', t => {
   t.true(Number.isInteger(TABLE_DESCRIBE_MAX_ATTEMPTS));
   t.true(TABLE_DESCRIBE_MAX_ATTEMPTS >= 1);
   t.true(Number.isFinite(TABLE_DESCRIBE_MAX_ATTEMPTS));
+});
+
+// ---------------------------------------------------------------------------
+// B1 resilience-polish: bound the per-attempt waitUntilTableExists maxWaitTime so a
+// genuinely-missing table surfaces in SECONDS, not ~6 min (3 attempts x 120s before #291's
+// fail-fast even fires). 5s/attempt x TABLE_DESCRIBE_MAX_ATTEMPTS keeps it snappy while
+// staying above the SDK waiter minDelay (2s). Happy path returns on the first poll, unchanged.
+// ---------------------------------------------------------------------------
+
+test('B1 TABLE_EXISTS_MAX_WAIT_SECONDS is a small bound (seconds, not minutes)', t => {
+  t.true(Number.isInteger(TABLE_EXISTS_MAX_WAIT_SECONDS));
+  // small enough that TABLE_DESCRIBE_MAX_ATTEMPTS attempts error in seconds, not ~6 min ...
+  t.true(TABLE_EXISTS_MAX_WAIT_SECONDS <= 10);
+  // ... yet >= the aws-sdk v3 waiter minimum delay (2s) so the waiter never floors/rejects it.
+  t.true(TABLE_EXISTS_MAX_WAIT_SECONDS >= 2);
+  // the whole missing-table fail-fast budget stays well under a minute
+  t.true(TABLE_EXISTS_MAX_WAIT_SECONDS * TABLE_DESCRIBE_MAX_ATTEMPTS < 60);
+});
+
+// ---------------------------------------------------------------------------
+// B1 resilience-polish: coerceBoolean — a YAML/CLI boolean-style option arrives as the
+// STRING 'false'/'true'. Boolean('false') === true silently inverts the documented
+// continueOnMissingResource fail-fast default. Coerce by VALUE (mirrors src/index isPluginEnabled).
+// ---------------------------------------------------------------------------
+
+test('B1 coerceBoolean coerces the string "false" to false (not Boolean of a non-empty string)', t => {
+  t.is(coerceBoolean('false'), false);
+});
+
+test('B1 coerceBoolean coerces the string "true" to true', t => {
+  t.is(coerceBoolean('true'), true);
+});
+
+test('B1 coerceBoolean passes a real boolean through unchanged', t => {
+  t.is(coerceBoolean(true), true);
+  t.is(coerceBoolean(false), false);
+});
+
+test('B1 coerceBoolean treats unset/other values via Boolean (default-off preserved)', t => {
+  t.is(coerceBoolean(undefined), false);
+  t.is(coerceBoolean(null), false);
+  t.is(coerceBoolean(''), false);
+  t.is(coerceBoolean('yes'), true);
+});
+
+test('B1 shouldContinueOnMissingResource honors the YAML-quoted string "false" as false', t => {
+  // the regression: a serverless.yml value quoted to a string must NOT flip the fail-fast default.
+  t.false(shouldContinueOnMissingResource({continueOnMissingResource: 'false'}));
+  // and the string 'true' opts in, as a user expects
+  t.true(shouldContinueOnMissingResource({continueOnMissingResource: 'true'}));
 });
 
 const buildMissingTableStreams = (options = {}) => {

@@ -34,8 +34,13 @@ const DDB_STREAMS_READABLE_COMMANDS = {
   getRecords: GetRecordsCommand
 };
 
-// waitUntilTableExists needs a bounded max wait; mirror the v2 waiter's generous polling budget.
-const TABLE_EXISTS_MAX_WAIT_SECONDS = 120;
+// B1 resilience-polish: the v3 `waitUntilTableExists` waiter retries on ResourceNotFoundException
+// for the WHOLE maxWaitTime, and #241 wraps it in TABLE_DESCRIBE_MAX_ATTEMPTS retries — so a 120s
+// per-attempt budget meant a genuinely-missing table took ~6 min (3 x 120s) to surface the clear
+// error. Bound the per-attempt wait to a few seconds so an absent table fails fast (in seconds, not
+// minutes) while a table created moments-after-start is still awaited. Keep it >= the SDK waiter's
+// minDelay (2s) so the waiter never rejects the config. A present table returns on the first poll.
+const TABLE_EXISTS_MAX_WAIT_SECONDS = 5;
 
 // #241 (lqueryvg): how many times `_describeTable` may wait-and-retry before giving up.
 // The previous code recursed UNCONDITIONALLY on any waiter failure, so a genuinely-missing
@@ -55,12 +60,24 @@ const assertStreamEnabled = (tableName, latestStreamArn) => {
   return latestStreamArn;
 };
 
+// B1 resilience-polish: a YAML/CLI boolean-style option may arrive as the STRING 'false'/'true'
+// (serverless.yml quoting, `--flag false`). `Boolean('false') === true` would silently invert the
+// flag. Coerce by VALUE — mirrors src/index isPluginEnabled's `=== 'false'` handling — so the string
+// 'false' is false and 'true' is true, while real booleans pass through and anything else (nil,
+// numbers, other strings) defers to Boolean. Pure + total.
+const coerceBoolean = value => {
+  if (value === 'false') return false;
+  if (value === 'true') return true;
+  return Boolean(value);
+};
+
 // #241 (lqueryvg): opt-in to a non-blocking startup. Default false preserves the current
 // fail-fast behavior; when set, a missing table/stream is warned-and-skipped so the rest of
 // serverless-offline still starts. Pure read of the merged custom options. `undefined`/missing
-// -> false.
+// -> false. B1: route through coerceBoolean so a YAML-quoted `'false'` stays false (was
+// `Boolean('false') === true`, which silently flipped the documented fail-fast default).
 const shouldContinueOnMissingResource = options =>
-  Boolean(get('continueOnMissingResource', options));
+  coerceBoolean(get('continueOnMissingResource', options));
 
 // #241 (lqueryvg): the warning shown when a missing table/stream is skipped (opt-in path).
 // Pure: names the table and the underlying cause so the developer knows what was skipped and
@@ -288,5 +305,7 @@ module.exports = DynamodbStreams;
 module.exports.assertStreamEnabled = assertStreamEnabled;
 module.exports.chunkSequenceNumber = chunkSequenceNumber;
 module.exports.shouldContinueOnMissingResource = shouldContinueOnMissingResource;
+module.exports.coerceBoolean = coerceBoolean;
 module.exports.missingResourceWarning = missingResourceWarning;
 module.exports.TABLE_DESCRIBE_MAX_ATTEMPTS = TABLE_DESCRIBE_MAX_ATTEMPTS;
+module.exports.TABLE_EXISTS_MAX_WAIT_SECONDS = TABLE_EXISTS_MAX_WAIT_SECONDS;
