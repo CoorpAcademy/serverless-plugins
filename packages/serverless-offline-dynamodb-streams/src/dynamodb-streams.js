@@ -35,12 +35,16 @@ const DDB_STREAMS_READABLE_COMMANDS = {
 };
 
 // B1 resilience-polish: the v3 `waitUntilTableExists` waiter retries on ResourceNotFoundException
-// for the WHOLE maxWaitTime, and #241 wraps it in TABLE_DESCRIBE_MAX_ATTEMPTS retries — so a 120s
-// per-attempt budget meant a genuinely-missing table took ~6 min (3 x 120s) to surface the clear
-// error. Bound the per-attempt wait to a few seconds so an absent table fails fast (in seconds, not
-// minutes) while a table created moments-after-start is still awaited. Keep it >= the SDK waiter's
-// minDelay (2s) so the waiter never rejects the config. A present table returns on the first poll.
-const TABLE_EXISTS_MAX_WAIT_SECONDS = 5;
+// for the WHOLE maxWaitTime, and #241 wraps it in TABLE_DESCRIBE_MAX_ATTEMPTS retries — so the SDK
+// default 120s per-attempt budget meant a genuinely-missing table took ~6 min (3 x 120s) to surface
+// the clear error. Bound the per-attempt wait so an absent table fails fast (~25s/attempt, not 120s)
+// while a table created moments-after-start is still awaited. CONSTRAINT: DynamoDB's
+// `waitUntilTableExists` hardcodes minDelay: 20, and @smithy/util-waiter `validateWaiterOptions`
+// THROWS when maxWaitTime <= minDelay (even when the table EXISTS, regressing the happy path). So
+// maxWaitTime MUST be > 20. 25 bounds it just above that floor: valid for the waiter, yet far below
+// the old 120 so a missing table surfaces in ~25s/attempt instead of ~120s. A present table returns
+// on the first poll.
+const TABLE_EXISTS_MAX_WAIT_SECONDS = 25;
 
 // #241 (lqueryvg): how many times `_describeTable` may wait-and-retry before giving up.
 // The previous code recursed UNCONDITIONALLY on any waiter failure, so a genuinely-missing
@@ -145,7 +149,9 @@ class DynamodbStreams {
   }
 
   // #248 (aws-sdk v3): the bounded waiter, extracted as a seam so unit tests can stub the
-  // 120s poll without hitting AWS. Production wiring is unchanged.
+  // waiter poll without hitting AWS. Production wiring is unchanged. NOTE: the seam-stubbing
+  // tests bypass validateWaiterOptions; the faithful test in test/index.js exercises the real
+  // waiter to guard TABLE_EXISTS_MAX_WAIT_SECONDS against the minDelay-20 floor.
   _waitUntilTableExists(tableName) {
     return waitUntilTableExists(
       {client: this.client, maxWaitTime: TABLE_EXISTS_MAX_WAIT_SECONDS},

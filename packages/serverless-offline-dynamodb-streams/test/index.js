@@ -802,19 +802,41 @@ test('TABLE_DESCRIBE_MAX_ATTEMPTS is a finite positive bound (#241)', t => {
 
 // ---------------------------------------------------------------------------
 // B1 resilience-polish: bound the per-attempt waitUntilTableExists maxWaitTime so a
-// genuinely-missing table surfaces in SECONDS, not ~6 min (3 attempts x 120s before #291's
-// fail-fast even fires). 5s/attempt x TABLE_DESCRIBE_MAX_ATTEMPTS keeps it snappy while
-// staying above the SDK waiter minDelay (2s). Happy path returns on the first poll, unchanged.
+// genuinely-missing table surfaces in ~25s/attempt, not the SDK default 120s/attempt.
+// HARD CONSTRAINT: DynamoDB's `waitUntilTableExists` hardcodes minDelay: 20, and
+// @smithy/util-waiter `validateWaiterOptions` THROWS when maxWaitTime <= minDelay — even
+// when the table EXISTS — so maxWaitTime MUST be > 20 or the happy path regresses. 25 sits
+// just above that floor: valid for the waiter, yet far below the old 120 so a missing table
+// fails fast. The `> 20` assertion below is the one that would have caught the broken `= 5`.
 // ---------------------------------------------------------------------------
 
-test('B1 TABLE_EXISTS_MAX_WAIT_SECONDS is a small bound (seconds, not minutes)', t => {
+test('B1 TABLE_EXISTS_MAX_WAIT_SECONDS is above the DDB waiter minDelay floor (20s)', t => {
   t.true(Number.isInteger(TABLE_EXISTS_MAX_WAIT_SECONDS));
-  // small enough that TABLE_DESCRIBE_MAX_ATTEMPTS attempts error in seconds, not ~6 min ...
-  t.true(TABLE_EXISTS_MAX_WAIT_SECONDS <= 10);
-  // ... yet >= the aws-sdk v3 waiter minimum delay (2s) so the waiter never floors/rejects it.
-  t.true(TABLE_EXISTS_MAX_WAIT_SECONDS >= 2);
-  // the whole missing-table fail-fast budget stays well under a minute
-  t.true(TABLE_EXISTS_MAX_WAIT_SECONDS * TABLE_DESCRIBE_MAX_ATTEMPTS < 60);
+  // CRITICAL: DynamoDB waitUntilTableExists hardcodes minDelay: 20 and validateWaiterOptions
+  // THROWS when maxWaitTime <= minDelay (even for an EXISTING table). maxWaitTime MUST be > 20.
+  t.true(TABLE_EXISTS_MAX_WAIT_SECONDS > 20, 'must exceed the DDB waiter minDelay of 20');
+  // still far below the SDK default of 120, so a missing table fails fast (~25s, not ~120s).
+  t.true(TABLE_EXISTS_MAX_WAIT_SECONDS < 120);
+});
+
+// FAITHFUL waiter test: the stubbed-seam unit tests bypass validateWaiterOptions entirely, so
+// they never noticed `maxWaitTime: 5` throws on EVERY call. Call the REAL waitUntilTableExists
+// (from @aws-sdk/client-dynamodb) with maxWaitTime: TABLE_EXISTS_MAX_WAIT_SECONDS and a stub
+// client whose send resolves an ACTIVE table. This exercises validateWaiterOptions + the happy
+// path: it MUST resolve (state SUCCESS) without throwing. With the old `= 5` it threw here.
+test('B1 the real waitUntilTableExists accepts maxWaitTime: TABLE_EXISTS_MAX_WAIT_SECONDS and resolves an ACTIVE table', async t => {
+  const {waitUntilTableExists} = require('@aws-sdk/client-dynamodb');
+  // stub client: every send resolves an ACTIVE table (never hits the network).
+  const stubClient = {
+    send: () => Promise.resolve({Table: {TableName: 't', TableStatus: 'ACTIVE'}})
+  };
+
+  const result = await waitUntilTableExists(
+    {client: stubClient, maxWaitTime: TABLE_EXISTS_MAX_WAIT_SECONDS},
+    {TableName: 't'}
+  );
+
+  t.is(result.state, 'SUCCESS', 'the happy path resolves (validateWaiterOptions did not throw)');
 });
 
 // ---------------------------------------------------------------------------
