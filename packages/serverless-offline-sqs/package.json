@@ -14,6 +14,7 @@
   "files": [
     "src/index.js",
     "src/log.js",
+    "src/client-config.js",
     "src/sqs.js",
     "src/sqs-event.js",
     "src/sqs-event-definition.js"
@@ -31,7 +32,7 @@
     "serverless-offline": "^10.0.2 || >=11"
   },
   "dependencies": {
-    "aws-sdk": "^2.1234.0",
+    "@aws-sdk/client-sqs": "^3.0.0",
     "lodash": "^4.17.21",
     "p-queue": "^6.6.2"
   },

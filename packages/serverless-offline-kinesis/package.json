@@ -14,6 +14,8 @@
   "files": [
     "src/index.js",
     "src/log.js",
+    "src/client-config.js",
+    "src/callback-adapter.js",
     "src/kinesis.js",
     "src/kinesis-event.js",
     "src/kinesis-event-definition.js"
@@ -31,7 +33,8 @@
     "serverless-offline": "^10.0.2 || >=11"
   },
   "dependencies": {
-    "aws-sdk": "^2.1234.0",
+    "@aws-sdk/client-kinesis": "^3.0.0",
+    "@smithy/node-http-handler": "^4.0.0",
     "kinesis-readable": "^1.2.0",
     "lodash": "^4.17.21"
   },

@@ -15,12 +15,122 @@ const {
   extractDlqTargetName,
   orderQueuesForCreation,
   normalizeQueueNames,
-  expandSqsEventDefinitions
+  expandSqsEventDefinitions,
+  isNonExistentQueueError
 } = require('../src/sqs');
 const SQSEvent = require('../src/sqs-event');
 const SQSEventDefinition = require('../src/sqs-event-definition');
 const {defaultOptions, isPluginEnabled} = require('../src');
 const {extractQueueNameFromARN, resolveCfnValue} = require('../src/sqs-event-definition');
+const {
+  buildClientConfig,
+  buildCredentials,
+  resolveRegion,
+  ensureArray,
+  DEFAULT_REGION
+} = require('../src/client-config');
+
+// ---------------------------------------------------------------------------
+// buildClientConfig (#248/#252 aws-sdk v3 migration)
+// ---------------------------------------------------------------------------
+
+// EARS5: accessKeyId without secretAccessKey must NOT build a half-empty credentials object.
+test('buildCredentials returns undefined when only accessKeyId is provided (EARS5)', t => {
+  t.is(buildCredentials({accessKeyId: 'local'}), undefined);
+});
+
+test('buildCredentials returns undefined when only secretAccessKey is provided', t => {
+  t.is(buildCredentials({secretAccessKey: 'local'}), undefined);
+});
+
+test('buildCredentials returns undefined when neither key is provided', t => {
+  t.is(buildCredentials({}), undefined);
+  t.is(buildCredentials(undefined), undefined);
+});
+
+test('buildCredentials returns a credentials object only when BOTH keys are present', t => {
+  t.deepEqual(buildCredentials({accessKeyId: 'a', secretAccessKey: 's'}), {
+    accessKeyId: 'a',
+    secretAccessKey: 's'
+  });
+});
+
+test('buildCredentials carries sessionToken through only when present', t => {
+  t.deepEqual(buildCredentials({accessKeyId: 'a', secretAccessKey: 's', sessionToken: 't'}), {
+    accessKeyId: 'a',
+    secretAccessKey: 's',
+    sessionToken: 't'
+  });
+});
+
+test('buildClientConfig omits credentials when only accessKeyId is set (EARS5)', t => {
+  const config = buildClientConfig({accessKeyId: 'local', endpoint: 'http://localhost:9324'});
+  t.false('credentials' in config);
+  t.false('accessKeyId' in config);
+});
+
+test('buildClientConfig builds credentials when both keys are set', t => {
+  const config = buildClientConfig({accessKeyId: 'a', secretAccessKey: 's', region: 'eu-west-1'});
+  t.deepEqual(config.credentials, {accessKeyId: 'a', secretAccessKey: 's'});
+  t.false('accessKeyId' in config);
+  t.false('secretAccessKey' in config);
+});
+
+// EARS4: a custom endpoint without provider.region still works (default region supplied).
+test('resolveRegion supplies a default region when endpoint is set and region absent (EARS4)', t => {
+  t.is(resolveRegion({endpoint: 'http://localhost:9324'}), DEFAULT_REGION);
+});
+
+test('resolveRegion keeps the provided region untouched', t => {
+  t.is(resolveRegion({endpoint: 'http://localhost:9324', region: 'eu-west-1'}), 'eu-west-1');
+});
+
+test('resolveRegion returns undefined with no endpoint and no region (default chain owns it)', t => {
+  t.is(resolveRegion({}), undefined);
+});
+
+test('buildClientConfig injects a default region for an endpoint with no region (EARS4)', t => {
+  const config = buildClientConfig({endpoint: 'http://localhost:9324'});
+  t.is(config.region, DEFAULT_REGION);
+  t.is(config.endpoint, 'http://localhost:9324');
+});
+
+test('buildClientConfig passes through unrelated options untouched', t => {
+  const config = buildClientConfig({endpoint: 'http://x', region: 'eu-west-1', maxAttempts: 3});
+  t.is(config.maxAttempts, 3);
+});
+
+test('buildClientConfig does not mutate its input', t => {
+  const options = {accessKeyId: 'a', secretAccessKey: 's', region: 'eu-west-1'};
+  const before = {...options};
+  buildClientConfig(options);
+  t.deepEqual(options, before);
+});
+
+// EARS3: an omitted response array must be treated as [] (no undefined.length crash).
+test('ensureArray returns [] for undefined/null (EARS3)', t => {
+  t.deepEqual(ensureArray(undefined), []);
+  t.deepEqual(ensureArray(null), []);
+});
+
+test('ensureArray returns the array unchanged when present', t => {
+  const records = [{a: 1}];
+  t.is(ensureArray(records), records);
+});
+
+// The createQueue retry guard must match BOTH the v2 and v3 non-existent-queue error names.
+test('isNonExistentQueueError matches the v3 QueueDoesNotExist name', t => {
+  t.true(isNonExistentQueueError({name: 'QueueDoesNotExist'}));
+});
+
+test('isNonExistentQueueError still matches the legacy v2 name', t => {
+  t.true(isNonExistentQueueError({name: 'AWS.SimpleQueueService.NonExistentQueue'}));
+});
+
+test('isNonExistentQueueError is false for an unrelated error', t => {
+  t.false(isNonExistentQueueError({name: 'AccessDenied'}));
+  t.false(isNonExistentQueueError(undefined));
+});
 
 // ---------------------------------------------------------------------------
 // normalizeLog
@@ -557,13 +667,19 @@ const captureReceiveMessage = async (options, rawDefinition) => {
   const sqs = new SQS(null, {}, {...options, region: 'eu-west-1', accountId: '0'}, undefined);
 
   // replace the real AWS client with a capturing mock; pause the poll queue after the first poll so
-  // the recursive job does not loop forever.
+  // the recursive job does not loop forever. #248 (aws-sdk v3): the production client is driven via
+  // `send(new XCommand(params))`, so dispatch on the command name and read params from `command.input`.
   sqs.client = {
-    getQueueUrl: () => ({promise: () => Promise.resolve({QueueUrl: 'http://local/q'})}),
-    receiveMessage: params => {
-      captured.push(params);
-      sqs.queue.pause();
-      return {promise: () => Promise.resolve({Messages: []})};
+    send: command => {
+      const commandName = command.constructor.name;
+      if (commandName === 'GetQueueUrlCommand')
+        return Promise.resolve({QueueUrl: 'http://local/q'});
+      if (commandName === 'ReceiveMessageCommand') {
+        captured.push(command.input);
+        sqs.queue.pause();
+        return Promise.resolve({Messages: []});
+      }
+      return Promise.resolve({});
     }
   };
 

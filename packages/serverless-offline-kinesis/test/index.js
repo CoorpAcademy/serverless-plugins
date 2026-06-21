@@ -6,6 +6,169 @@ const {defaultLog, normalizeLog} = require('../src/log');
 const {shouldRetry} = require('../src/kinesis');
 const KinesisEvent = require('../src/kinesis-event');
 const KinesisEventDefinition = require('../src/kinesis-event-definition');
+const {
+  buildClientConfig,
+  buildCredentials,
+  resolveRegion,
+  ensureArray,
+  DEFAULT_REGION
+} = require('../src/client-config');
+const {
+  toCallbackMethod,
+  buildCallbackClient,
+  ensureRecordsResponse
+} = require('../src/callback-adapter');
+
+// ---------------------------------------------------------------------------
+// buildClientConfig (#248/#252 aws-sdk v3 migration)
+// ---------------------------------------------------------------------------
+
+// EARS5: accessKeyId without secretAccessKey must NOT build a half-empty credentials object.
+test('buildCredentials returns undefined when only one key is provided (EARS5)', t => {
+  t.is(buildCredentials({accessKeyId: 'local'}), undefined);
+  t.is(buildCredentials({secretAccessKey: 'local'}), undefined);
+});
+
+test('buildCredentials returns credentials only when BOTH keys are present', t => {
+  t.deepEqual(buildCredentials({accessKeyId: 'a', secretAccessKey: 's'}), {
+    accessKeyId: 'a',
+    secretAccessKey: 's'
+  });
+});
+
+test('buildClientConfig omits credentials when only accessKeyId is set (EARS5)', t => {
+  t.false('credentials' in buildClientConfig({accessKeyId: 'local', endpoint: 'http://x'}));
+});
+
+// EARS4: a custom endpoint without provider.region still works (default region supplied).
+test('buildClientConfig injects a default region for an endpoint with no region (EARS4)', t => {
+  t.is(buildClientConfig({endpoint: 'http://localhost:4567'}).region, DEFAULT_REGION);
+});
+
+test('resolveRegion keeps the provided region untouched', t => {
+  t.is(resolveRegion({endpoint: 'http://x', region: 'eu-west-1'}), 'eu-west-1');
+});
+
+// #248: kinesis (unlike the other clients) defaults to NodeHttp2Handler; kinesalite only speaks
+// HTTP/1.1. buildClientConfig must force an HTTP/1.1 request handler so the offline client connects
+// (otherwise the plugin hangs on ERR_HTTP2_ERROR in _describeStream).
+test('buildClientConfig forces an HTTP/1.1 request handler for kinesalite', t => {
+  const {requestHandler} = buildClientConfig({endpoint: 'http://localhost:4567'});
+  t.is(requestHandler.constructor.name, 'NodeHttpHandler');
+});
+
+test('buildClientConfig keeps a user-supplied requestHandler', t => {
+  const custom = {marker: 'mine'};
+  t.is(buildClientConfig({requestHandler: custom}).requestHandler, custom);
+});
+
+// EARS3: an omitted response array must be treated as [] (no undefined.length crash).
+test('ensureArray returns [] for undefined/null (EARS3)', t => {
+  t.deepEqual(ensureArray(undefined), []);
+  t.deepEqual(ensureArray(null), []);
+});
+
+// ---------------------------------------------------------------------------
+// callback-adapter (#248 promise->callback shim for kinesis-readable)
+// ---------------------------------------------------------------------------
+
+class FakeCommand {
+  constructor(params) {
+    this.params = params;
+  }
+}
+
+test('toCallbackMethod forwards a resolved v3 send as (null, data)', async t => {
+  const client = {send: command => Promise.resolve({echoed: command.params})};
+  const method = toCallbackMethod(client, FakeCommand);
+  const data = await new Promise((resolve, reject) => {
+    method({StreamName: 's'}, (err, d) => (err ? reject(err) : resolve(d)));
+  });
+  t.deepEqual(data, {echoed: {StreamName: 's'}});
+});
+
+test('toCallbackMethod forwards a rejected v3 send as the err arg (no throw)', async t => {
+  const boom = new Error('boom');
+  const client = {send: () => Promise.reject(boom)};
+  const method = toCallbackMethod(client, FakeCommand);
+  const err = await new Promise(resolve => {
+    method({}, e => resolve(e));
+  });
+  t.is(err, boom);
+});
+
+test('buildCallbackClient exposes a callback method per command plus a passthrough send', t => {
+  const client = {send: () => Promise.resolve('ok')};
+  const wrapped = buildCallbackClient(client, {
+    getRecords: FakeCommand,
+    describeStream: FakeCommand
+  });
+  t.is(typeof wrapped.getRecords, 'function');
+  t.is(typeof wrapped.describeStream, 'function');
+  t.is(typeof wrapped.send, 'function');
+});
+
+// ---------------------------------------------------------------------------
+// EARS3 parity: kinesis-readable reads `data.Records.length` UNGUARDED, but a v3
+// GetRecords response OMITS `Records` when the batch is empty. The callback adapter
+// must default `Records` to [] before the data reaches kinesis-readable (mirrors the
+// dynamodb-streams-readable guard).
+// ---------------------------------------------------------------------------
+
+test('ensureRecordsResponse defaults an omitted Records to [] (EARS3)', t => {
+  // The exact shape v3 GetRecords returns on an empty poll: no `Records` key at all.
+  const v3EmptyResponse = {NextShardIterator: 'AAAA', MillisBehindLatest: 0};
+  const normalized = ensureRecordsResponse(v3EmptyResponse);
+  t.deepEqual(normalized.Records, []);
+  // pinning the exact bug: `.length` must be readable (this is what kinesis-readable does)
+  t.is(normalized.Records.length, 0);
+  // other fields are preserved, input is not mutated
+  t.is(normalized.NextShardIterator, 'AAAA');
+  t.false('Records' in v3EmptyResponse);
+});
+
+test('ensureRecordsResponse also coalesces an explicit null Records to []', t => {
+  const normalized = ensureRecordsResponse({Records: null, NextShardIterator: 'BBBB'});
+  t.deepEqual(normalized.Records, []);
+  t.is(normalized.Records.length, 0);
+});
+
+test('ensureRecordsResponse leaves a populated Records array untouched', t => {
+  const records = [{SequenceNumber: '1'}, {SequenceNumber: '2'}];
+  const normalized = ensureRecordsResponse({Records: records, NextShardIterator: 'CCCC'});
+  t.deepEqual(normalized.Records, records);
+  t.is(normalized.NextShardIterator, 'CCCC');
+});
+
+test('buildCallbackClient guards getRecords so an omitted Records reaches the cb as [] (EARS3)', async t => {
+  // The v3 client resolves a GetRecords response with NO `Records` key.
+  const client = {send: () => Promise.resolve({NextShardIterator: 'next'})};
+  const wrapped = buildCallbackClient(client, {getRecords: FakeCommand});
+
+  const data = await new Promise((resolve, reject) => {
+    wrapped.getRecords({ShardIterator: 'it', Limit: 10}, (err, d) =>
+      err ? reject(err) : resolve(d)
+    );
+  });
+
+  // This is exactly what kinesis-readable does next — it must not throw on undefined.
+  t.notThrows(() => data.Records.length);
+  t.deepEqual(data.Records, []);
+  t.is(data.NextShardIterator, 'next');
+});
+
+test('buildCallbackClient does NOT inject Records into non-getRecords methods', async t => {
+  // describeStream/getShardIterator responses must pass through untouched (identity normalizer).
+  const client = {send: () => Promise.resolve({ShardIterator: 'shard-it'})};
+  const wrapped = buildCallbackClient(client, {getShardIterator: FakeCommand});
+
+  const data = await new Promise((resolve, reject) => {
+    wrapped.getShardIterator({}, (err, d) => (err ? reject(err) : resolve(d)));
+  });
+
+  t.is(data.ShardIterator, 'shard-it');
+  t.false('Records' in data);
+});
 
 // ---------------------------------------------------------------------------
 // normalizeLog (v4 logger shim)

@@ -1,4 +1,10 @@
-const SQSClient = require('aws-sdk/clients/sqs');
+const {
+  SQSClient,
+  CreateQueueCommand,
+  DeleteMessageBatchCommand,
+  GetQueueUrlCommand,
+  ReceiveMessageCommand
+} = require('@aws-sdk/client-sqs');
 
 const {
   assign,
@@ -36,6 +42,7 @@ const {
 } = require('lodash/fp');
 const {default: PQueue} = require('p-queue');
 const {normalizeLog} = require('./log');
+const {buildClientConfig, ensureArray} = require('./client-config');
 const SQSEventDefinition = require('./sqs-event-definition');
 const SQSEvent = require('./sqs-event');
 
@@ -45,6 +52,12 @@ const delay = timeout =>
   new Promise(resolve => {
     setTimeout(resolve, timeout);
   });
+
+// #133/#167 (aws-sdk v3): the "queue does not exist yet" error that gates the createQueue retry is
+// `AWS.SimpleQueueService.NonExistentQueue` on aws-sdk v2 but `QueueDoesNotExist` on @aws-sdk v3 (and
+// some emulators keep the legacy name). Match either so the bounded retry survives the v3 migration.
+const NON_EXISTENT_QUEUE_ERRORS = ['AWS.SimpleQueueService.NonExistentQueue', 'QueueDoesNotExist'];
+const isNonExistentQueueError = err => includes(get('name', err), NON_EXISTENT_QUEUE_ERRORS);
 
 // #253 (flipscholtz): MessageId is not guaranteed unique within a batch and can exceed the 80-char
 // `Id` limit. Derive the batch-entry Id from the array index so it is unique and short.
@@ -292,7 +305,7 @@ class SQS {
     this.options = options;
     this.log = normalizeLog(log);
 
-    this.client = new SQSClient(this.options);
+    this.client = new SQSClient(buildClientConfig(this.options));
 
     this.queue = new PQueue({autoStart: false});
   }
@@ -375,7 +388,7 @@ class SQS {
 
   async _getQueueUrl(queueName) {
     try {
-      return await this.client.getQueueUrl({QueueName: queueName}).promise();
+      return await this.client.send(new GetQueueUrlCommand({QueueName: queueName}));
     } catch (err) {
       await delay(10000);
       return this._getQueueUrl(queueName);
@@ -390,7 +403,7 @@ class SQS {
     if (this.options.autoCreate) await this._createQueue(sqsEvent);
 
     const QueueUrl = this._rewriteQueueUrl(
-      (await this.client.getQueueUrl({QueueName: queueName}).promise()).QueueUrl
+      (await this.client.send(new GetQueueUrlCommand({QueueName: queueName}))).QueueUrl
     );
 
     // #227 (tomusiaka) + #123: use the event-level maximumBatchingWindow as the long-poll wait when
@@ -403,17 +416,20 @@ class SQS {
     const getMessages = async (size, messages = []) => {
       if (size <= 0) return messages;
 
-      const {Messages} = await this.client
-        .receiveMessage({
+      const response = await this.client.send(
+        new ReceiveMessageCommand({
           QueueUrl,
           MaxNumberOfMessages: size > 10 ? 10 : size,
           AttributeNames: ['All'],
           MessageAttributeNames: ['All'],
           WaitTimeSeconds
         })
-        .promise();
+      );
 
-      if (!Messages || Messages.length === 0) return messages;
+      // #248 (aws-sdk v3): v3 OMITS `Messages` from an empty ReceiveMessage response (v2 returned
+      // []). Guard so `.length` never reads `undefined`.
+      const Messages = ensureArray(response.Messages);
+      if (Messages.length === 0) return messages;
       return getMessages(size - Messages.length, [...messages, ...Messages]);
     };
 
@@ -436,12 +452,12 @@ class SQS {
           if (toDelete.length > 0) {
             await Promise.all(
               chunk(10, toDeleteEntries(toDelete)).map(Entries =>
-                this.client
-                  .deleteMessageBatch({
+                this.client.send(
+                  new DeleteMessageBatchCommand({
                     Entries,
                     QueueUrl
                   })
-                  .promise()
+                )
               )
             );
           }
@@ -466,9 +482,9 @@ class SQS {
   async _createQueue({queueName}, remainingTry = 5) {
     try {
       const properties = this._getResourceProperties(queueName);
-      await this.client.createQueue(toCreateQueueParams(queueName, properties)).promise();
+      await this.client.send(new CreateQueueCommand(toCreateQueueParams(queueName, properties)));
     } catch (err) {
-      if (remainingTry > 0 && err.name === 'AWS.SimpleQueueService.NonExistentQueue')
+      if (remainingTry > 0 && isNonExistentQueueError(err))
         return this._createQueue({queueName}, remainingTry - 1);
       this.log.warning(err.stack);
     }
@@ -487,3 +503,4 @@ module.exports.partitionBatchForDeletion = partitionBatchForDeletion;
 module.exports.collectQueueDefinitions = collectQueueDefinitions;
 module.exports.extractDlqTargetName = extractDlqTargetName;
 module.exports.orderQueuesForCreation = orderQueuesForCreation;
+module.exports.isNonExistentQueueError = isNonExistentQueueError;
