@@ -59,6 +59,21 @@ const delay = timeout =>
 const NON_EXISTENT_QUEUE_ERRORS = ['AWS.SimpleQueueService.NonExistentQueue', 'QueueDoesNotExist'];
 const isNonExistentQueueError = err => includes(get('name', err), NON_EXISTENT_QUEUE_ERRORS);
 
+// #189 (nicolaspfernandes): an event whose ARN resolves to a `.fifo`-suffixed name (e.g.
+// `arn:...:QueueName.fifo`) yields GetQueueUrl({QueueName: 'QueueName.fifo'}), but ElasticMQ's
+// configured queue id is literally `QueueName` — it does NOT append `.fifo` — so GetQueueUrl is
+// rejected with QueueDoesNotExist and the listener never starts. There is no single correct name
+// because the emulator's naming contract is ambiguous, so probe BOTH forms: the name exactly as
+// given (it always wins when it exists) and the toggled-suffix variant (drop `.fifo` if present,
+// else append it). Pure + total: returns an ordered, de-duplicated string[]; empty/nil -> [].
+const FIFO_SUFFIX = '.fifo';
+const toggleFifoSuffix = queueName =>
+  endsWith(FIFO_SUFFIX, queueName)
+    ? queueName.slice(0, -FIFO_SUFFIX.length)
+    : `${queueName}${FIFO_SUFFIX}`;
+const queueNameCandidates = queueName =>
+  isEmpty(queueName) ? [] : uniq(compact([queueName, toggleFifoSuffix(queueName)]));
+
 // #253 (flipscholtz): MessageId is not guaranteed unique within a batch and can exceed the 80-char
 // `Id` limit. Derive the batch-entry Id from the array index so it is unique and short.
 const toDeleteEntries = messages =>
@@ -399,10 +414,19 @@ class SQS {
     return rewritedQueueUrl.href;
   }
 
-  async _getQueueUrl(queueName) {
+  // #189 (nicolaspfernandes): resolve the queue URL by probing each name candidate in order — the
+  // name exactly as given first, then the toggled `.fifo`-suffix variant — so a `.fifo` event name
+  // still resolves against a bare ElasticMQ queue id (and vice-versa). A QueueDoesNotExist on one
+  // candidate falls through to the next; only when EVERY candidate is genuinely missing do we keep
+  // the historical wait-for-availability behavior (delay, then retry the whole candidate set) so a
+  // not-yet-created queue is still awaited. A non-existence error is never swallowed — it just
+  // advances the probe.
+  async _getQueueUrl(queueName, candidates = queueNameCandidates(queueName)) {
+    const [candidate, ...rest] = candidates;
     try {
-      return await this.client.send(new GetQueueUrlCommand({QueueName: queueName}));
+      return await this.client.send(new GetQueueUrlCommand({QueueName: candidate}));
     } catch (err) {
+      if (rest.length > 0) return this._getQueueUrl(queueName, rest);
       await delay(10000);
       return this._getQueueUrl(queueName);
     }
@@ -415,9 +439,9 @@ class SQS {
 
     if (this.options.autoCreate) await this._createQueue(sqsEvent);
 
-    const QueueUrl = this._rewriteQueueUrl(
-      (await this.client.send(new GetQueueUrlCommand({QueueName: queueName}))).QueueUrl
-    );
+    // #189: resolve the URL through the candidate-probing helper so a `.fifo` event name still maps
+    // to a bare ElasticMQ queue id (and vice-versa) instead of rejecting forever.
+    const QueueUrl = this._rewriteQueueUrl((await this._getQueueUrl(queueName)).QueueUrl);
 
     // #227 (tomusiaka) + #123: use the event-level maximumBatchingWindow as the long-poll wait when
     // present; otherwise the configurable default (custom.serverless-offline-sqs.waitTimeSeconds /
@@ -523,3 +547,4 @@ module.exports.extractDlqTargetName = extractDlqTargetName;
 module.exports.orderQueuesForCreation = orderQueuesForCreation;
 module.exports.isNonExistentQueueError = isNonExistentQueueError;
 module.exports.enqueueLoop = enqueueLoop;
+module.exports.queueNameCandidates = queueNameCandidates;
