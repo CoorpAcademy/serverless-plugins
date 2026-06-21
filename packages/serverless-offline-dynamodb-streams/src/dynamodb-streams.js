@@ -10,11 +10,13 @@ const {
   GetRecordsCommand,
   GetShardIteratorCommand
 } = require('@aws-sdk/client-dynamodb-streams');
+const {SQSClient} = require('@aws-sdk/client-sqs');
 const DynamodbStreamsReadable = require('dynamodb-streams-readable');
 const {assign, isEmpty, last, get} = require('lodash/fp');
 
 const {normalizeLog} = require('./log');
 const {buildClientConfig} = require('./client-config');
+const {pseudoParams, runDestinations} = require('./destinations');
 const {buildCallbackClient} = require('./callback-adapter');
 const DynamodbStreamsEventDefinition = require('./dynamodb-streams-event-definition');
 const DynamodbStreamsEvent = require('./dynamodb-streams-event');
@@ -95,6 +97,9 @@ class DynamodbStreams {
 
     this.readables = [];
 
+    // B2 destinations: lazily built only when a function declares a destination (see _sqsClient).
+    this.sqsClient = null;
+
     // #178 (ddb-streams-checkpoint): resolve and load the restart checkpoint once. The
     // configured `checkpointFile` (custom option) is anchored at process cwd; a missing
     // file is a clean cold start (loadState returns {}). The in-memory map is the single
@@ -105,7 +110,9 @@ class DynamodbStreams {
 
   create(events) {
     return Promise.all(
-      events.map(({functionKey, dynamodbStreams}) => this._create(functionKey, dynamodbStreams))
+      events.map(({functionKey, destinations, dynamodbStreams}) =>
+        this._create(functionKey, destinations, dynamodbStreams)
+      )
     );
   }
 
@@ -117,14 +124,14 @@ class DynamodbStreams {
     this.readables.forEach(readable => readable.pause());
   }
 
-  _create(functionKey, rawDynamodbStreamsEventDefinition) {
+  _create(functionKey, destinations, rawDynamodbStreamsEventDefinition) {
     const dynamodbStreamsEvent = new DynamodbStreamsEventDefinition(
       rawDynamodbStreamsEventDefinition,
       this.options.region,
       this.options.accountId
     );
 
-    return this._dynamodbStreamsEvent(functionKey, dynamodbStreamsEvent);
+    return this._dynamodbStreamsEvent(functionKey, destinations, dynamodbStreamsEvent);
   }
 
   // #248 (aws-sdk v3): the bounded waiter, extracted as a seam so unit tests can stub the
@@ -153,7 +160,7 @@ class DynamodbStreams {
     }
   }
 
-  async _dynamodbStreamsEvent(functionKey, dynamodbStreamsEvent) {
+  async _dynamodbStreamsEvent(functionKey, destinations, dynamodbStreamsEvent) {
     const {
       enabled,
       tableName,
@@ -229,20 +236,27 @@ class DynamodbStreams {
             return cb();
           }
 
+          const event = new DynamodbStreamsEvent(matching, this.options.region, arn);
+
           const task = async remainingAttempts => {
             try {
               const lambdaFunction = this.lambda.get(functionKey);
 
-              const event = new DynamodbStreamsEvent(matching, this.options.region, arn);
               lambdaFunction.setEvent(event);
 
-              await lambdaFunction.runHandler();
+              const result = await lambdaFunction.runHandler();
+              // B2 destinations: a clean handler run dispatches `destinations.onSuccess` once
+              // (records as requestPayload). Best-effort — never blocks the stream.
+              await this._dispatchDestination(destinations, event, {result});
             } catch (err) {
               this.log.warning(err.stack);
               if (remainingAttempts > 0) {
                 await delay(500);
                 return task(remainingAttempts - 1);
               }
+              // B2 destinations: retries exhausted — dispatch `destinations.onFailure` with the
+              // stream records + error. A handler that succeeds on a retry never reaches here.
+              await this._dispatchDestination(destinations, event, {error: err});
             }
           };
 
@@ -265,6 +279,34 @@ class DynamodbStreams {
       readable.pause();
 
       this.readables.push(readable);
+    });
+  }
+
+  // B2 destinations: lazily build (and memoize) the SQS client used for destination dispatch, so no
+  // client is constructed unless a function actually declares a destination.
+  _sqsClient() {
+    if (!this.sqsClient) this.sqsClient = new SQSClient(buildClientConfig(this.options));
+    return this.sqsClient;
+  }
+
+  // B2 destinations: best-effort onFailure/onSuccess dispatch to the resolved SQS target. Gated
+  // behind simulateDestinations, never throws (a dispatch failure must not break the stream).
+  async _dispatchDestination(destinations, requestPayload, {error, result} = {}) {
+    await runDestinations({
+      simulateDestinations: this.options.simulateDestinations,
+      destinations,
+      // Surface the CFN Resources map so a Ref/Fn::GetAtt destination ARN resolves against the
+      // declared AWS::SQS::Queue (spec EARS6).
+      ctx: pseudoParams(
+        this.options.region,
+        this.options.accountId,
+        get(['resources', 'Resources'], this.options) || {}
+      ),
+      makeClient: () => this._sqsClient(),
+      log: this.log,
+      requestPayload,
+      error,
+      result
     });
   }
 

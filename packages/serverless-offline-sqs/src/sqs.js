@@ -43,6 +43,7 @@ const {
 const {default: PQueue} = require('p-queue');
 const {normalizeLog} = require('./log');
 const {buildClientConfig, ensureArray} = require('./client-config');
+const {pseudoParams, runDestinations} = require('./destinations');
 const SQSEventDefinition = require('./sqs-event-definition');
 const SQSEvent = require('./sqs-event');
 
@@ -345,8 +346,8 @@ class SQS {
     // comma-separated queueName, event-level or via the --queueName override) before creating; each
     // `def` is a fully-resolved single-queue definition.
     const definitions = flatMap(
-      ({functionKey, sqs}) =>
-        expandSqsEventDefinitions(this.options, sqs).map(def => ({functionKey, def})),
+      ({functionKey, destinations, sqs}) =>
+        expandSqsEventDefinitions(this.options, sqs).map(def => ({functionKey, destinations, def})),
       events
     );
 
@@ -380,7 +381,11 @@ class SQS {
       );
     }
 
-    return Promise.all(definitions.map(({functionKey, def}) => this._create(functionKey, def)));
+    return Promise.all(
+      definitions.map(({functionKey, destinations, def}) =>
+        this._create(functionKey, destinations, def)
+      )
+    );
   }
 
   start() {
@@ -391,13 +396,13 @@ class SQS {
     this.queue.pause();
   }
 
-  _create(functionKey, def) {
+  _create(functionKey, destinations, def) {
     // #262 (renanlido): `def` is already a fully-resolved single-queue definition produced by
     // expandSqsEventDefinitions (override-wins + arn-strip handled there), so SQSEventDefinition
     // only ever sees one queue at a time.
     const sqsEvent = new SQSEventDefinition(def, this.options.region, this.options.accountId);
 
-    return this._sqsEvent(functionKey, sqsEvent);
+    return this._sqsEvent(functionKey, destinations, sqsEvent);
   }
 
   _rewriteQueueUrl(queueUrl) {
@@ -432,7 +437,7 @@ class SQS {
     }
   }
 
-  async _sqsEvent(functionKey, sqsEvent) {
+  async _sqsEvent(functionKey, destinations, sqsEvent) {
     const {enabled, arn, queueName, batchSize = 10, functionResponseType} = sqsEvent;
 
     if (!enabled) return;
@@ -475,6 +480,7 @@ class SQS {
       // try/catch, so a transient SQS-client / network failure rejected the p-queue task and became
       // an unhandled rejection. Pull it inside: a receive failure is now logged via log.warning and
       // the loop re-schedules, exactly like a thrown handler — the offline session keeps polling.
+      let dispatchEvent;
       try {
         const messages = await getMessages(batchSize);
 
@@ -482,6 +488,7 @@ class SQS {
           const lambdaFunction = this.lambda.get(functionKey);
 
           const event = new SQSEvent(messages, this.options.region, arn);
+          dispatchEvent = event;
           lambdaFunction.setEvent(event);
 
           // #221 (successkrisz): capture the handler result so ReportBatchItemFailures can keep the
@@ -502,15 +509,41 @@ class SQS {
               )
             );
           }
+
+          // B2 destinations: a clean handler run dispatches `destinations.onSuccess`. Best-effort —
+          // a dispatch failure never blocks the poll loop.
+          await this._dispatchDestination(destinations, event, {result});
         }
       } catch (err) {
         this.log.warning(err.stack);
+        // B2 destinations: a poll iteration has no per-batch retry budget, so one throw IS exhaustion
+        // for that batch — dispatch `destinations.onFailure` with the SQS event payload + error.
+        await this._dispatchDestination(destinations, dispatchEvent, {error: err});
       }
 
       // #226: re-enqueue through enqueueLoop so the floating task promise can never go unhandled.
       enqueueLoop(this.queue, job, this.log);
     };
     enqueueLoop(this.queue, job, this.log);
+  }
+
+  // B2 destinations: best-effort onFailure/onSuccess dispatch reusing this.client (the SQS client is
+  // already constructed for the plugin). No-op when there is no requestPayload (the receive itself
+  // failed before any batch was built) or no matching destination. Never throws.
+  async _dispatchDestination(destinations, requestPayload, {error, result} = {}) {
+    if (isNil(requestPayload)) return;
+    await runDestinations({
+      simulateDestinations: this.options.simulateDestinations,
+      destinations,
+      // this.resources is the already-_resolveFn-flattened CFN Resources map; pass it so a
+      // Ref/Fn::GetAtt destination ARN resolves against the declared AWS::SQS::Queue (spec EARS6).
+      ctx: pseudoParams(this.options.region, this.options.accountId, this.resources || {}),
+      makeClient: () => this.client,
+      log: this.log,
+      requestPayload,
+      error,
+      result
+    });
   }
 
   _getResourceProperties(queueName) {

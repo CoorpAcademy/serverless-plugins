@@ -215,6 +215,7 @@ class ServerlessOfflineSQS {
           sqsEvents.push({
             functionKey,
             handler: functionDefinition.handler,
+            destinations: get('destinations', functionDefinition),
             sqs
           });
         }

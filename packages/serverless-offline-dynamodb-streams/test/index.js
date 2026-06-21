@@ -17,6 +17,14 @@ const {
   TABLE_DESCRIBE_MAX_ATTEMPTS
 } = DynamodbStreams;
 const {resolveTableName} = require('../src/resolve-arn');
+const {
+  resolveDestinationArn,
+  queueNameFromArn,
+  buildFailurePayload,
+  buildSuccessPayload,
+  dispatchDestination,
+  runDestinations
+} = require('../src/destinations');
 const {recordMatchesFilterPatterns, filterRecords} = require('../src/filter-patterns');
 const {
   DEFAULT_STATE_FILE,
@@ -688,6 +696,7 @@ test('write: a batch fully dropped by filterPatterns still advances the checkpoi
 
   await streams._dynamodbStreamsEvent(
     'fnKey',
+    undefined,
     new DynamodbStreamsEventDefinition(
       {
         arn: HARNESS_STREAM_ARN,
@@ -729,6 +738,7 @@ test('write: a partially-matching batch runs the handler and advances to the FUL
 
   await streams._dynamodbStreamsEvent(
     'fnKey',
+    undefined,
     new DynamodbStreamsEventDefinition(
       {
         arn: HARNESS_STREAM_ARN,
@@ -837,7 +847,7 @@ test('_dynamodbStreamsEvent rejects with a clear error when the table is missing
   streams._describeTable = () => Promise.reject(new Error('Table ghostTable not found'));
 
   const error = await t.throwsAsync(() =>
-    streams._dynamodbStreamsEvent('fnKey', missingTableEvent())
+    streams._dynamodbStreamsEvent('fnKey', undefined, missingTableEvent())
   );
   t.regex(error.message, /ghostTable/);
   t.is(streams.readables.length, 0, 'no readable was wired for the missing resource');
@@ -849,7 +859,9 @@ test('_dynamodbStreamsEvent warns and skips a missing table when continueOnMissi
   const {streams, warnings} = buildMissingTableStreams({continueOnMissingResource: true});
   streams._describeTable = () => Promise.reject(new Error('Table ghostTable not found'));
 
-  await t.notThrowsAsync(() => streams._dynamodbStreamsEvent('fnKey', missingTableEvent()));
+  await t.notThrowsAsync(() =>
+    streams._dynamodbStreamsEvent('fnKey', undefined, missingTableEvent())
+  );
   t.is(streams.readables.length, 0, 'the missing event source is skipped');
   t.is(warnings.length, 1, 'a single warning was logged');
   t.regex(warnings[0], /ghostTable/, 'the warning names the table');
@@ -862,7 +874,9 @@ test('_dynamodbStreamsEvent warns and skips a table without streams when continu
   // Table exists, but LatestStreamArn is absent -> assertStreamEnabled throws.
   streams._describeTable = () => Promise.resolve({Table: {LatestStreamArn: undefined}});
 
-  await t.notThrowsAsync(() => streams._dynamodbStreamsEvent('fnKey', missingTableEvent()));
+  await t.notThrowsAsync(() =>
+    streams._dynamodbStreamsEvent('fnKey', undefined, missingTableEvent())
+  );
   t.is(streams.readables.length, 0);
   t.is(warnings.length, 1);
   t.regex(warnings[0], /ghostTable/);
@@ -874,7 +888,7 @@ test('_dynamodbStreamsEvent rejects for a table without streams when no opt-in (
   streams._describeTable = () => Promise.resolve({Table: {LatestStreamArn: undefined}});
 
   const error = await t.throwsAsync(() =>
-    streams._dynamodbStreamsEvent('fnKey', missingTableEvent())
+    streams._dynamodbStreamsEvent('fnKey', undefined, missingTableEvent())
   );
   t.regex(error.message, /streams/i);
 });
@@ -886,4 +900,229 @@ test('src/dynamodb-streams.js no longer re-waits unconditionally in _describeTab
     /catch\s*\([^)]*\)\s*{\s*return this\._describeTable\(tableName\);?\s*}/.test(source),
     'the unbounded `catch { return this._describeTable(tableName) }` must be removed'
   );
+});
+
+// ---------------------------------------------------------------------------
+// Lambda async destinations (onFailure / onSuccess) — spec B2
+// ---------------------------------------------------------------------------
+
+const CTX = {'AWS::Region': 'eu-west-1', 'AWS::AccountId': '000000000000'};
+
+const fakeSqsClient = (impl = {}) => {
+  const calls = [];
+  return {
+    calls,
+    send: command => {
+      const name = command.constructor.name;
+      calls.push({name, input: command.input});
+      if (name === 'GetQueueUrlCommand') {
+        if (impl.getQueueUrlError) throw impl.getQueueUrlError;
+        return Promise.resolve({QueueUrl: impl.queueUrl || 'http://localhost:9324/000/q'});
+      }
+      if (name === 'SendMessageCommand') return Promise.resolve({MessageId: 'm-1'});
+      return Promise.resolve({});
+    }
+  };
+};
+
+test('destinations: resolveDestinationArn / queueNameFromArn (EARS1, EARS6)', t => {
+  t.is(resolveDestinationArn({arn: {Ref: 'AWS::Region'}}, CTX), 'eu-west-1');
+  t.is(resolveDestinationArn({arn: {'Fn::ImportValue': 'X'}}, CTX), undefined);
+  t.is(queueNameFromArn('arn:aws:sqs:eu-west-1:0:my-dlq'), 'my-dlq');
+});
+
+test('destinations: build*Payload shapes (EARS5, EARS8)', t => {
+  t.deepEqual(buildFailurePayload({a: 1}, Object.assign(new Error('boom'), {name: 'E'})), {
+    requestPayload: {a: 1},
+    responsePayload: {errorMessage: 'boom', errorType: 'E'}
+  });
+  t.deepEqual(buildSuccessPayload({a: 1}, {ok: 1}), {
+    requestPayload: {a: 1},
+    responsePayload: {ok: 1}
+  });
+});
+
+test('destinations: dispatchDestination swallows a client error and warns (EARS7)', async t => {
+  const client = fakeSqsClient({getQueueUrlError: new Error('gone')});
+  const warnings = [];
+  await t.notThrowsAsync(
+    dispatchDestination({
+      client,
+      target: 'arn:aws:sqs:eu-west-1:0:dlq',
+      ctx: CTX,
+      payload: {},
+      log: normalizeLog({warning: m => warnings.push(m)})
+    })
+  );
+  t.is(warnings.length, 1);
+});
+
+test('destinations: runDestinations is a no-op (no client) when simulateDestinations is false (EARS2)', async t => {
+  let built = false;
+  await runDestinations({
+    simulateDestinations: false,
+    destinations: {onFailure: 'arn:aws:sqs:eu-west-1:0:dlq'},
+    ctx: CTX,
+    makeClient: () => {
+      built = true;
+      return fakeSqsClient();
+    },
+    log: normalizeLog(),
+    requestPayload: {},
+    error: new Error('boom')
+  });
+  t.false(built);
+});
+
+// A harness that drives the REAL writable with a configurable handler + injected SQS client, so we
+// can exercise the retry-vs-exhaustion destinations wiring end-to-end (no AWS, no docker).
+const buildDestinationsHarness = ({runHandler, destinations, sqsClient}) => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ddb-dest-')), DEFAULT_STATE_FILE);
+  const handlerCalls = [];
+  const lambda = {
+    get: () => ({
+      setEvent: event => handlerCalls.push(event),
+      runHandler
+    })
+  };
+
+  const streams = new DynamodbStreams(
+    lambda,
+    {
+      region: 'eu-west-1',
+      accountId: '000000000000',
+      checkpointFile: file,
+      simulateDestinations: true
+    },
+    {}
+  );
+
+  streams._describeTable = () => Promise.resolve({Table: {LatestStreamArn: HARNESS_STREAM_ARN}});
+  streams.streamsClient.send = () =>
+    Promise.resolve({StreamDescription: {Shards: [{ShardId: SHARD_ID}]}});
+  // Inject the fake SQS client so destinations dispatch hits no real AWS.
+  streams.sqsClient = sqsClient;
+
+  return {streams, handlerCalls, destinations};
+};
+
+const runOneBatch = async ({runHandler, destinations, sqsClient}) => {
+  const {streams} = buildDestinationsHarness({runHandler, destinations, sqsClient});
+  await streams._dynamodbStreamsEvent(
+    'fnKey',
+    destinations,
+    new DynamodbStreamsEventDefinition(
+      {arn: HARNESS_STREAM_ARN, startingPosition: 'TRIM_HORIZON', maximumRetryAttempts: 3},
+      'eu-west-1',
+      '000000000000'
+    )
+  );
+  const writable = writableOf(streams.readables[0]);
+  await writeChunk(writable, [
+    {...insertRecord, dynamodb: {...insertRecord.dynamodb, SequenceNumber: '100'}}
+  ]);
+};
+
+// EARS4: retries exhausted -> exactly one onFailure dispatch with the stream records + error.
+test('DDB: a handler that exhausts its retries dispatches onFailure once (EARS4)', async t => {
+  const client = fakeSqsClient();
+  await runOneBatch({
+    runHandler: () => Promise.reject(Object.assign(new Error('boom'), {name: 'E'})),
+    destinations: {onFailure: 'arn:aws:sqs:eu-west-1:0:my-dlq'},
+    sqsClient: client
+  });
+  const sends = client.calls.filter(({name}) => name === 'SendMessageCommand');
+  t.is(sends.length, 1, 'exactly one onFailure dispatch');
+  const body = JSON.parse(sends[0].input.MessageBody);
+  t.is(body.responsePayload.errorMessage, 'boom');
+  t.is(body.responsePayload.errorType, 'E');
+  t.truthy(body.requestPayload.Records, 'requestPayload carries the stream records');
+});
+
+// Edge 5: a handler that succeeds on a retry does NOT fire onFailure; onSuccess fires once.
+test('DDB: a handler that succeeds on a retry fires onSuccess once, never onFailure (edge 5, EARS5)', async t => {
+  const client = fakeSqsClient();
+  let attempts = 0;
+  await runOneBatch({
+    runHandler: () => {
+      attempts += 1;
+      return attempts < 2
+        ? Promise.reject(new Error('transient'))
+        : Promise.resolve({statusCode: 200});
+    },
+    destinations: {
+      onFailure: 'arn:aws:sqs:eu-west-1:0:dlq',
+      onSuccess: 'arn:aws:sqs:eu-west-1:0:ok'
+    },
+    sqsClient: client
+  });
+  const getQueue = client.calls.find(({name}) => name === 'GetQueueUrlCommand');
+  const sends = client.calls.filter(({name}) => name === 'SendMessageCommand');
+  t.is(sends.length, 1, 'exactly one dispatch');
+  t.is(getQueue.input.QueueName, 'ok', 'dispatched to onSuccess, not onFailure');
+  t.deepEqual(JSON.parse(sends[0].input.MessageBody).responsePayload, {statusCode: 200});
+});
+
+// EARS5: a clean first-attempt run fires onSuccess once.
+test('DDB: a clean handler run dispatches onSuccess once (EARS5)', async t => {
+  const client = fakeSqsClient();
+  await runOneBatch({
+    runHandler: () => Promise.resolve({ok: true}),
+    destinations: {onSuccess: 'arn:aws:sqs:eu-west-1:0:ok'},
+    sqsClient: client
+  });
+  const sends = client.calls.filter(({name}) => name === 'SendMessageCommand');
+  t.is(sends.length, 1);
+  t.deepEqual(JSON.parse(sends[0].input.MessageBody).responsePayload, {ok: true});
+});
+
+// Edge 1: no destinations declared -> no SQS calls at all.
+test('DDB: no destinations -> no SQS dispatch (edge 1)', async t => {
+  const client = fakeSqsClient();
+  await runOneBatch({
+    runHandler: () => Promise.resolve({ok: true}),
+    destinations: undefined,
+    sqsClient: client
+  });
+  t.deepEqual(client.calls, []);
+});
+
+// EARS6: a Fn::GetAtt / Ref destination ARN pointing at a Queue declared in this.options.resources
+// resolves to that queue. Build a minimal streams object so the test targets only the resolution path.
+const buildStreamsForDispatch = (client, resources) => {
+  const streams = Object.create(DynamodbStreams.prototype);
+  streams.options = {
+    region: 'eu-west-1',
+    accountId: '000000000000',
+    simulateDestinations: true,
+    resources: {Resources: resources}
+  };
+  streams.sqsClient = client;
+  streams.log = normalizeLog();
+  return streams;
+};
+
+test('DDB._dispatchDestination resolves a Fn::GetAtt destination via options.resources (EARS6)', async t => {
+  const client = fakeSqsClient();
+  const streams = buildStreamsForDispatch(client, {
+    MyDlq: {Type: 'AWS::SQS::Queue', Properties: {QueueName: 'my-dlq'}}
+  });
+  await streams._dispatchDestination(
+    {onFailure: {'Fn::GetAtt': ['MyDlq', 'Arn']}},
+    {Records: [{eventID: '1'}]},
+    {error: Object.assign(new Error('boom'), {name: 'E'})}
+  );
+  t.is(client.calls[0].input.QueueName, 'my-dlq');
+});
+
+test('DDB._dispatchDestination resolves a {Ref: <Queue>} destination via options.resources (EARS6)', async t => {
+  const client = fakeSqsClient();
+  const streams = buildStreamsForDispatch(client, {OkQueue: {Type: 'AWS::SQS::Queue'}});
+  await streams._dispatchDestination(
+    {onSuccess: {Ref: 'OkQueue'}},
+    {Records: [{eventID: '1'}]},
+    {result: {ok: true}}
+  );
+  // No explicit QueueName -> falls back to the logical id.
+  t.is(client.calls[0].input.QueueName, 'OkQueue');
 });

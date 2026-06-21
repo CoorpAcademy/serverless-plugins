@@ -129,7 +129,11 @@ class ServerlessOfflineDynamodbStreams {
       omitUndefined(provider),
       omitUndefined(pick(['location', 'localEnvironment'], offlineOptions)), // serverless-webpack support
       omitUndefined(customOptions),
-      omitUndefined(this.cliOptions)
+      omitUndefined(this.cliOptions),
+      // B2 destinations: surface the raw CFN Resources so a Ref/Fn::GetAtt destination ARN can resolve
+      // to an AWS::SQS::Queue declared in the stack (spec EARS6). Always overwritten so user config
+      // can never shadow it.
+      {resources: get(['service', 'resources'], this.serverless) || {Resources: {}}}
     );
 
     this.log.debug('dynamodb-streams options:', this.options);
@@ -161,6 +165,7 @@ class ServerlessOfflineDynamodbStreams {
           dynamodbStreamsEvents.push({
             functionKey,
             handler: functionDefinition.handler,
+            destinations: get('destinations', functionDefinition),
             dynamodbStreams: this._resolveFn(stream)
           });
         }
