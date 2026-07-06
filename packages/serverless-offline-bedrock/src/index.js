@@ -55,12 +55,14 @@ class ServerlessOfflineBedrock {
 
     this._mergeOptions();
 
-    // AC-A1: inject the AWS SDK v3 endpoint env vars BEFORE _createLambda. serverless-offline copies
+    // AC-A1: inject the AWS SDK v3 endpoint env var BEFORE _createLambda. serverless-offline copies
     // every `AWS_*` process.env key into the lazy per-function env snapshot (LambdaFunction.js), so
     // the unmodified BedrockRuntimeClient in the handler resolves to our local server with no app
     // code change. The service-specific spelling is derived from serviceId "Bedrock Runtime" by
-    // @smithy/core getEndpointUrlConfig; the generic var is a belt-and-suspenders fallback. Injection
-    // is a baseline default — an explicit YAML AWS_ENDPOINT_URL_* still wins (documented in README).
+    // @smithy/core getEndpointUrlConfig → AWS_ENDPOINT_URL_BEDROCK_RUNTIME (proven by SPIKE 1). We
+    // deliberately do NOT set the generic AWS_ENDPOINT_URL: it would misroute the app's OTHER AWS
+    // clients (S3/SQS/DynamoDB) in a multi-service offline stack to this port. Injection is a
+    // baseline default — an explicit YAML AWS_ENDPOINT_URL_BEDROCK_RUNTIME still wins (README).
     this._injectEndpointEnv();
 
     const lambdas = this._getLambdas();
@@ -78,9 +80,7 @@ class ServerlessOfflineBedrock {
   }
 
   _injectEndpointEnv() {
-    const endpoint = resolveEndpointUrl(this.options);
-    process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME = endpoint;
-    if (isNil(process.env.AWS_ENDPOINT_URL)) process.env.AWS_ENDPOINT_URL = endpoint;
+    process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME = resolveEndpointUrl(this.options);
   }
 
   ready() {
