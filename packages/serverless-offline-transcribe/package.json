@@ -1,0 +1,53 @@
+{
+  "name": "serverless-offline-transcribe",
+  "version": "1.0.0",
+  "description": "Emulate AWS Transcribe batch jobs locally, backed by OpenAI Whisper, when developing your Serverless project",
+  "main": "src",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:CoorpAcademy/serverless-plugins.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CoorpAcademy/serverless-plugins/issues"
+  },
+  "homepage": "https://github.com/CoorpAcademy/serverless-plugins/tree/master/packages/serverless-offline-transcribe#readme",
+  "files": [
+    "src/index.js",
+    "src/log.js",
+    "src/client-config.js",
+    "src/job-registry.js",
+    "src/s3-io.js",
+    "src/whisper.js",
+    "src/transcript.js",
+    "src/transcribe.js"
+  ],
+  "author": "Arthur Weber @godu",
+  "maintainers": [
+    "Arthur Weber @godu",
+    "Adrien Becchis @AdrieanKhisbe"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "serverless-offline": "^10.0.2 || >=11"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/client-transcribe": "^3.0.0",
+    "@hapi/hapi": "^21.3.10",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "serverless-offline": "^13"
+  },
+  "keywords": [
+    "transcribe",
+    "whisper",
+    "minio",
+    "serverless",
+    "serverless-offline",
+    "lambda"
+  ]
+}
