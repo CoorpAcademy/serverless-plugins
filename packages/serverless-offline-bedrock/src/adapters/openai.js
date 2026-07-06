@@ -128,14 +128,14 @@ const toOpenAiRequest = (converseRequest, backend) => {
   const toolChoice = toToolChoice(get(['toolConfig', 'toolChoice'], converseRequest));
 
   return {
-    model: backend.model,
-    messages,
     ...(isNil(inference.maxTokens) ? {} : {max_tokens: inference.maxTokens}),
     ...(isNil(inference.temperature) ? {} : {temperature: inference.temperature}),
     ...(isNil(inference.topP) ? {} : {top_p: inference.topP}),
     ...(isNil(inference.stopSequences) ? {} : {stop: inference.stopSequences}),
     ...(isEmpty(tools) ? {} : {tools}),
     ...(isNil(toolChoice) ? {} : {tool_choice: toolChoice}),
+    model: backend.model,
+    messages,
     stream: false
   };
 };
@@ -143,9 +143,7 @@ const toOpenAiRequest = (converseRequest, backend) => {
 // OpenAI message → Converse content blocks. A string `content` becomes one text block; `tool_calls`
 // each become a `toolUse` block whose JSON-string arguments are parsed back to an object.
 const toConverseContent = message => {
-  const textBlocks = isEmpty(getOr('', 'content', message))
-    ? []
-    : [{text: message.content}];
+  const textBlocks = isEmpty(getOr('', 'content', message)) ? [] : [{text: message.content}];
   const toolUseBlocks = map(
     tc => ({
       toolUse: {
@@ -167,7 +165,9 @@ const fromOpenAiResponse = (openAiResponse, {latencyMs}) => {
   const choice = getOr({}, ['choices', 0], openAiResponse);
   const usage = getOr({}, 'usage', openAiResponse);
   return {
-    output: {message: {role: 'assistant', content: toConverseContent(getOr({}, 'message', choice))}},
+    output: {
+      message: {role: 'assistant', content: toConverseContent(getOr({}, 'message', choice))}
+    },
     stopReason: getOr('end_turn', choice.finish_reason, OPENAI_STOP_REASON),
     usage: {
       inputTokens: getOr(0, 'prompt_tokens', usage),
