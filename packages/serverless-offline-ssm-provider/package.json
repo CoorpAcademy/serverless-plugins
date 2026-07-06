@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-ssm-provider",
-  "version": "1.0.0",
+  "version": "4.0.0",
   "description": "Resolve SSM parameters locally for the configured offline stages of your Serverless project",
   "main": "src",
   "repository": {

@@ -1,4 +1,4 @@
-# serverless-offline-eventbridge
+# @coorpacademy/serverless-offline-eventbridge
 
 This Serverless-offline plugin emulates AWS λ and EventBridge on your local machine. It exposes a
 local `PutEvents` endpoint, routes every published event through a real EventBridge **EventPattern**
@@ -23,10 +23,10 @@ configuration change is required when upgrading.
 
 ## Installation
 
-First, add `serverless-offline-eventbridge` to your project:
+First, add `@coorpacademy/serverless-offline-eventbridge` to your project:
 
 ```sh
-npm install serverless-offline-eventbridge
+npm install @coorpacademy/serverless-offline-eventbridge
 ```
 
 Then inside your project's `serverless.yml` file, add the following entry to the plugins section
@@ -34,7 +34,7 @@ before `serverless-offline`:
 
 ```yml
 plugins:
-  - serverless-offline-eventbridge
+  - '@coorpacademy/serverless-offline-eventbridge'
   - serverless-offline
 ```
 

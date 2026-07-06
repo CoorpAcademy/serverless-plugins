@@ -5,7 +5,7 @@ const {isEmpty, some, filter} = require('lodash/fp');
 // grammar (prefix/suffix/anything-but/exists/equals-ignore-case/numeric/wildcard/
 // cidr, `$or`, nested-object AND), so a cross-package import keeps a single source
 // of truth for the grammar rather than re-implementing it here.
-const {matchesPattern} = require('serverless-offline-eventbridge/src/eventbridge');
+const {matchesPattern} = require('@coorpacademy/serverless-offline-eventbridge/src/eventbridge');
 
 // #242 (cremoon): honor dynamodb stream event-source-mapping `filterPatterns`
 // locally. A record matches when it matches ANY one of the patterns in the array

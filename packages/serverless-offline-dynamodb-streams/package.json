@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-dynamodb-streams",
-  "version": "7.1.0",
+  "version": "8.0.0",
   "description": "Emulate AWS λ and DynamoDB streams locally when developing your Serverless project",
   "main": "src",
   "repository": {
@@ -36,10 +36,10 @@
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/client-dynamodb-streams": "^3.0.0",
     "@aws-sdk/client-sqs": "^3.0.0",
+    "@coorpacademy/serverless-offline-eventbridge": "^1.0.0",
     "@smithy/node-http-handler": "^4.0.0",
     "dynamodb-streams-readable": "^3.0.0",
-    "lodash": "^4.17.21",
-    "serverless-offline-eventbridge": "^1.0.0"
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
     "serverless-offline": "^13"
