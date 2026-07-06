@@ -1,4 +1,5 @@
 const http = require('http');
+const net = require('net');
 const test = require('ava');
 
 const {defaultLog, normalizeLog} = require('../src/log');
@@ -497,6 +498,18 @@ test('the plugin exposes the four offline hooks', t => {
 // integration proof; it also verifies the Bedrock Runtime client speaks HTTP/2 (h2c).
 // ---------------------------------------------------------------------------
 
+// The emulator binds an OS-assigned free port — a fixed port collides with other offline
+// sessions on the same machine (and parallel CI executors).
+const getFreePort = () =>
+  new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const {port} = probe.address();
+      probe.close(() => resolve(port));
+    });
+  });
+
 test.serial(
   'SPIKE 1: unmodified BedrockRuntimeClient reaches the Bedrock emulator via injected endpoint (AC-A1/A2)',
   async t => {
@@ -515,10 +528,11 @@ test.serial(
     });
     const backendPort = backend.address().port;
 
+    const emulatorPort = await getFreePort();
     const emulator = new Bedrock(
       {
         host: '127.0.0.1',
-        port: 4019,
+        port: emulatorPort,
         backend: {
           protocol: 'openai',
           model: 'llama3.1',
@@ -534,7 +548,7 @@ test.serial(
     const prev = process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME;
     process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME = resolveEndpointUrl({
       host: '127.0.0.1',
-      port: 4019
+      port: emulatorPort
     });
     process.env.AWS_REGION = process.env.AWS_REGION || 'us-east-1';
     process.env.AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID || 'local';
