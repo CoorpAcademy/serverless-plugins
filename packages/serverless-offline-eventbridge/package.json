@@ -1,6 +1,6 @@
 {
   "name": "@coorpacademy/serverless-offline-eventbridge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publishConfig": {
     "access": "public"
   },
@@ -21,6 +21,7 @@
     "src/eventbridge.js",
     "src/eventbridge-event.js",
     "src/eventbridge-event-definition.js",
+    "src/destinations.js",
     "NOTICE"
   ],
   "author": "Arthur Weber @godu",

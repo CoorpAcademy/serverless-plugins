@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-sqs",
-  "version": "9.0.0",
+  "version": "9.0.1",
   "description": "Emulate AWS λ and SQS locally when developing your Serverless project",
   "main": "src",
   "repository": {
@@ -18,7 +18,8 @@
     "src/elasticmq.js",
     "src/sqs.js",
     "src/sqs-event.js",
-    "src/sqs-event-definition.js"
+    "src/sqs-event-definition.js",
+    "src/destinations.js"
   ],
   "author": "Arthur Weber @godu",
   "maintainers": [

@@ -1,6 +1,6 @@
 {
   "name": "serverless-offline-dynamodb-streams",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "Emulate AWS λ and DynamoDB streams locally when developing your Serverless project",
   "main": "src",
   "repository": {
@@ -22,6 +22,7 @@
     "src/resolve-arn.js",
     "src/filter-patterns.js",
     "src/checkpoint-store.js",
+    "src/destinations.js",
     "NOTICE"
   ],
   "author": "Arthur Weber @godu",
