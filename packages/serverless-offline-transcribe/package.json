@@ -35,11 +35,11 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
-    "@aws-sdk/client-transcribe": "^3.0.0",
     "@hapi/hapi": "^21.3.10",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
+    "@aws-sdk/client-transcribe": "^3.0.0",
     "serverless-offline": "^13"
   },
   "keywords": [

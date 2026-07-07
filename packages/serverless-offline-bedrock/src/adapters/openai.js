@@ -140,10 +140,18 @@ const toOpenAiRequest = (converseRequest, backend) => {
   };
 };
 
-// OpenAI message → Converse content blocks. A string `content` becomes one text block; `tool_calls`
-// each become a `toolUse` block whose JSON-string arguments are parsed back to an object.
+// OpenAI `message.content` is usually a string but MAY be an array of content-parts
+// ([{type:'text',text:'…'}]) — collapse those to a single string, because a Converse ContentBlock's
+// `text` member must be a string (wrapping the raw array would emit a malformed Converse response).
+const contentToText = content =>
+  typeof content === 'string' ? content : map(getOr('', 'text'), content || []).join('');
+
+// OpenAI message → Converse content blocks. A string (or content-parts array) `content` becomes one
+// text block; `tool_calls` each become a `toolUse` block whose JSON-string arguments are parsed back
+// to an object.
 const toConverseContent = message => {
-  const textBlocks = isEmpty(getOr('', 'content', message)) ? [] : [{text: message.content}];
+  const text = contentToText(getOr('', 'content', message));
+  const textBlocks = isEmpty(text) ? [] : [{text}];
   const toolUseBlocks = map(
     tc => ({
       toolUse: {

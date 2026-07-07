@@ -33,7 +33,7 @@ const {
   isWhisperAvailable
 } = require('../src/whisper');
 const Transcribe = require('../src/transcribe');
-const {parseTarget, parseBody} = require('../src/transcribe');
+const {parseTarget, parseBody, resolvePort} = require('../src/transcribe');
 const ServerlessOfflineTranscribe = require('../src');
 const {defaultOptions, isPluginEnabled, resolveEndpointUrl} = require('../src');
 
@@ -281,6 +281,8 @@ test('buildWhisperArgs always sets --word_timestamps True and json output', t =>
   });
   t.true(args.includes('--word_timestamps'));
   t.is(args[args.indexOf('--word_timestamps') + 1], 'True');
+  // --verbose False keeps whisper's per-segment stdout from tripping execFile's maxBuffer.
+  t.is(args[args.indexOf('--verbose') + 1], 'False');
   t.is(args[args.indexOf('--output_format') + 1], 'json');
   t.is(args[args.indexOf('--language') + 1], 'en');
   // Absent language → auto-detect (no --language flag).
@@ -327,6 +329,14 @@ test('isPluginEnabled honors enabled:false and the string "false" (AC-X1)', t =>
 test('resolveEndpointUrl maps a 0.0.0.0 bind host to a connectable localhost URL', t => {
   t.is(resolveEndpointUrl({host: '0.0.0.0', port: 4569}), 'http://localhost:4569');
   t.is(resolveEndpointUrl({}), 'http://localhost:4569');
+});
+
+test('resolvePort honors an explicit 0 (OS-assigned port) and defaults only when unset', t => {
+  t.is(resolvePort(0), 0);
+  t.is(resolvePort('5000'), 5000);
+  t.is(resolvePort(undefined), 4569);
+  t.is(resolvePort(null), 4569);
+  t.is(resolvePort(''), 4569);
 });
 
 test('the plugin exposes the four offline hooks', t => {

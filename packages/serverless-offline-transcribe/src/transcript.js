@@ -1,4 +1,4 @@
-const {filter, flatMap, getOr, isNil, map, reduce} = require('lodash/fp');
+const {filter, flatMap, getOr, isNil, map} = require('lodash/fp');
 
 // serverless-offline-transcribe — Whisper JSON → AWS Transcribe JSON shaping (pure).
 //
@@ -60,27 +60,32 @@ const wordToItems = word => {
   ];
 };
 
-// Assign stable integer ids across the whole item stream (audio_segments reference these ids).
-const assignIds = reduce(
-  (acc, piece) => {
-    const id = acc.items.length;
-    const item =
-      piece.kind === 'punctuation'
-        ? punctuationItem(id, piece.content)
-        : pronunciationItem(id, piece.content, piece.word);
-    return {items: [...acc.items, item]};
-  },
-  {items: []}
-);
+// One flattened piece → its AWS item, stamped with the given id. Pure.
+const pieceToItem = (id, piece) =>
+  piece.kind === 'punctuation'
+    ? punctuationItem(id, piece.content)
+    : pronunciationItem(id, piece.content, piece.word);
 
-// Per-Whisper-segment fidelity block: the segment transcript, its span, and the ids of the items it
-// contributed. Diarization / speaker_labels are omitted (Non-Goal). Pure.
-const buildAudioSegments = segments => {
-  let cursor = 0;
-  return map(segment => {
-    const pieces = flatMap(wordToItems, getOr([], 'words', segment));
-    const ids = pieces.map((piece, index) => cursor + index);
-    cursor += pieces.length;
+// whisperJsonToTranscribe(whisperJson, {jobName, accountId}) → the AWS Transcribe result document.
+// Top-level camelCase jobName/accountId + status:'COMPLETED' + results{transcripts,items,audio_segments}.
+//
+// SINGLE traversal: each segment's words are shaped to pieces exactly ONCE; global ids are stamped as
+// we go and each segment's contributed id range is read off the SAME piece stream. (The earlier
+// version shaped every word twice — once for items, once in buildAudioSegments — with two hand-written
+// id counters that had to stay in lockstep; folding them removes both the double work and that
+// fragility. audio_segments reference item ids by number, so the two must agree by construction.)
+const whisperJsonToTranscribe = (whisperJson, {jobName, accountId}) => {
+  const segments = getOr([], 'segments', whisperJson);
+
+  const items = [];
+  let nextId = 0;
+  const audioSegments = map(segment => {
+    const ids = flatMap(wordToItems, getOr([], 'words', segment)).map(piece => {
+      const id = nextId;
+      nextId += 1;
+      items.push(pieceToItem(id, piece));
+      return id;
+    });
     return {
       id: getOr(0, 'id', segment),
       transcript: (getOr('', 'text', segment) || '').trim(),
@@ -89,15 +94,6 @@ const buildAudioSegments = segments => {
       items: ids
     };
   }, segments);
-};
-
-// whisperJsonToTranscribe(whisperJson, {jobName, accountId}) → the AWS Transcribe result document.
-// Top-level camelCase jobName/accountId + status:'COMPLETED' + results{transcripts,items,audio_segments}.
-const whisperJsonToTranscribe = (whisperJson, {jobName, accountId}) => {
-  const segments = getOr([], 'segments', whisperJson);
-  const words = flatMap(getOr([], 'words'), segments);
-  const pieces = flatMap(wordToItems, words);
-  const {items} = assignIds(pieces);
 
   return {
     jobName,
@@ -106,7 +102,7 @@ const whisperJsonToTranscribe = (whisperJson, {jobName, accountId}) => {
     results: {
       transcripts: [{transcript: (getOr('', 'text', whisperJson) || '').trim()}],
       items,
-      audio_segments: buildAudioSegments(segments)
+      audio_segments: audioSegments
     }
   };
 };

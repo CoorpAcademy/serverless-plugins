@@ -6,7 +6,7 @@ const {get, getOr, isNil, last, split} = require('lodash/fp');
 
 const {normalizeLog} = require('./log');
 const {buildJob, completeJob, failJob, toJobSummary, JobRegistry} = require('./job-registry');
-const {whisperJsonToTranscribe, countPronunciations} = require('./transcript');
+const {whisperJsonToTranscribe} = require('./transcript');
 const {mapLanguageCode, runWhisper, isWhisperAvailable} = require('./whisper');
 const {
   parseS3Uri,
@@ -28,6 +28,11 @@ const {
 const DEFAULT_HOST = '0.0.0.0';
 const DEFAULT_PORT = 4569;
 const CONTENT_TYPE = 'application/x-amz-json-1.1';
+
+// Coerce a configured port to a number while honoring an explicit `0` (OS-assigned free port).
+// `Number(port) || DEFAULT_PORT` would treat the valid 0 as unset and rebind DEFAULT_PORT. Pure/total.
+const resolvePort = port =>
+  port === undefined || port === null || port === '' ? DEFAULT_PORT : Number(port);
 
 // The SDK sends `x-amz-target: Transcribe.<Op>` (some tooling uses the fully-qualified
 // `com.amazonaws.transcribe.Transcribe.<Op>`); match the suffix after the last `.` so both work. Pure.
@@ -60,7 +65,7 @@ class Transcribe {
     this.log = normalizeLog(log);
 
     this.host = options.host || DEFAULT_HOST;
-    this.port = Number(options.port) || DEFAULT_PORT;
+    this.port = resolvePort(options.port);
     this.accountId = getOr('000000000000', 'accountId', options);
     this.model = getOr('base', 'model', options);
 
@@ -194,8 +199,11 @@ class Transcribe {
         timeout: this.options.whisperTimeout
       });
 
-      // AC-C4: a run that recognized no words is a failure, not an empty success.
-      if (countPronunciations(whisperJson) === 0) {
+      const transcript = whisperJsonToTranscribe(whisperJson, {jobName, accountId: this.accountId});
+
+      // AC-C4: a run that recognized no words is a failure, not an empty success. Reuse the items we
+      // just shaped rather than re-running the whole word→item pass a second time.
+      if (!transcript.results.items.some(item => item.type === 'pronunciation')) {
         this.registry.put(
           failJob(job, {
             failureReason:
@@ -206,7 +214,6 @@ class Transcribe {
         return;
       }
 
-      const transcript = whisperJsonToTranscribe(whisperJson, {jobName, accountId: this.accountId});
       const location = resolveOutputLocation({
         outputBucketName: get('OutputBucketName', body),
         outputKey: get('OutputKey', body),
@@ -251,5 +258,6 @@ class Transcribe {
 module.exports = Transcribe;
 module.exports.parseTarget = parseTarget;
 module.exports.parseBody = parseBody;
+module.exports.resolvePort = resolvePort;
 module.exports.DEFAULT_HOST = DEFAULT_HOST;
 module.exports.DEFAULT_PORT = DEFAULT_PORT;

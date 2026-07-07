@@ -21,7 +21,7 @@ const {
   handleConverse
 } = require('../src/converse');
 const Bedrock = require('../src/bedrock');
-const {decodeModelId, matchConverse, parseBody} = require('../src/bedrock');
+const {decodeModelId, matchConverse, parseBody, resolvePort} = require('../src/bedrock');
 const ServerlessOfflineBedrock = require('../src');
 const {defaultOptions, isPluginEnabled, resolveEndpointUrl} = require('../src');
 
@@ -197,6 +197,28 @@ test('fromOpenAiResponse maps finish_reason table and defaults to end_turn', t =
   );
   t.is(unknown.stopReason, 'end_turn');
   t.deepEqual(unknown.usage, {inputTokens: 0, outputTokens: 0, totalTokens: 0});
+});
+
+test('fromOpenAiResponse collapses array content-parts to a single Converse text string', t => {
+  const converse = fromOpenAiResponse(
+    {
+      choices: [
+        {
+          message: {
+            role: 'assistant',
+            content: [
+              {type: 'text', text: 'Bon'},
+              {type: 'text', text: 'jour'}
+            ]
+          },
+          finish_reason: 'stop'
+        }
+      ]
+    },
+    {latencyMs: 1}
+  );
+  // A non-string (content-parts) content must not leak into Converse `text` as an array.
+  t.deepEqual(converse.output.message.content, [{text: 'Bonjour'}]);
 });
 
 test('safeJsonParse is total — bad JSON yields {} not a throw (G12)', t => {
@@ -408,6 +430,22 @@ test('handleConverse surfaces a config error as a 400 ValidationException (never
   t.is(result.errorType, 'ValidationException');
 });
 
+test('handleConverse surfaces a malformed request as a 400 ValidationException (never throws, G5)', async t => {
+  // A toolConfig entry missing `toolSpec` makes the adapter throw during translation; that throw must
+  // be caught and returned as a 400, not escape handleConverse (which would become a wrong 500).
+  const result = await handleConverse({
+    modelId: 'm:0',
+    converseRequest: {messages: [], toolConfig: {tools: [{}]}},
+    options: {
+      backend: {protocol: 'openai', model: 'llama3.1', baseUrl: 'http://localhost:11434/v1'}
+    },
+    fetchImpl: () => Promise.reject(new Error('should not reach the backend'))
+  });
+  t.is(result.statusCode, 400);
+  t.is(result.errorType, 'ValidationException');
+  t.truthy(result.error);
+});
+
 test('handleConverse translates a successful OpenAI backend round-trip (AC-A2)', async t => {
   const fetchImpl = (url, init) => {
     t.true(url.endsWith('/chat/completions'));
@@ -480,6 +518,14 @@ test('resolveEndpointUrl maps a 0.0.0.0 bind host to a connectable localhost URL
   t.is(resolveEndpointUrl({host: '0.0.0.0', port: 4019}), 'http://localhost:4019');
   t.is(resolveEndpointUrl({host: '127.0.0.1', port: 5000}), 'http://127.0.0.1:5000');
   t.is(resolveEndpointUrl({}), 'http://localhost:4019');
+});
+
+test('resolvePort honors an explicit 0 (OS-assigned port) and defaults only when unset', t => {
+  t.is(resolvePort(0), 0); // explicit "free port" request must NOT become DEFAULT_PORT
+  t.is(resolvePort('5000'), 5000);
+  t.is(resolvePort(undefined), 4019);
+  t.is(resolvePort(null), 4019);
+  t.is(resolvePort(''), 4019);
 });
 
 test('the plugin exposes the four offline hooks', t => {
@@ -576,5 +622,41 @@ test.serial(
         backend.close(resolve);
       });
     }
+  }
+);
+
+test.serial(
+  'stop() releases the port even with a live HTTP/1.1 keep-alive connection (AC-X2)',
+  async t => {
+    const port = await getFreePort();
+    const emulator = new Bedrock(
+      {
+        host: '127.0.0.1',
+        port,
+        backend: {protocol: 'openai', model: 'x', baseUrl: 'http://127.0.0.1:1/v1', timeout: 100}
+      },
+      defaultLog
+    );
+    await emulator.start();
+
+    // A raw HTTP/1.1 socket is never tracked as an h2 'session'; before the fix stop() would hang on
+    // it forever. Open one and leave it idle.
+    const socket = net.connect(port, '127.0.0.1');
+    await new Promise((resolve, reject) => {
+      socket.once('connect', resolve);
+      socket.once('error', reject);
+    });
+
+    // Must resolve (not hang); the 2s cap proves it does not wait on the live socket indefinitely.
+    await emulator.stop(2000);
+
+    // The port is genuinely released: a fresh listener can bind it again.
+    await new Promise((resolve, reject) => {
+      const probe = net.createServer();
+      probe.once('error', reject);
+      probe.listen(port, '127.0.0.1', () => probe.close(resolve));
+    });
+    socket.destroy();
+    t.pass();
   }
 );

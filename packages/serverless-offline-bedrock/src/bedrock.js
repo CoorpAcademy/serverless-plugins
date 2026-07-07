@@ -17,6 +17,13 @@ const {handleConverse} = require('./converse');
 const DEFAULT_HOST = '0.0.0.0';
 const DEFAULT_PORT = 4019;
 
+// Coerce a configured port to a number while honoring an explicit `0` (the standard "bind an
+// OS-assigned free port" request). `Number(port) || DEFAULT_PORT` is WRONG here — 0 is falsy, so it
+// would silently rebind DEFAULT_PORT and cause the collision port:0 exists to avoid. Only an
+// unset/blank value falls back. Pure/total.
+const resolvePort = port =>
+  port === undefined || port === null || port === '' ? DEFAULT_PORT : Number(port);
+
 // Bedrock Runtime restJson Converse path. {modelId} arrives percent-encoded (`:`→`%3A`, `/`→`%2F`
 // via the SDK's extendedEncodeURIComponent). Capture the raw segment; decode it before backend
 // lookup. NOTE (verified): restJson uses a REST path — there is deliberately no `X-Amz-Target`
@@ -63,16 +70,23 @@ class Bedrock {
     this.log = normalizeLog(log);
 
     this.host = options.host || DEFAULT_HOST;
-    this.port = Number(options.port) || DEFAULT_PORT;
+    this.port = resolvePort(options.port);
 
     // Track live h2 sessions: the SDK's NodeHttp2Handler pools and keeps sessions open, so a bare
     // server.close() would hang forever — we destroy them on stop() to release the port (AC-X2).
     this.sessions = new Set();
+    // Also track raw sockets: with allowHTTP1:true a stray HTTP/1.1 keep-alive connection never emits
+    // a 'session' event, so destroying only sessions would still leave server.close() hanging on it.
+    this.sockets = new Set();
 
     this.server = http2.createServer({allowHTTP1: true});
     this.server.on('session', session => {
       this.sessions.add(session);
       session.on('close', () => this.sessions.delete(session));
+    });
+    this.server.on('connection', socket => {
+      this.sockets.add(socket);
+      socket.on('close', () => this.sockets.delete(socket));
     });
     this.server.on('request', this._onRequest.bind(this));
   }
@@ -131,12 +145,20 @@ class Bedrock {
     this.log.notice(`Bedrock Runtime emulator listening on http://${this.host}:${this.port}`);
   }
 
-  async stop() {
-    // AC-X2: destroy the pooled h2 sessions first (else close() never fires), then release the port.
+  async stop(timeout) {
+    // AC-X2: destroy the pooled h2 sessions AND any raw sockets (incl. stray HTTP/1.1 keep-alives)
+    // first — otherwise server.close() waits on a live connection forever. `timeout` is honored as a
+    // hard cap so shutdown can never hang the offline process even if a socket resists closing.
     this.sessions.forEach(session => session.destroy());
     this.sessions.clear();
+    this.sockets.forEach(socket => socket.destroy());
+    this.sockets.clear();
     await new Promise(resolve => {
-      this.server.close(() => resolve());
+      const timer = timeout ? setTimeout(resolve, timeout) : null;
+      this.server.close(() => {
+        if (timer) clearTimeout(timer);
+        resolve();
+      });
     });
   }
 }
@@ -145,5 +167,6 @@ module.exports = Bedrock;
 module.exports.decodeModelId = decodeModelId;
 module.exports.matchConverse = matchConverse;
 module.exports.parseBody = parseBody;
+module.exports.resolvePort = resolvePort;
 module.exports.DEFAULT_HOST = DEFAULT_HOST;
 module.exports.DEFAULT_PORT = DEFAULT_PORT;

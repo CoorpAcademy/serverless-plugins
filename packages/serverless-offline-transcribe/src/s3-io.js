@@ -1,4 +1,5 @@
 const fs = require('fs');
+const {pipeline} = require('stream/promises');
 const {isNil} = require('lodash/fp');
 const {S3Client, GetObjectCommand, PutObjectCommand} = require('@aws-sdk/client-s3');
 const {buildClientConfig} = require('./client-config');
@@ -62,10 +63,12 @@ const buildS3Config = options => {
 const createS3Client = options => new S3Client(buildS3Config(options));
 
 // Side effect: download an s3://bucket/key object to a local file (Whisper reads a real file path).
+// Media is audio/video and routinely hundreds of MB — STREAM Body to disk rather than buffering the
+// whole object into memory (transformToByteArray would OOM the offline process on a large-but-valid
+// input).
 const downloadToFile = async (client, {bucket, key}, filePath) => {
   const response = await client.send(new GetObjectCommand({Bucket: bucket, Key: key}));
-  const bytes = await response.Body.transformToByteArray();
-  await fs.promises.writeFile(filePath, Buffer.from(bytes));
+  await pipeline(response.Body, fs.createWriteStream(filePath));
   return filePath;
 };
 

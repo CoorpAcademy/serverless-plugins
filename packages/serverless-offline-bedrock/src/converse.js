@@ -88,11 +88,16 @@ const callBackend = async (backend, body, fetchImpl = fetch) => {
 // with verbatim. Never throws — a failure becomes an AC-A4 error result and is logged by the caller.
 const handleConverse = async ({modelId, converseRequest, options, fetchImpl}) => {
   let backend;
+  let body;
   try {
     backend = resolveBackend(modelId, options);
+    // Translation is inside the guard too: a malformed Converse request (e.g. a toolConfig entry
+    // missing toolSpec) makes an adapter throw, and that is a client-side bad request — surface it as
+    // a 400 ValidationException, never let it escape handleConverse's "never throws" contract (G5/G12).
+    body = toBackendRequest(converseRequest, backend);
   } catch (err) {
-    // Bad config (unknown protocol / no model) is a client-side ValidationException (400),
-    // surfaced not thrown so the offline process never crashes (G5). resolveBackend names the modelId.
+    // Bad config (unknown protocol / no model) or an untranslatable request is a client-side
+    // ValidationException (400), surfaced not thrown so the offline process never crashes (G5).
     return {
       error: err,
       statusCode: 400,
@@ -100,7 +105,6 @@ const handleConverse = async ({modelId, converseRequest, options, fetchImpl}) =>
       body: {message: err.message}
     };
   }
-  const body = toBackendRequest(converseRequest, backend);
   try {
     const {json, latencyMs} = await callBackend(backend, body, fetchImpl);
     return {

@@ -22,14 +22,19 @@ const mapLanguageCode = code => {
 };
 
 // Build the Whisper argv (pure/testable). `--word_timestamps True` is MANDATORY — it is what
-// populates `segments[].words[]`, the source of the AWS `items[]` word timings. `--language` is
-// omitted when unmapped so Whisper auto-detects.
+// populates `segments[].words[]`, the source of the AWS `items[]` word timings. `--verbose False`
+// suppresses the per-segment transcript stream Whisper otherwise prints to stdout — for a long
+// recording that stream can exceed execFile's maxBuffer and abort a run that actually SUCCEEDED (the
+// JSON is read from disk, not stdout, so nothing of value is lost). `--language` is omitted when
+// unmapped so Whisper auto-detects.
 const buildWhisperArgs = ({audioPath, model, outputDir, language}) => [
   audioPath,
   '--model',
   model || DEFAULT_MODEL,
   '--word_timestamps',
   'True',
+  '--verbose',
+  'False',
   '--output_format',
   'json',
   '--output_dir',
@@ -60,7 +65,9 @@ const isWhisperAvailable = async (bin = 'whisper') => {
 const runWhisper = async ({audioPath, model, outputDir, language, bin = 'whisper', timeout}) => {
   const args = buildWhisperArgs({audioPath, model, outputDir, language});
   try {
-    await execFileAsync(bin, args, {maxBuffer: 64 * 1024 * 1024, timeout});
+    // 256MB stdio ceiling (with `--verbose False` above stdout is near-empty) so a long recording's
+    // residual output can never trip ERR_CHILD_PROCESS_STDIO_MAXBUFFER and false-FAIL a good run.
+    await execFileAsync(bin, args, {maxBuffer: 256 * 1024 * 1024, timeout});
   } catch (err) {
     if (err.code === 'ENOENT')
       throw new Error(

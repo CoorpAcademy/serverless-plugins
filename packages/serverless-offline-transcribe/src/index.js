@@ -2,7 +2,7 @@ const {get, isNil, isUndefined, omitBy, pick} = require('lodash/fp');
 
 const {normalizeLog} = require('./log');
 const Transcribe = require('./transcribe');
-const {DEFAULT_HOST, DEFAULT_PORT} = require('./transcribe');
+const {DEFAULT_HOST, DEFAULT_PORT, resolvePort} = require('./transcribe');
 
 const OFFLINE_OPTION = 'serverless-offline';
 const CUSTOM_OPTION = 'serverless-offline-transcribe';
@@ -39,7 +39,7 @@ const isPluginEnabled = options => {
 const resolveEndpointUrl = options => {
   const host = options.host || DEFAULT_HOST;
   const connectHost = host === '0.0.0.0' ? 'localhost' : host;
-  const port = Number(options.port) || DEFAULT_PORT;
+  const port = resolvePort(options.port);
   return `http://${connectHost}:${port}`;
 };
 
