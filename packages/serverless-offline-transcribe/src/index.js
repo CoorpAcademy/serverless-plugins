@@ -24,6 +24,23 @@ const defaultOptions = {
 
 const omitUndefined = omitBy(isUndefined);
 
+// Deep-redact secret-bearing keys before debug-logging the merged options: the config carries the
+// local S3 (Minio) `accessKey`/`secretKey` (and any `provider.environment` secrets), and serverless
+// debug output is routinely captured by CI/support tooling (Codex F5). Pure — returns a redacted
+// copy, never mutates the input.
+const SECRET_KEY = /(secret|token|password|api[-_]?key|access[-_]?key)/i;
+const redactSecrets = value => {
+  if (Array.isArray(value)) return value.map(redactSecrets);
+  if (value && typeof value === 'object')
+    return Object.fromEntries(
+      Object.entries(value).map(([key, val]) => [
+        key,
+        SECRET_KEY.test(key) ? '***' : redactSecrets(val)
+      ])
+    );
+  return value;
+};
+
 // Mirrors the sibling plugins' #222 convention: disable the whole emulator via
 // `custom.serverless-offline-transcribe.enabled: false` (AC-X1). YAML/CLI may deliver the string
 // "false"; treat that as off too. Enabled by default.
@@ -62,29 +79,36 @@ class ServerlessOfflineTranscribe {
 
     this._mergeOptions();
 
-    // AC-C1/AC-A1-analogue: inject the Transcribe endpoint env var BEFORE _createLambda so the
-    // unmodified TranscribeClient in the handler resolves to our local server (serverless-offline
-    // copies AWS_* into the per-function env snapshot). serviceId "Transcribe" → the single-word var
-    // AWS_ENDPOINT_URL_TRANSCRIBE. We do NOT set the generic AWS_ENDPOINT_URL (it would misroute the
-    // app's S3/other clients to this port). An explicit YAML override still wins (documented).
-    this._injectEndpointEnv();
+    // AC-C1/AC-X1 (Codex F1): only stand up the server AND inject the endpoint when enabled, and in
+    // this order. Bind FIRST so we know the REAL port — `port: 0` asks the OS for a free port only
+    // known after start(); injecting the configured `0` would point the client at a dead `:0`
+    // endpoint. Then inject BEFORE _createLambda so the unmodified TranscribeClient resolves to our
+    // local server (serverless-offline copies AWS_* into the per-function env snapshot). serviceId
+    // "Transcribe" → the single-word var AWS_ENDPOINT_URL_TRANSCRIBE. We do NOT set the generic
+    // AWS_ENDPOINT_URL (it would misroute the app's S3/other clients to this port). When DISABLED we
+    // inject nothing, so the app's Transcribe client keeps its own target rather than a dead port. An
+    // explicit YAML override still wins (documented).
+    if (isPluginEnabled(this.options)) {
+      await this._createTranscribe();
+      this._injectEndpointEnv();
+    }
 
     const lambdas = this._getLambdas();
 
     await this._createLambda(lambdas);
-
-    // AC-X1: when disabled, still create the lambdas (plain HTTP fns keep working) but skip the server.
-    if (isPluginEnabled(this.options)) {
-      await this._createTranscribe();
-    }
 
     this.log.notice(
       `Starting Offline Transcribe at stage ${this.options.stage} (${this.options.region})`
     );
   }
 
+  // Inject the endpoint using the ACTUAL bound port (known only after the server is listening, so
+  // `port: 0` resolves to the OS-assigned port rather than a useless `:0`).
   _injectEndpointEnv() {
-    process.env.AWS_ENDPOINT_URL_TRANSCRIBE = resolveEndpointUrl(this.options);
+    process.env.AWS_ENDPOINT_URL_TRANSCRIBE = resolveEndpointUrl({
+      host: this.options.host,
+      port: this.transcribe.port
+    });
   }
 
   ready() {
@@ -164,7 +188,7 @@ class ServerlessOfflineTranscribe {
       omitUndefined(this.cliOptions)
     );
 
-    this.log.debug('transcribe options:', this.options);
+    this.log.debug('transcribe options:', redactSecrets(this.options));
   }
 
   _getLambdas() {
@@ -182,3 +206,4 @@ module.exports = ServerlessOfflineTranscribe;
 module.exports.defaultOptions = defaultOptions;
 module.exports.isPluginEnabled = isPluginEnabled;
 module.exports.resolveEndpointUrl = resolveEndpointUrl;
+module.exports.redactSecrets = redactSecrets;

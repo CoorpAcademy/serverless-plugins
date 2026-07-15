@@ -1,3 +1,4 @@
+const {get, getOr, isNil} = require('lodash/fp');
 const {toOpenAiRequest, fromOpenAiResponse} = require('./adapters/openai');
 const {toAnthropicRequest, fromAnthropicResponse} = require('./adapters/anthropic');
 const {resolveBackend} = require('./backend-config');
@@ -8,11 +9,35 @@ const {resolveBackend} = require('./backend-config');
 // isolated side effect is `callBackend` (the outbound HTTP call to the local LLM). The exported
 // helpers are pure/total so they unit-test without a network (G2/G3/G4).
 
-// Converse → backend body. Protocol selects the adapter (validated already by resolveBackend).
-const toBackendRequest = (converseRequest, backend) =>
-  backend.protocol === 'anthropic'
+// The MVP adapters translate only text + tool blocks. Genuine multimodal content (image/document/
+// video) carries meaning the adapters would otherwise SILENTLY DROP — the backend then answers 200 on
+// a materially different prompt, hiding the loss (Codex F8). Reject those blocks up front so the
+// caller gets an explicit 400 ValidationException (via handleConverse's guard) instead of a
+// false-confidence success. Metadata-only blocks (cachePoint/guardContent) are left to pass through
+// untouched — rejecting them would be stricter than real Bedrock. Pure/total (throws on unsupported).
+const UNSUPPORTED_CONTENT = ['image', 'document', 'video'];
+const assertSupportedContent = converseRequest => {
+  getOr([], 'messages', converseRequest).forEach(message =>
+    getOr([], 'content', message).forEach(block => {
+      const unsupported = UNSUPPORTED_CONTENT.find(kind => !isNil(get(kind, block)));
+      if (unsupported)
+        throw new Error(
+          `serverless-offline-bedrock: Converse content block "${unsupported}" is not supported by ` +
+            `the offline emulator (text and tool blocks only).`
+        );
+    })
+  );
+};
+
+// Converse → backend body. Protocol selects the adapter (validated already by resolveBackend); an
+// unsupported multimodal block is rejected before translation (→ 400 ValidationException, not a
+// silent drop).
+const toBackendRequest = (converseRequest, backend) => {
+  assertSupportedContent(converseRequest);
+  return backend.protocol === 'anthropic'
     ? toAnthropicRequest(converseRequest, backend)
     : toOpenAiRequest(converseRequest, backend);
+};
 
 // backend body → Converse response. `protocol` selects the adapter; `latencyMs` is the measured
 // wall-clock of the backend call (Converse `metrics.latencyMs`, a required member).
@@ -117,6 +142,7 @@ const handleConverse = async ({modelId, converseRequest, options, fetchImpl}) =>
 };
 
 module.exports = {
+  assertSupportedContent,
   toBackendRequest,
   fromBackendResponse,
   resolveBackendUrl,

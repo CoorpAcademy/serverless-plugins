@@ -23,7 +23,7 @@ const {
 const Bedrock = require('../src/bedrock');
 const {decodeModelId, matchConverse, parseBody, resolvePort} = require('../src/bedrock');
 const ServerlessOfflineBedrock = require('../src');
-const {defaultOptions, isPluginEnabled, resolveEndpointUrl} = require('../src');
+const {defaultOptions, isPluginEnabled, resolveEndpointUrl, redactSecrets} = require('../src');
 
 // ---------------------------------------------------------------------------
 // log.js (copied byte-for-byte from sibling plugins — regression guard)
@@ -536,6 +536,99 @@ test('the plugin exposes the four offline hooks', t => {
     'offline:start:init',
     'offline:start:ready'
   ]);
+});
+
+// ---------------------------------------------------------------------------
+// Endpoint lifecycle (Codex F1): drive the plugin's own start() with _createLambda stubbed out (the
+// serverless-offline Lambda machinery is irrelevant here — we only assert the inject ordering/gating).
+// ---------------------------------------------------------------------------
+
+const fakeServerless = custom => ({
+  service: {
+    custom,
+    provider: {stage: 'dev', region: 'us-east-1'},
+    getAllFunctions: () => [],
+    getFunction: () => ({})
+  }
+});
+
+test.serial('start() injects the REAL bound port for port:0, never :0 (Codex F1)', async t => {
+  const plugin = new ServerlessOfflineBedrock(
+    fakeServerless({'serverless-offline-bedrock': {host: '127.0.0.1', port: 0}}),
+    {},
+    {log: defaultLog}
+  );
+  plugin._createLambda = async () => {}; // avoid the real serverless-offline Lambda import
+  const prev = process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME;
+  delete process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME;
+  try {
+    await plugin.start();
+    const injected = process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME;
+    t.true(plugin.bedrock.port > 0); // OS assigned a real port
+    t.false(injected.endsWith(':0')); // and it is NOT the placeholder 0
+    t.is(injected, `http://127.0.0.1:${plugin.bedrock.port}`);
+  } finally {
+    await plugin.end(true);
+    if (prev === undefined) delete process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME;
+    else process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME = prev;
+  }
+});
+
+test.serial('start() injects NOTHING and skips the server when disabled (Codex F1)', async t => {
+  const plugin = new ServerlessOfflineBedrock(
+    fakeServerless({'serverless-offline-bedrock': {enabled: false}}),
+    {},
+    {log: defaultLog}
+  );
+  plugin._createLambda = async () => {};
+  const prev = process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME;
+  delete process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME;
+  try {
+    await plugin.start();
+    t.is(process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME, undefined); // not injected → no dead endpoint
+    t.is(plugin.bedrock, undefined); // server not stood up
+  } finally {
+    await plugin.end(true);
+    if (prev === undefined) delete process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME;
+    else process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME = prev;
+  }
+});
+
+test('redactSecrets masks secret-bearing keys deeply and never mutates the input (Codex F5)', t => {
+  const options = {
+    host: '0.0.0.0',
+    port: 4019,
+    backend: {protocol: 'openai', model: 'x', apiKey: 'sk-super-secret'},
+    models: {'m:0': {apiKey: 'sk-another'}},
+    environment: {OPENAI_API_KEY: 'sk-env', HARMLESS: 'ok'}
+  };
+  const red = redactSecrets(options);
+  t.is(red.backend.apiKey, '***');
+  t.is(red.models['m:0'].apiKey, '***');
+  t.is(red.environment.OPENAI_API_KEY, '***');
+  t.is(red.environment.HARMLESS, 'ok'); // non-secret keys pass through
+  t.is(red.host, '0.0.0.0');
+  t.is(red.port, 4019);
+  t.is(options.backend.apiKey, 'sk-super-secret'); // input untouched (pure)
+});
+
+test('handleConverse rejects an unsupported multimodal block with 400 ValidationException (Codex F8)', async t => {
+  const result = await handleConverse({
+    modelId: 'm:0',
+    converseRequest: {
+      messages: [{role: 'user', content: [{image: {format: 'png', source: {bytes: 'x'}}}]}]
+    },
+    options: {
+      backend: {protocol: 'openai', model: 'x', baseUrl: 'http://127.0.0.1:1/v1', timeout: 100}
+    },
+    fetchImpl: () => {
+      t.fail('backend must not be called for an unsupported content block');
+      throw new Error('unreachable');
+    }
+  });
+  t.is(result.statusCode, 400);
+  t.is(result.errorType, 'ValidationException');
+  t.true(result.body.message.includes('image'));
 });
 
 // ---------------------------------------------------------------------------

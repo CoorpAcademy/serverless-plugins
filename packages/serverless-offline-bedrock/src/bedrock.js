@@ -10,9 +10,12 @@ const {handleConverse} = require('./converse');
 //
 // IMPORTANT (verified by SPIKE 1): the `@aws-sdk/client-bedrock-runtime` client's default
 // requestHandler is `NodeHttp2Handler` — it dials the endpoint over cleartext HTTP/2 (h2c), NOT
-// HTTP/1.1. @hapi/hapi cannot serve h2c, so this emulator uses Node's built-in `http2` server with
-// `allowHTTP1:true` (so a stray HTTP/1.1 probe still gets an answer). This is the one deviation from
-// the sibling plugins' @hapi/hapi choice, forced by the SDK's wire protocol.
+// HTTP/1.1. @hapi/hapi cannot serve h2c, so this emulator uses Node's built-in `http2` server. This
+// is the one deviation from the sibling plugins' @hapi/hapi choice, forced by the SDK's wire
+// protocol. NOTE (Codex F7): the emulator is h2c-only by design. `allowHTTP1:true` lets the server
+// ACCEPT a plain TCP/HTTP-1.1 connection instead of resetting it, but on cleartext there is no ALPN,
+// so such a connection is still answered with HTTP/2 framing — an HTTP/1.1-only client will not get
+// a usable response. The only supported client contract is the SDK's default h2c NodeHttp2Handler.
 
 const DEFAULT_HOST = '0.0.0.0';
 const DEFAULT_PORT = 4019;
@@ -139,6 +142,9 @@ class Bedrock {
       this.server.once('error', reject);
       this.server.listen(this.port, this.host, () => {
         this.server.removeListener('error', reject);
+        // Honor `port: 0` end-to-end (Codex F1): capture the OS-assigned port so callers (the plugin's
+        // endpoint injection) advertise the real port, not the placeholder 0.
+        this.port = this.server.address().port;
         resolve();
       });
     });

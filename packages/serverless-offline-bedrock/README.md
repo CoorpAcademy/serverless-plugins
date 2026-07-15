@@ -9,6 +9,8 @@ exactly as `serverless-offline-sqs` translates SQS calls to ElasticMQ.
 _Scope (MVP):_ non-streaming `Converse`. Streaming (`ConverseStream`) and `InvokeModel` are out of
 scope for now.
 
+> **Requirements:** Node.js **≥ 20** (the bundled AWS SDK v3 requires it).
+
 ## How it works
 
 The plugin stands up a local HTTP server speaking the Bedrock Runtime wire protocol and, in
@@ -18,8 +20,10 @@ environment. Your **unmodified** `BedrockRuntimeClient` therefore resolves to `l
 application code change**.
 
 > **HTTP/2 note:** the `@aws-sdk/client-bedrock-runtime` client dials its endpoint over cleartext
-> HTTP/2 (h2c). This emulator uses Node's built-in `http2` server accordingly (it also answers
-> HTTP/1.1). No configuration is needed.
+> HTTP/2 (h2c). This emulator uses Node's built-in `http2` server accordingly and is **h2c-only** by
+> design: the SDK's default `NodeHttp2Handler` is the supported client. A plain HTTP/1.1 client is
+> not supported (on cleartext there is no ALPN, so the server always replies with HTTP/2 framing). No
+> configuration is needed.
 
 Each `Converse` request is:
 

@@ -17,6 +17,22 @@ const defaultOptions = {
 
 const omitUndefined = omitBy(isUndefined);
 
+// Deep-redact secret-bearing keys before debug-logging the merged options: the config can carry a
+// backend `apiKey` or `provider.environment` secrets, and serverless debug output is routinely
+// captured by CI/support tooling (Codex F5). Pure — returns a redacted copy, never mutates the input.
+const SECRET_KEY = /(secret|token|password|api[-_]?key|access[-_]?key)/i;
+const redactSecrets = value => {
+  if (Array.isArray(value)) return value.map(redactSecrets);
+  if (value && typeof value === 'object')
+    return Object.fromEntries(
+      Object.entries(value).map(([key, val]) => [
+        key,
+        SECRET_KEY.test(key) ? '***' : redactSecrets(val)
+      ])
+    );
+  return value;
+};
+
 // Mirrors serverless-offline-sqs #222: allow disabling the whole emulator via
 // `custom.serverless-offline-bedrock.enabled: false` without removing the plugin (AC-X1). YAML/CLI
 // may deliver the value as the string "false", so treat that as off too; enabled by default.
@@ -55,32 +71,41 @@ class ServerlessOfflineBedrock {
 
     this._mergeOptions();
 
-    // AC-A1: inject the AWS SDK v3 endpoint env var BEFORE _createLambda. serverless-offline copies
-    // every `AWS_*` process.env key into the lazy per-function env snapshot (LambdaFunction.js), so
-    // the unmodified BedrockRuntimeClient in the handler resolves to our local server with no app
-    // code change. The service-specific spelling is derived from serviceId "Bedrock Runtime" by
-    // @smithy/core getEndpointUrlConfig → AWS_ENDPOINT_URL_BEDROCK_RUNTIME (proven by SPIKE 1). We
-    // deliberately do NOT set the generic AWS_ENDPOINT_URL: it would misroute the app's OTHER AWS
-    // clients (S3/SQS/DynamoDB) in a multi-service offline stack to this port. Injection is a
-    // baseline default — an explicit YAML AWS_ENDPOINT_URL_BEDROCK_RUNTIME still wins (README).
-    this._injectEndpointEnv();
+    // AC-A1/AC-X1 (Codex F1): only stand up the server AND inject the endpoint when enabled, and in
+    // this order. Two orderings matter:
+    //   • bind the server FIRST so we know the REAL port — `port: 0` asks the OS for a free port that
+    //     is only known after listen(); injecting the configured `0` would point the client at a dead
+    //     `:0` endpoint.
+    //   • inject the endpoint env var BEFORE _createLambda: serverless-offline snapshots every `AWS_*`
+    //     process.env key into each function's env at Lambda construction (LambdaFunction.js), so the
+    //     unmodified BedrockRuntimeClient resolves to our local server with no app code change. The
+    //     service-specific spelling AWS_ENDPOINT_URL_BEDROCK_RUNTIME is derived from serviceId
+    //     "Bedrock Runtime" (proven by SPIKE 1). We deliberately do NOT set the generic
+    //     AWS_ENDPOINT_URL — it would misroute the app's OTHER AWS clients (S3/SQS/DynamoDB) in a
+    //     multi-service stack. When DISABLED we inject nothing, so the app's Bedrock client keeps its
+    //     own target rather than a port nothing is listening on. Injection is a baseline default — an
+    //     explicit YAML AWS_ENDPOINT_URL_BEDROCK_RUNTIME still wins (README).
+    if (isPluginEnabled(this.options)) {
+      await this._createBedrock();
+      this._injectEndpointEnv();
+    }
 
     const lambdas = this._getLambdas();
 
     await this._createLambda(lambdas);
-
-    // AC-X1: when disabled, still create the lambdas (plain HTTP fns keep working) but skip the server.
-    if (isPluginEnabled(this.options)) {
-      await this._createBedrock();
-    }
 
     this.log.notice(
       `Starting Offline Bedrock at stage ${this.options.stage} (${this.options.region})`
     );
   }
 
+  // Inject the endpoint using the ACTUAL bound port (known only after the server is listening, so
+  // `port: 0` resolves to the OS-assigned port rather than a useless `:0`).
   _injectEndpointEnv() {
-    process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME = resolveEndpointUrl(this.options);
+    process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME = resolveEndpointUrl({
+      host: this.options.host,
+      port: this.bedrock.port
+    });
   }
 
   ready() {
@@ -160,7 +185,7 @@ class ServerlessOfflineBedrock {
       omitUndefined(this.cliOptions)
     );
 
-    this.log.debug('bedrock options:', this.options);
+    this.log.debug('bedrock options:', redactSecrets(this.options));
   }
 
   _getLambdas() {
@@ -178,3 +203,4 @@ module.exports = ServerlessOfflineBedrock;
 module.exports.defaultOptions = defaultOptions;
 module.exports.isPluginEnabled = isPluginEnabled;
 module.exports.resolveEndpointUrl = resolveEndpointUrl;
+module.exports.redactSecrets = redactSecrets;

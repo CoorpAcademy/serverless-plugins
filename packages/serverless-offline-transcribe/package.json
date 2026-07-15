@@ -28,7 +28,7 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "peerDependencies": {
     "serverless-offline": "^10.0.2 || >=11"

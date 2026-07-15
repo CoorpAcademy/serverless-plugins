@@ -35,7 +35,7 @@ const {
 const Transcribe = require('../src/transcribe');
 const {parseTarget, parseBody, resolvePort} = require('../src/transcribe');
 const ServerlessOfflineTranscribe = require('../src');
-const {defaultOptions, isPluginEnabled, resolveEndpointUrl} = require('../src');
+const {defaultOptions, isPluginEnabled, resolveEndpointUrl, redactSecrets} = require('../src');
 
 // The SPIKE 2 fixture — a REAL `whisper base --word_timestamps True` run (see README/report). Words
 // carry a leading space and glued trailing punctuation; the transform must match the AWS shape.
@@ -347,6 +347,91 @@ test('the plugin exposes the four offline hooks', t => {
     'offline:start:init',
     'offline:start:ready'
   ]);
+});
+
+// ---------------------------------------------------------------------------
+// Endpoint lifecycle (Codex F1): drive the plugin's own start() with _createLambda stubbed out.
+// ---------------------------------------------------------------------------
+
+const fakeServerless = custom => ({
+  service: {
+    custom,
+    provider: {stage: 'dev', region: 'us-east-1'},
+    getAllFunctions: () => [],
+    getFunction: () => ({})
+  }
+});
+
+test.serial('start() injects the REAL bound port for port:0, never :0 (Codex F1)', async t => {
+  // Standing up the server runs the whisper fail-fast probe (AC-C5); skip on whisper-less hosts.
+  if (!(await isWhisperAvailable('whisper'))) {
+    t.pass(
+      'whisper binary not installed — lifecycle covered by the enabled:false + unit tests here'
+    );
+    return;
+  }
+  const plugin = new ServerlessOfflineTranscribe(
+    fakeServerless({'serverless-offline-transcribe': {host: '127.0.0.1', port: 0}}),
+    {},
+    {log: defaultLog}
+  );
+  plugin._createLambda = async () => {}; // avoid the real serverless-offline Lambda import
+  const prev = process.env.AWS_ENDPOINT_URL_TRANSCRIBE;
+  delete process.env.AWS_ENDPOINT_URL_TRANSCRIBE;
+  try {
+    await plugin.start();
+    const injected = process.env.AWS_ENDPOINT_URL_TRANSCRIBE;
+    t.true(plugin.transcribe.port > 0); // OS assigned a real port
+    t.false(injected.endsWith(':0')); // and it is NOT the placeholder 0
+    t.is(injected, `http://127.0.0.1:${plugin.transcribe.port}`);
+  } finally {
+    await plugin.end(true);
+    if (prev === undefined) delete process.env.AWS_ENDPOINT_URL_TRANSCRIBE;
+    else process.env.AWS_ENDPOINT_URL_TRANSCRIBE = prev;
+  }
+});
+
+test.serial('start() injects NOTHING and skips the server when disabled (Codex F1)', async t => {
+  const plugin = new ServerlessOfflineTranscribe(
+    fakeServerless({'serverless-offline-transcribe': {enabled: false}}),
+    {},
+    {log: defaultLog}
+  );
+  plugin._createLambda = async () => {};
+  const prev = process.env.AWS_ENDPOINT_URL_TRANSCRIBE;
+  delete process.env.AWS_ENDPOINT_URL_TRANSCRIBE;
+  try {
+    await plugin.start(); // no whisper needed — the server is never created when disabled
+    t.is(process.env.AWS_ENDPOINT_URL_TRANSCRIBE, undefined); // not injected → no dead endpoint
+    t.is(plugin.transcribe, undefined); // server not stood up
+  } finally {
+    await plugin.end(true);
+    if (prev === undefined) delete process.env.AWS_ENDPOINT_URL_TRANSCRIBE;
+    else process.env.AWS_ENDPOINT_URL_TRANSCRIBE = prev;
+  }
+});
+
+test('redactSecrets masks the S3 credentials deeply and never mutates the input (Codex F5)', t => {
+  const options = {
+    host: '0.0.0.0',
+    accessKey: 'minioadmin',
+    secretKey: 'minioadmin',
+    accessKeyId: 'AKIA',
+    secretAccessKey: 'zzz',
+    endpoint: 'http://localhost:9000',
+    accountId: '000000000000',
+    environment: {DB_PASSWORD: 'p', HARMLESS: 'ok'}
+  };
+  const red = redactSecrets(options);
+  t.is(red.accessKey, '***');
+  t.is(red.secretKey, '***');
+  t.is(red.accessKeyId, '***');
+  t.is(red.secretAccessKey, '***');
+  t.is(red.environment.DB_PASSWORD, '***');
+  t.is(red.environment.HARMLESS, 'ok');
+  t.is(red.endpoint, 'http://localhost:9000'); // non-secret keys pass through
+  t.is(red.accountId, '000000000000');
+  t.is(options.secretKey, 'minioadmin'); // input untouched (pure)
 });
 
 // ---------------------------------------------------------------------------

@@ -10,6 +10,14 @@ Transcribe JSON shape — exactly as `serverless-offline-sqs` translates SQS cal
 _Scope (MVP):_ asynchronous **batch** jobs (`StartTranscriptionJob` / `GetTranscriptionJob` /
 `ListTranscriptionJobs`). Streaming transcription is out of scope for now.
 
+> **Requirements:** Node.js **≥ 20** (the bundled AWS SDK v3 requires it).
+
+> **Local-dev tool — mind the exposure.** Like the sibling emulators the server binds `0.0.0.0` by
+> default, so it is reachable from your LAN; set `host: 127.0.0.1` to keep it loopback-only. It is
+> also **unauthenticated** and does **not** bound concurrency — every `StartTranscriptionJob`
+> immediately launches its own Whisper process. This is fine for local development but is not
+> hardened against untrusted callers or high job volume; do not expose it on an untrusted network.
+
 ## How it works
 
 The plugin stands up a local HTTP server speaking AWS JSON 1.1 and, in `offline:start:init`, injects

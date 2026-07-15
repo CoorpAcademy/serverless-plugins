@@ -246,6 +246,9 @@ class Transcribe {
       );
     }
     await this.server.start();
+    // Honor `port: 0` end-to-end (Codex F1): after start() Hapi exposes the OS-assigned port on
+    // server.info.port (NOT server.address()), so callers advertise the real port, not the 0.
+    this.port = this.server.info.port;
     this.log.notice(`Transcribe emulator listening on http://${this.host}:${this.port}`);
   }
 
