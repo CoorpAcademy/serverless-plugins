@@ -42,7 +42,7 @@ reports `COMPLETED` (with `Transcript.TranscriptFileUri`) or `FAILED` (with `Fai
 - **Local S3 (Minio)** — the same local S3 this repo uses for `serverless-offline-s3`:
   ```sh
   docker run -p 9000:9000 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
-    minio/minio server /data
+    quay.io/minio/minio server /data
   ```
 
 Neither engine is bundled (developer prerequisites, like ElasticMQ for SQS).
