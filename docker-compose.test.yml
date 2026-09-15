@@ -56,7 +56,7 @@ services:
       - AWS_DEFAULT_REGION=eu-west-1
       - AWS_ENDPOINT_URL=http://kinesis:4567
   s3:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     command: server /data
     ports:
       - "9000:9000"
