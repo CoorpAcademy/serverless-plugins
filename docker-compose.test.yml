@@ -56,7 +56,10 @@ services:
       - AWS_DEFAULT_REGION=eu-west-1
       - AWS_ENDPOINT_URL=http://kinesis:4567
   s3:
-    image: quay.io/minio/minio:latest
+    # MinIO no longer publishes public images (Docker Hub and quay.io both 401 on
+    # every tag and digest). Chainguard builds the same MinIO server from the
+    # AGPLv3 source and publishes it on ECR Public, which pulls anonymously.
+    image: public.ecr.aws/chainguard/minio:latest
     command: server /data
     ports:
       - "9000:9000"
